@@ -1,0 +1,13 @@
+diff -r 99940f1f5402 c/misc_thread_common.h
+--- a/c/misc_thread_common.h	Tue Feb 27 21:18:33 2018 +0100
++++ b/c/misc_thread_common.h	Tue Mar 13 13:13:11 2018 +0100
+@@ -29,7 +29,8 @@
+     struct cffi_tls_s *tls = (struct cffi_tls_s *)p;
+
+     if (tls->local_thread_state != NULL) {
+-        PyThreadState_Delete(tls->local_thread_state);
++        // This crashes at exit
++        //PyThreadState_Delete(tls->local_thread_state);
+     }
+     free(tls);
+ }
