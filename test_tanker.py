@@ -1,5 +1,6 @@
 import tanker
 from tanker import Tanker
+from faker import Faker
 
 import pytest
 
@@ -37,5 +38,8 @@ def test_open(tmpdir):
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
         db_storage_path=str(tmpdir)
     )
-    token = tanker.make_user_token("python-test-1", "s3cr3t")
+    fake = Faker()
+    user_name = fake.email()
+    print("Creating account for", user_name)
+    token = tanker.make_user_token(user_name, "s3cr3t")
     tanker.open(token)
