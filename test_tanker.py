@@ -43,3 +43,8 @@ def test_open(tmpdir):
     print("Creating account for", user_name)
     token = tanker.make_user_token(user_name, "s3cr3t")
     tanker.open(token)
+    tanker.close()
+
+
+if __name__ == "__main__":
+    test_open("/tmp/test")

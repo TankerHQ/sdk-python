@@ -74,6 +74,7 @@ typedef struct tanker_t tanker_t;
 const char* tanker_version_string();
 typedef void (*tanker_log_handler_t)(char const* category, char level, const char* message);
 void tanker_set_log_handler(tanker_log_handler_t handler);
+
 struct tanker_options
 {
   uint8_t version;
@@ -85,6 +86,7 @@ struct tanker_options
 typedef struct tanker_options tanker_options_t;
 tanker_future_t* tanker_create(const tanker_options_t* options);
 tanker_future_t* tanker_open(tanker_t* tanker, const char* user_token);
+tanker_future_t* tanker_destroy(tanker_t* tanker);
 
 
 char* tanker_make_user_token(tanker_t* ctanker,

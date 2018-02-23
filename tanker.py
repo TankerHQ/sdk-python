@@ -1,10 +1,25 @@
+import os
+
+
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
 
 @ffi.def_extern()
 def log_handler(category, level, message):
-    print(ffi.string(message).decode(), end="")
+    if os.environ.get("DEBUG"):
+        print(ffi.string(message).decode(), end="")
+
+
+def str_to_c(text):
+    return ffi.new("char[]", text.encode())
+
+
+def wait_fut_or_die(c_fut):
+    tankerlib.tanker_future_wait(c_fut)
+    if tankerlib.tanker_future_has_error(c_fut):
+        c_message = tankerlib.tanker_future_get_error(c_fut)
+        raise Error(ffi.string(c_message))
 
 
 class Error(Exception):
@@ -26,12 +41,19 @@ class Tanker:
     def _set_log_handler(self):
         tankerlib.tanker_set_log_handler(tankerlib.log_handler)
 
+    def close(self):
+        print("destroying tanker ...")
+        c_fut = tankerlib.tanker_destroy(self.c_tanker)
+        wait_fut_or_die(c_fut)
+        self.c_fut = c_fut
+        print("tanker destroyed")
+
     def _create_tanker_obj(self):
-        c_trustchain_url = ffi.new("char[]", self.trustchain_url.encode())
-        c_trustchain_id = ffi.new("char[]", self.trustchain_id.encode())
-        c_unsafe_trustchain_private_key = ffi.new("char[]", self.trustchain_private_key.encode())
-        c_db_storage_path = ffi.new("char[]", self.db_storage_path.encode())
-        tanker_options = ffi.new(
+        c_trustchain_url = str_to_c(self.trustchain_url)
+        c_trustchain_id = str_to_c(self.trustchain_id)
+        c_unsafe_trustchain_private_key = str_to_c(self.trustchain_private_key)
+        c_db_storage_path = str_to_c(self.db_storage_path)
+        self.tanker_options = ffi.new(
             "tanker_options_t *",
             {
                 "version": 1,
@@ -41,17 +63,14 @@ class Tanker:
                 "db_storage_path": c_db_storage_path,
             }
         )
-        create_fut = tankerlib.tanker_create(tanker_options)
-        tankerlib.tanker_future_wait(create_fut)
-        if tankerlib.tanker_future_has_error(create_fut):
-            c_message = tankerlib.tanker_future_get_error(create_fut)
-            raise Error(ffi.string(c_message).decode())
+        create_fut = tankerlib.tanker_create(self.tanker_options)  # keep tanker_options alive
         p = tankerlib.tanker_future_get_voidptr(create_fut)
+        self.p = p  # keeping p alive ?
         self.c_tanker = ffi.cast("tanker_t*", p)
 
     def make_user_token(self, user_id, secret):
-        c_user_id = ffi.new("char[]", user_id.encode())
-        c_secret = ffi.new("char[]", secret.encode())
+        c_user_id = str_to_c(user_id)
+        c_secret = str_to_c(secret)
         c_token = tankerlib.tanker_make_user_token(self.c_tanker, c_user_id, c_secret)
         return ffi.string(c_token).decode()
 
@@ -61,9 +80,8 @@ class Tanker:
         return ffi.string(char_p).decode()
 
     def open(self, user_token):
-        c_token = ffi.new("char[]", user_token.encode())
+        c_token = str_to_c(user_token)
         open_fut = tankerlib.tanker_open(self.c_tanker, c_token)
-        tankerlib.tanker_future_wait(open_fut)
-        if tankerlib.tanker_future_has_error(open_fut):
-            c_message = tankerlib.tanker_future_get_error(open_fut)
-            raise Error(ffi.string(c_message))
+        wait_fut_or_die(open_fut)
+        self.open_fut = open_fut
+        print("open ok")
