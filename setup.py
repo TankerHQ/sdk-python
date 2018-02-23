@@ -17,6 +17,8 @@ setup(name="tanker",
       url="https://tanker.io",
       author="Kontrol SAS",
       packages=find_packages(),
+      setup_requires=["cffi>=1.0.0"],
+      cffi_modules=["build_tanker.py:ffibuilder"],
       install_requires=["cffi>=1.0.0"],
       classifiers=[
         "Programming Language :: Python :: 3.3",
