@@ -5,6 +5,7 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 
+
 @ffi.def_extern()
 def log_handler(category, level, message):
     if os.environ.get("DEBUG"):
@@ -51,7 +52,6 @@ class Tanker:
     def _create_tanker_obj(self):
         c_trustchain_url = str_to_c(self.trustchain_url)
         c_trustchain_id = str_to_c(self.trustchain_id)
-        c_unsafe_trustchain_private_key = str_to_c(self.trustchain_private_key)
         c_db_storage_path = str_to_c(self.db_storage_path)
         self.tanker_options = ffi.new(
             "tanker_options_t *",
@@ -59,7 +59,6 @@ class Tanker:
                 "version": 1,
                 "trustchain_id": c_trustchain_id,
                 "trustchain_url": c_trustchain_url,
-                "unsafe_trustchain_private_key": c_unsafe_trustchain_private_key,
                 "db_storage_path": c_db_storage_path,
             }
         )
@@ -68,10 +67,11 @@ class Tanker:
         self.p = p  # keeping p alive ?
         self.c_tanker = ffi.cast("tanker_t*", p)
 
-    def make_user_token(self, user_id, secret):
+    def generate_user_token(self, user_id):
         c_user_id = str_to_c(user_id)
-        c_secret = str_to_c(secret)
-        c_token = tankerlib.tanker_make_user_token(self.c_tanker, c_user_id, c_secret)
+        c_trustchain_id = str_to_c(self.trustchain_id)
+        c_trustchain_private_key = str_to_c(self.trustchain_private_key)
+        c_token = tankerlib.tanker_generate_user_token(c_trustchain_id, c_trustchain_private_key, c_user_id)
         return ffi.string(c_token).decode()
 
     @property
