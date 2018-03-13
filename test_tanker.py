@@ -5,8 +5,8 @@ from faker import Faker
 import pytest
 
 TRUSTCHAIN_URL = "https://dev-api.tanker.io"
-TRUSTCHAIN_ID = "EBwzNy5/hFgxqSSgN4FPdm2PrEaGMhHXr8g6v05U1Zg="
-TRUSTCHAIN_PRIVATE_KEY = "t8SvaSQ6E/6w41bKNQThkzCZKU9lqDjoz9M0syrJuglB4J/bDaQTpOXNeYiOtoX6ToTaifmlbkp5FyqQtpFElw=="  # noqa
+TRUSTCHAIN_ID = "Lj93QRsF4aadPoT/abm/ZUS1YqC5StX+B326stEeiT8="
+TRUSTCHAIN_PRIVATE_KEY = "TZEIID4mTQta0xtLSNzh/mejX1SOjLb4l8tLCbORHpk29v9yEMS7uk0s9GlbPtuqn5+morIna1Op2F8Y6uTl2Q=="  # noqa
 
 
 def test_init_tanker_ok(tmpdir):
@@ -20,7 +20,6 @@ def test_init_tanker_ok(tmpdir):
     assert tanker.trustchain_url == TRUSTCHAIN_URL
 
 
-@pytest.mark.skip("error handling not done")
 def test_init_tanker_invalid_url(tmpdir):
     with pytest.raises(tanker.Error) as e:
         Tanker(
