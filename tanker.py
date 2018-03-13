@@ -5,7 +5,6 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 
-
 @ffi.def_extern()
 def log_handler(category, level, message):
     if os.environ.get("DEBUG"):
@@ -19,8 +18,8 @@ def str_to_c(text):
 def wait_fut_or_die(c_fut):
     tankerlib.tanker_future_wait(c_fut)
     if tankerlib.tanker_future_has_error(c_fut):
-        c_message = tankerlib.tanker_future_get_error(c_fut)
-        raise Error(ffi.string(c_message))
+        c_error = tankerlib.tanker_future_get_error(c_fut)
+        raise Error(ffi.string(c_error.message).decode("latin-1"))
 
 
 class Error(Exception):
@@ -63,6 +62,7 @@ class Tanker:
             }
         )
         create_fut = tankerlib.tanker_create(self.tanker_options)  # keep tanker_options alive
+        wait_fut_or_die(create_fut)
         p = tankerlib.tanker_future_get_voidptr(create_fut)
         self.p = p  # keeping p alive ?
         self.c_tanker = ffi.cast("tanker_t*", p)
@@ -71,7 +71,11 @@ class Tanker:
         c_user_id = str_to_c(user_id)
         c_trustchain_id = str_to_c(self.trustchain_id)
         c_trustchain_private_key = str_to_c(self.trustchain_private_key)
-        c_token = tankerlib.tanker_generate_user_token(c_trustchain_id, c_trustchain_private_key, c_user_id)
+        c_token = tankerlib.tanker_generate_user_token(
+            c_trustchain_id,
+            c_trustchain_private_key,
+            c_user_id
+        )
         return ffi.string(c_token).decode()
 
     @property
