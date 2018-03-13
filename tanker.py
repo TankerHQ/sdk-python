@@ -46,31 +46,58 @@ class Tanker:
         tankerlib.tanker_set_log_handler(tankerlib.log_handler)
 
     def close(self):
-        print("destroying tanker ...")
         c_fut = tankerlib.tanker_destroy(self.c_tanker)
         wait_fut_or_die(c_fut)
-        self.c_fut = c_fut
-        print("tanker destroyed")
 
-    def encrypt(self, clear_buffer, *, share_with=None):
-        c_clear_buffer = bytes_to_c(clear_buffer)
+    def encrypt(self, clear_data, *, share_with=None):
+        if share_with:
+            nb_recipients = len(share_with)
+            c_ids = [str_to_c(x) for x in share_with]
+            c_recipients_uids = ffi.new("char*[]", c_ids)
+        else:
+            c_recipients_uids = ffi.NULL
+            nb_recipients = 0
+        c_encrypt_options = ffi.new(
+            "tanker_encrypt_options_t *",
+            {
+                "version": 1,
+                "recipientUids": c_recipients_uids,
+                "nb_recipients": nb_recipients
+            }
+        )
+        c_clear_buffer = bytes_to_c(clear_data)
         size = tankerlib.tanker_encrypted_size(len(c_clear_buffer))
         c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
         c_encrypt_fut = tankerlib.tanker_encrypt(
             self.c_tanker,
             c_encrypted_buffer,
-            clear_buffer,
-            len(clear_buffer),
-            ffi.NULL
+            c_clear_buffer,
+            len(c_clear_buffer),
+            c_encrypt_options,
         )
         wait_fut_or_die(c_encrypt_fut)
-        return ffi.string(c_encrypted_buffer)
+        res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
+        return res[:]
+
+    def decrypt(self, encrypted_data):
+        c_encrypted_buffer = encrypted_data
+        size = tankerlib.tanker_decrypted_size(c_encrypted_buffer, len(c_encrypted_buffer))
+        c_clear_buffer = ffi.new("uint8_t[%i]" % size)
+        c_decrypt_fut = tankerlib.tanker_decrypt(
+            self.c_tanker,
+            c_clear_buffer,
+            c_encrypted_buffer,
+            len(c_encrypted_buffer),
+            ffi.NULL
+        )
+        wait_fut_or_die(c_decrypt_fut)
+        return ffi.string(c_clear_buffer)
 
     def _create_tanker_obj(self):
         c_trustchain_url = str_to_c(self.trustchain_url)
         c_trustchain_id = str_to_c(self.trustchain_id)
         c_db_storage_path = str_to_c(self.db_storage_path)
-        self.tanker_options = ffi.new(
+        tanker_options = ffi.new(
             "tanker_options_t *",
             {
                 "version": 1,
@@ -79,10 +106,9 @@ class Tanker:
                 "db_storage_path": c_db_storage_path,
             }
         )
-        create_fut = tankerlib.tanker_create(self.tanker_options)  # keep tanker_options alive
+        create_fut = tankerlib.tanker_create(tanker_options)  # keep tanker_options alive
         wait_fut_or_die(create_fut)
         p = tankerlib.tanker_future_get_voidptr(create_fut)
-        self.p = p  # keeping p alive ?
         self.c_tanker = ffi.cast("tanker_t*", p)
 
     def generate_user_token(self, user_id):
@@ -105,5 +131,3 @@ class Tanker:
         c_token = str_to_c(user_token)
         open_fut = tankerlib.tanker_open(self.c_tanker, c_token)
         wait_fut_or_die(open_fut)
-        self.open_fut = open_fut
-        print("open ok")

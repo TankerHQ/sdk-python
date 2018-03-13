@@ -1,3 +1,5 @@
+import time
+
 import tanker
 from tanker import Tanker
 
@@ -76,7 +78,8 @@ def test_encrypt_decrypt(tmp_path):
     alice_tanker.open(alice_token)
     message = b"I love you"
     encrypted_data = alice_tanker.encrypt(message)
-    clear_data = alice_tanker.decrypted(encrypted_data)
+    time.sleep(5)
+    clear_data = alice_tanker.decrypt(encrypted_data)
     assert clear_data == message
 
 
@@ -106,7 +109,8 @@ def test_share(tmp_path):
     bob_tanker.open(bob_token)
     message = b"I love you"
     encrypted = alice_tanker.encrypt(message, share_with=[bob_id])
-    assert encrypted
+    decrypted = bob_tanker.decrypt(encrypted)
+    assert decrypted == message
 
 
 if __name__ == "__main__":
