@@ -15,6 +15,10 @@ def str_to_c(text):
     return ffi.new("char[]", text.encode())
 
 
+def bytes_to_c(buffer):
+    return ffi.new("char[]", buffer)
+
+
 def wait_fut_or_die(c_fut):
     tankerlib.tanker_future_wait(c_fut)
     if tankerlib.tanker_future_has_error(c_fut):
@@ -47,6 +51,20 @@ class Tanker:
         wait_fut_or_die(c_fut)
         self.c_fut = c_fut
         print("tanker destroyed")
+
+    def encrypt(self, clear_buffer, *, share_with=None):
+        c_clear_buffer = bytes_to_c(clear_buffer)
+        size = tankerlib.tanker_encrypted_size(len(c_clear_buffer))
+        c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
+        c_encrypt_fut = tankerlib.tanker_encrypt(
+            self.c_tanker,
+            c_encrypted_buffer,
+            clear_buffer,
+            len(clear_buffer),
+            ffi.NULL
+        )
+        wait_fut_or_die(c_encrypt_fut)
+        return ffi.string(c_encrypted_buffer)
 
     def _create_tanker_obj(self):
         c_trustchain_url = str_to_c(self.trustchain_url)
