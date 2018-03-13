@@ -1,4 +1,5 @@
 import time
+import threading
 
 import tanker
 from tanker import Tanker
@@ -111,6 +112,56 @@ def test_share(tmp_path):
     encrypted = alice_tanker.encrypt(message, share_with=[bob_id])
     decrypted = bob_tanker.decrypt(encrypted)
     assert decrypted == message
+
+
+@pytest.mark.skip("Need proper async stuff")
+def test_add_device(tmp_path):
+    fake = Faker()
+    alice_id = fake.email()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = Tanker(
+        trustchain_url=TRUSTCHAIN_URL,
+        trustchain_id=TRUSTCHAIN_ID,
+        trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
+        db_storage_path=laptop_path
+    )
+    alice_token = laptop_tanker.generate_user_token(alice_id)
+    laptop_tanker.open(alice_token)
+    time.sleep(5)
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+
+    phone_tanker = Tanker(
+        trustchain_url=TRUSTCHAIN_URL,
+        trustchain_id=TRUSTCHAIN_ID,
+        trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
+        db_storage_path=phone_path,
+    )
+
+    def on_waiting_for_validation(code):
+        print("waiting for validation with code", code)
+        print("accepting phone on laptop ...")
+        laptop_tanker.accept_device(code)
+        print("done accepting phone on laptop")
+
+    phone_tanker.on_waiting_for_validation = on_waiting_for_validation
+
+    class PhoneOpenThread(threading.Thread):
+        def __init__(self):
+            super().__init__(name="phone.open() thread")
+
+        def run(self):
+            phone_tanker.open(alice_token)
+
+    phone_open_thread = PhoneOpenThread()
+    print("starting phone_tanker.open() in a thread ...")
+    phone_open_thread.start()
+    print("sleeping 5 sec")
+    time.sleep(5)
+    phone_open_thread.join()
+    print("done")
 
 
 if __name__ == "__main__":

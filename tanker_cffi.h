@@ -1,4 +1,5 @@
 extern "Python" void log_handler(const char* category, char level, const char* message);
+extern "Python" void validation_callback(void* arg, void* data);
 
 typedef struct tanker_future_t tanker_future_t;
 typedef struct tanker_error tanker_error_t;

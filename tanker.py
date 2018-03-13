@@ -5,10 +5,8 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 
-@ffi.def_extern()
-def log_handler(category, level, message):
-    if os.environ.get("DEBUG"):
-        print(ffi.string(message).decode(), end="")
+class Error(Exception):
+    pass
 
 
 def str_to_c(text):
@@ -19,15 +17,28 @@ def bytes_to_c(buffer):
     return ffi.new("char[]", buffer)
 
 
+@ffi.def_extern()
+def log_handler(category, level, message):
+    if os.environ.get("DEBUG"):
+        print(ffi.string(message).decode(), end="")
+
+
+@ffi.def_extern()
+def validation_callback(args, data):
+    tanker_instance = ffi.from_handle(data)
+    c_validation_code = ffi.cast("char*", args)
+    validation_code = ffi.string(c_validation_code)
+    if tanker_instance.on_waiting_for_validation:
+        tanker_instance.on_waiting_for_validation(validation_code)
+    else:
+        print("Warning: tanker.on_waiting_for_validation not set, .open will not return")
+
+
 def wait_fut_or_die(c_fut):
     tankerlib.tanker_future_wait(c_fut)
     if tankerlib.tanker_future_has_error(c_fut):
         c_error = tankerlib.tanker_future_get_error(c_fut)
         raise Error(ffi.string(c_error.message).decode("latin-1"))
-
-
-class Error(Exception):
-    pass
 
 
 class Tanker:
@@ -41,9 +52,45 @@ class Tanker:
 
         self._set_log_handler()
         self._create_tanker_obj()
+        self._set_event_callbacks()
+        self.on_waiting_for_validation = None
 
     def _set_log_handler(self):
         tankerlib.tanker_set_log_handler(tankerlib.log_handler)
+
+    def _create_tanker_obj(self):
+        c_trustchain_url = str_to_c(self.trustchain_url)
+        c_trustchain_id = str_to_c(self.trustchain_id)
+        c_db_storage_path = str_to_c(self.db_storage_path)
+        tanker_options = ffi.new(
+            "tanker_options_t *",
+            {
+                "version": 1,
+                "trustchain_id": c_trustchain_id,
+                "trustchain_url": c_trustchain_url,
+                "db_storage_path": c_db_storage_path,
+            }
+        )
+        create_fut = tankerlib.tanker_create(tanker_options)  # keep tanker_options alive
+        wait_fut_or_die(create_fut)
+        p = tankerlib.tanker_future_get_voidptr(create_fut)
+        self.c_tanker = ffi.cast("tanker_t*", p)
+
+    def _set_event_callbacks(self):
+        userdata = ffi.new_handle(self)
+        self._userdata = userdata  # Must keep this alive
+        c_future_connect = tankerlib.tanker_event_connect(
+            self.c_tanker,
+            tankerlib.TANKER_EVENT_WAITING_FOR_VALIDATION,
+            tankerlib.validation_callback,
+            self._userdata,
+        )
+        wait_fut_or_die(c_future_connect)
+
+    def open(self, user_token):
+        c_token = str_to_c(user_token)
+        open_fut = tankerlib.tanker_open(self.c_tanker, c_token)
+        wait_fut_or_die(open_fut)
 
     def close(self):
         c_fut = tankerlib.tanker_destroy(self.c_tanker)
@@ -93,24 +140,6 @@ class Tanker:
         wait_fut_or_die(c_decrypt_fut)
         return ffi.string(c_clear_buffer)
 
-    def _create_tanker_obj(self):
-        c_trustchain_url = str_to_c(self.trustchain_url)
-        c_trustchain_id = str_to_c(self.trustchain_id)
-        c_db_storage_path = str_to_c(self.db_storage_path)
-        tanker_options = ffi.new(
-            "tanker_options_t *",
-            {
-                "version": 1,
-                "trustchain_id": c_trustchain_id,
-                "trustchain_url": c_trustchain_url,
-                "db_storage_path": c_db_storage_path,
-            }
-        )
-        create_fut = tankerlib.tanker_create(tanker_options)  # keep tanker_options alive
-        wait_fut_or_die(create_fut)
-        p = tankerlib.tanker_future_get_voidptr(create_fut)
-        self.c_tanker = ffi.cast("tanker_t*", p)
-
     def generate_user_token(self, user_id):
         c_user_id = str_to_c(user_id)
         c_trustchain_id = str_to_c(self.trustchain_id)
@@ -122,12 +151,15 @@ class Tanker:
         )
         return ffi.string(c_token).decode()
 
+    def accept_device(self, code):
+        c_code = bytes_to_c(code)
+        c_accept_fut = tankerlib.tanker_accept_device(
+            self.c_tanker,
+            c_code
+        )
+        wait_fut_or_die(c_accept_fut)
+
     @property
     def version(self):
         char_p = tankerlib.tanker_version_string()
         return ffi.string(char_p).decode()
-
-    def open(self, user_token):
-        c_token = str_to_c(user_token)
-        open_fut = tankerlib.tanker_open(self.c_tanker, c_token)
-        wait_fut_or_die(open_fut)
