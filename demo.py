@@ -26,12 +26,12 @@ def main():
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=storage_path
+        writable_path=storage_path
     )
     tanker.on_waiting_for_validation = on_waiting_for_validation
     token = tanker.generate_user_token(user_id)
 
-    tanker.open(token)
+    tanker.open(user_id, token)
     if validation_code:
         tanker.accept_device(validation_code.encode())
 

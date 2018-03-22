@@ -41,14 +41,23 @@ def wait_fut_or_die(c_fut):
         raise Error(ffi.string(c_error.message).decode("latin-1"))
 
 
+def unwrap_expected(c_expected, c_type):
+    c_as_future = ffi.cast("tanker_future_t*", c_expected)
+    if tankerlib.tanker_future_has_error(c_as_future):
+        c_error = tankerlib.tanker_future_get_error(c_as_future)
+        raise Error(ffi.string(c_error.message).decode("latin-1"))
+    p = tankerlib.tanker_future_get_voidptr(c_as_future)
+    return ffi.cast(c_type, p)
+
+
 class Tanker:
     def __init__(self, *, trustchain_url="https://api.tanker.io",
                  trustchain_id, trustchain_private_key,
-                 db_storage_path):
+                 writable_path):
         self.trustchain_id = trustchain_id
         self.trustchain_url = trustchain_url
         self.trustchain_private_key = trustchain_private_key
-        self.db_storage_path = db_storage_path
+        self.writable_path = writable_path
 
         self._set_log_handler()
         self._create_tanker_obj()
@@ -61,17 +70,17 @@ class Tanker:
     def _create_tanker_obj(self):
         c_trustchain_url = str_to_c(self.trustchain_url)
         c_trustchain_id = str_to_c(self.trustchain_id)
-        c_db_storage_path = str_to_c(self.db_storage_path)
+        c_writable_path = str_to_c(self.writable_path)
         tanker_options = ffi.new(
             "tanker_options_t *",
             {
                 "version": 1,
                 "trustchain_id": c_trustchain_id,
                 "trustchain_url": c_trustchain_url,
-                "db_storage_path": c_db_storage_path,
+                "writable_path": c_writable_path,
             }
         )
-        create_fut = tankerlib.tanker_create(tanker_options)  # keep tanker_options alive
+        create_fut = tankerlib.tanker_create(tanker_options)
         wait_fut_or_die(create_fut)
         p = tankerlib.tanker_future_get_voidptr(create_fut)
         self.c_tanker = ffi.cast("tanker_t*", p)
@@ -87,9 +96,10 @@ class Tanker:
         )
         wait_fut_or_die(c_future_connect)
 
-    def open(self, user_token):
+    def open(self, user_id, user_token):
         c_token = str_to_c(user_token)
-        open_fut = tankerlib.tanker_open(self.c_tanker, c_token)
+        c_user_id = str_to_c(user_id)
+        open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
         wait_fut_or_die(open_fut)
 
     def close(self):
@@ -108,7 +118,7 @@ class Tanker:
             "tanker_encrypt_options_t *",
             {
                 "version": 1,
-                "recipientUids": c_recipients_uids,
+                "recipient_uids": c_recipients_uids,
                 "nb_recipients": nb_recipients
             }
         )
@@ -128,8 +138,9 @@ class Tanker:
 
     def decrypt(self, encrypted_data):
         c_encrypted_buffer = encrypted_data
-        size = tankerlib.tanker_decrypted_size(c_encrypted_buffer, len(c_encrypted_buffer))
-        c_clear_buffer = ffi.new("uint8_t[%i]" % size)
+        c_expected_size = tankerlib.tanker_decrypted_size(c_encrypted_buffer, len(c_encrypted_buffer))
+        c_size = unwrap_expected(c_expected_size, "uint64_t")
+        c_clear_buffer = ffi.new("uint8_t[%i]" % c_size)
         c_decrypt_fut = tankerlib.tanker_decrypt(
             self.c_tanker,
             c_clear_buffer,

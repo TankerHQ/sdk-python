@@ -32,7 +32,7 @@ def test_init_tanker_ok(tmp_path):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=tmp_path
+        writable_path=tmp_path
     )
     assert tanker.version == "1.4.0"
     assert tanker.trustchain_url == TRUSTCHAIN_URL
@@ -44,7 +44,7 @@ def test_init_tanker_invalid_url(tmp_path):
             trustchain_url=TRUSTCHAIN_URL,
             trustchain_id="invalid bad 64",
             trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-            db_storage_path=tmp_path
+            writable_path=tmp_path
         )
     assert "parse error" in e.value.args[0]
 
@@ -54,13 +54,13 @@ def test_open_new_account(tmp_path):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=tmp_path,
+        writable_path=tmp_path,
     )
     fake = Faker()
-    user_name = fake.email()
-    print("Creating account for", user_name)
-    token = tanker.generate_user_token(user_name)
-    tanker.open(token)
+    user_id = fake.email()
+    print("Creating account for", user_id)
+    token = tanker.generate_user_token(user_id)
+    tanker.open(user_id, token)
     tanker.close()
 
 
@@ -73,10 +73,10 @@ def test_encrypt_decrypt(tmp_path):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=alice_path
+        writable_path=alice_path
     )
     alice_token = alice_tanker.generate_user_token(alice_id)
-    alice_tanker.open(alice_token)
+    alice_tanker.open(alice_id, alice_token)
     message = b"I love you"
     encrypted_data = alice_tanker.encrypt(message)
     time.sleep(5)
@@ -93,21 +93,21 @@ def test_share(tmp_path):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=alice_path
+        writable_path=alice_path
     )
     alice_token = alice_tanker.generate_user_token(alice_id)
-    alice_tanker.open(alice_token)
+    alice_tanker.open(alice_id, alice_token)
     bob_path = tmp_path.joinpath("bob")
     bob_path.mkdir_p()
     bob_tanker = Tanker(
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=bob_path
+        writable_path=bob_path
     )
     bob_id = fake.email()
     bob_token = bob_tanker.generate_user_token(bob_id)
-    bob_tanker.open(bob_token)
+    bob_tanker.open(bob_id, bob_token)
     message = b"I love you"
     encrypted = alice_tanker.encrypt(message, share_with=[bob_id])
     decrypted = bob_tanker.decrypt(encrypted)
@@ -124,10 +124,10 @@ def test_add_device(tmp_path):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=laptop_path
+        writable_path=laptop_path
     )
     alice_token = laptop_tanker.generate_user_token(alice_id)
-    laptop_tanker.open(alice_token)
+    laptop_tanker.open(alice_id, alice_token)
     time.sleep(5)
 
     phone_path = tmp_path.joinpath("phone")
@@ -137,7 +137,7 @@ def test_add_device(tmp_path):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        db_storage_path=phone_path,
+        writable_path=phone_path,
     )
 
     def on_waiting_for_validation(code):
@@ -153,7 +153,7 @@ def test_add_device(tmp_path):
             super().__init__(name="phone.open() thread")
 
         def run(self):
-            phone_tanker.open(alice_token)
+            phone_tanker.open(alice_id, alice_token)
 
     phone_open_thread = PhoneOpenThread()
     print("starting phone_tanker.open() in a thread ...")
