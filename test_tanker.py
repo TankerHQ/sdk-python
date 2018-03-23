@@ -1,6 +1,7 @@
 import time
 import threading
 
+from tanker import Tanker, Status as TankerStatus, Error as TankerError, get_answer
 import tanker
 from tanker import Tanker
 
@@ -39,7 +40,7 @@ def test_init_tanker_ok(tmp_path):
 
 
 def test_init_tanker_invalid_url(tmp_path):
-    with pytest.raises(tanker.Error) as e:
+    with pytest.raises(TankerError) as e:
         Tanker(
             trustchain_url=TRUSTCHAIN_URL,
             trustchain_id="invalid bad 64",
@@ -61,6 +62,7 @@ def test_open_new_account(tmp_path):
     print("Creating account for", user_id)
     token = tanker.generate_user_token(user_id)
     tanker.open(user_id, token)
+    assert tanker.status == TankerStatus.OPEN
     tanker.close()
 
 
