@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 
 from tanker import Tanker
 
@@ -12,7 +13,7 @@ def on_waiting_for_validation(code):
     print("Please add device with the following code", code)
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("user_id")
     parser.add_argument("--storage-path", default="")
@@ -31,13 +32,13 @@ def main():
     tanker.on_waiting_for_validation = on_waiting_for_validation
     token = tanker.generate_user_token(user_id)
 
-    tanker.open(user_id, token)
+    await tanker.open(user_id, token)
     if validation_code:
-        tanker.accept_device(validation_code.encode())
+        await tanker.accept_device(validation_code.encode())
 
     message = b"I love you"
-    encrypted = tanker.encrypt(message)
-    decrypted = tanker.decrypt(encrypted)
+    encrypted = await tanker.encrypt(message)
+    decrypted = await tanker.decrypt(encrypted)
 
     if message == decrypted:
         print("ok")
@@ -47,4 +48,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

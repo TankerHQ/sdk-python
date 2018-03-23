@@ -36,12 +36,18 @@ def validation_callback(args, data):
         print("Warning: tanker.on_waiting_for_validation not set, .open will not return")
 
 
-def ensure_no_error(c_fut):
+def c_fut_to_exception(c_fut):
     if tankerlib.tanker_future_has_error(c_fut):
         c_error = tankerlib.tanker_future_get_error(c_fut)
         message = ffi.string(c_error.message).decode("latin-1")
         print("error", message)
-        raise Error(message)
+        return Error(message)
+
+
+def ensure_no_error(c_fut):
+    exception = c_fut_to_exception(c_fut)
+    if exception:
+        raise exception
 
 
 def wait_fut_or_die(c_fut):
@@ -124,11 +130,13 @@ class Tanker:
 
         @ffi.callback("void*(tanker_future_t*, void*)")
         def on_open(c_fut, p):
-            print("on_open")
-            ensure_no_error(c_fut)
+            exception = c_fut_to_exception(c_fut)
 
             async def set_result():
-                open_fut.set_result(None)
+                if exception:
+                    open_fut.set_exception(exception)
+                else:
+                    open_fut.set_result(None)
             asyncio.run_coroutine_threadsafe(set_result(), loop)
 
             return ffi.NULL
@@ -173,11 +181,14 @@ class Tanker:
 
         @ffi.callback("void*(tanker_future_t*, void*)")
         def on_encrypt(c_fut, p):
-            ensure_no_error(c_fut)
+            exception = c_fut_to_exception(c_fut)
 
             async def set_result():
-                res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
-                encrypt_fut.set_result(res[:])
+                if exception:
+                    encrypt_fut.set_exception(exception)
+                else:
+                    res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
+                    encrypt_fut.set_result(res[:])
             asyncio.run_coroutine_threadsafe(set_result(), loop)
 
             return ffi.NULL
@@ -204,11 +215,14 @@ class Tanker:
 
         @ffi.callback("void*(tanker_future_t*, void*)")
         def on_decrypt(c_fut, p):
-            ensure_no_error(c_fut)
+            exception = c_fut_to_exception(c_fut)
 
             async def set_result():
-                res = ffi.string(c_clear_buffer)
-                decrypt_fut.set_result(res)
+                if exception:
+                    decrypt_fut.set_exception(exception)
+                else:
+                    res = ffi.string(c_clear_buffer)
+                    decrypt_fut.set_result(res)
             asyncio.run_coroutine_threadsafe(set_result(), loop)
 
             return ffi.NULL

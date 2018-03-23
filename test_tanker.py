@@ -56,11 +56,25 @@ async def test_open_new_account(tmp_path):
     )
     fake = Faker()
     user_id = fake.email()
-    print("Creating account for", user_id)
     token = tanker.generate_user_token(user_id)
     await tanker.open(user_id, token)
     assert tanker.status == TankerStatus.OPEN
     tanker.close()
+
+
+@pytest.mark.asyncio
+async def test_open_bad_token(tmp_path):
+    tanker = Tanker(
+        trustchain_url=TRUSTCHAIN_URL,
+        trustchain_id=TRUSTCHAIN_ID,
+        trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
+        writable_path=tmp_path,
+    )
+    fake = Faker()
+    user_id = fake.email()
+    with pytest.raises(TankerError) as e:
+        await tanker.open(user_id, "bad token")
+    assert "base64" in str(e.value)
 
 
 @pytest.mark.asyncio
