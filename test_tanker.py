@@ -1,7 +1,5 @@
-import time
-import threading
-
-from tanker import Tanker, Status as TankerStatus, Error as TankerError, get_answer
+import asyncio
+from tanker import Tanker, Status as TankerStatus, Error as TankerError
 
 import path
 from faker import Faker
@@ -48,7 +46,8 @@ def test_init_tanker_invalid_url(tmp_path):
     assert "parse error" in e.value.args[0]
 
 
-def test_open_new_account(tmp_path):
+@pytest.mark.asyncio
+async def test_open_new_account(tmp_path):
     tanker = Tanker(
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
@@ -59,12 +58,13 @@ def test_open_new_account(tmp_path):
     user_id = fake.email()
     print("Creating account for", user_id)
     token = tanker.generate_user_token(user_id)
-    tanker.open(user_id, token)
+    await tanker.open(user_id, token)
     assert tanker.status == TankerStatus.OPEN
     tanker.close()
 
 
-def test_encrypt_decrypt(tmp_path):
+@pytest.mark.asyncio
+async def test_encrypt_decrypt(tmp_path):
     fake = Faker()
     alice_id = fake.email()
     alice_path = tmp_path.joinpath("alice")
@@ -76,15 +76,15 @@ def test_encrypt_decrypt(tmp_path):
         writable_path=alice_path
     )
     alice_token = alice_tanker.generate_user_token(alice_id)
-    alice_tanker.open(alice_id, alice_token)
+    await alice_tanker.open(alice_id, alice_token)
     message = b"I love you"
-    encrypted_data = alice_tanker.encrypt(message)
-    time.sleep(5)
-    clear_data = alice_tanker.decrypt(encrypted_data)
+    encrypted_data = await alice_tanker.encrypt(message)
+    clear_data = await alice_tanker.decrypt(encrypted_data)
     assert clear_data == message
 
 
-def test_share(tmp_path):
+@pytest.mark.asyncio
+async def test_share(tmp_path):
     fake = Faker()
     alice_id = fake.email()
     alice_path = tmp_path.joinpath("alice")
@@ -96,7 +96,7 @@ def test_share(tmp_path):
         writable_path=alice_path
     )
     alice_token = alice_tanker.generate_user_token(alice_id)
-    alice_tanker.open(alice_id, alice_token)
+    await alice_tanker.open(alice_id, alice_token)
     bob_path = tmp_path.joinpath("bob")
     bob_path.mkdir_p()
     bob_tanker = Tanker(
@@ -107,15 +107,15 @@ def test_share(tmp_path):
     )
     bob_id = fake.email()
     bob_token = bob_tanker.generate_user_token(bob_id)
-    bob_tanker.open(bob_id, bob_token)
+    await bob_tanker.open(bob_id, bob_token)
     message = b"I love you"
-    encrypted = alice_tanker.encrypt(message, share_with=[bob_id])
-    decrypted = bob_tanker.decrypt(encrypted)
+    encrypted = await alice_tanker.encrypt(message, share_with=[bob_id])
+    decrypted = await bob_tanker.decrypt(encrypted)
     assert decrypted == message
 
 
-@pytest.mark.skip("Need proper async stuff")
-def test_add_device(tmp_path):
+@pytest.mark.asyncio
+async def test_add_device(tmp_path):
     fake = Faker()
     alice_id = fake.email()
     laptop_path = tmp_path.joinpath("laptop")
@@ -127,8 +127,7 @@ def test_add_device(tmp_path):
         writable_path=laptop_path
     )
     alice_token = laptop_tanker.generate_user_token(alice_id)
-    laptop_tanker.open(alice_id, alice_token)
-    time.sleep(5)
+    await laptop_tanker.open(alice_id, alice_token)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
@@ -140,44 +139,25 @@ def test_add_device(tmp_path):
         writable_path=phone_path,
     )
 
+    loop = asyncio.get_event_loop()
+
     def on_waiting_for_validation(code):
         print("waiting for validation with code", code)
         print("accepting phone on laptop ...")
-        laptop_tanker.accept_device(code)
-        print("done accepting phone on laptop")
+
+        async def cb():
+            try:
+                await laptop_tanker.accept_device(code)
+            except Exception as e:
+                pytest.fail("accept failed: %s" % e)
+
+        asyncio.run_coroutine_threadsafe(cb(), loop)
 
     phone_tanker.on_waiting_for_validation = on_waiting_for_validation
 
-    class PhoneOpenThread(threading.Thread):
-        def __init__(self):
-            super().__init__(name="phone.open() thread")
+    await phone_tanker.open(alice_id, alice_token)
+    assert phone_tanker.status == TankerStatus.OPEN
 
-        def run(self):
-            phone_tanker.open(alice_id, alice_token)
-
-    phone_open_thread = PhoneOpenThread()
-    print("starting phone_tanker.open() in a thread ...")
-    phone_open_thread.start()
-    print("sleeping 5 sec")
-    time.sleep(5)
-    phone_open_thread.join()
-    print("done")
-
-
-@pytest.mark.asyncio
-async def test_async_open(tmp_path):
-    tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=TRUSTCHAIN_ID,
-        trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        writable_path=tmp_path,
-    )
-    fake = Faker()
-    user_id = fake.email()
-    print("Creating account for", user_id)
-    token = tanker.generate_user_token(user_id)
-    await tanker.async_open(user_id, token)
-    assert tanker.status == TankerStatus.OPEN
 
 if __name__ == "__main__":
     test_open_new_account("/tmp/test")

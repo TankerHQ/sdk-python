@@ -1,7 +1,5 @@
 import asyncio
-import threading
 from enum import Enum
-import time
 import os
 
 
@@ -38,18 +36,22 @@ def validation_callback(args, data):
         print("Warning: tanker.on_waiting_for_validation not set, .open will not return")
 
 
-def wait_fut_or_die(c_fut):
-    tankerlib.tanker_future_wait(c_fut)
+def ensure_no_error(c_fut):
     if tankerlib.tanker_future_has_error(c_fut):
         c_error = tankerlib.tanker_future_get_error(c_fut)
-        raise Error(ffi.string(c_error.message).decode("latin-1"))
+        message = ffi.string(c_error.message).decode("latin-1")
+        print("error", message)
+        raise Error(message)
+
+
+def wait_fut_or_die(c_fut):
+    tankerlib.tanker_future_wait(c_fut)
+    ensure_no_error(c_fut)
 
 
 def unwrap_expected(c_expected, c_type):
     c_as_future = ffi.cast("tanker_future_t*", c_expected)
-    if tankerlib.tanker_future_has_error(c_as_future):
-        c_error = tankerlib.tanker_future_get_error(c_as_future)
-        raise Error(ffi.string(c_error.message).decode("latin-1"))
+    ensure_no_error(c_as_future)
     p = tankerlib.tanker_future_get_voidptr(c_as_future)
     return ffi.cast(c_type, p)
 
@@ -113,13 +115,7 @@ class Tanker:
         )
         wait_fut_or_die(c_future_connect)
 
-    def open(self, user_id, user_token):
-        c_token = str_to_c(user_token)
-        c_user_id = str_to_c(user_id)
-        open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
-        wait_fut_or_die(open_fut)
-
-    async def async_open(self, user_id, user_token):
+    async def open(self, user_id, user_token):
         c_token = str_to_c(user_token)
         c_user_id = str_to_c(user_id)
         c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
@@ -127,16 +123,17 @@ class Tanker:
         loop = asyncio.get_event_loop()
 
         @ffi.callback("void*(tanker_future_t*, void*)")
-        def cb(c_fut, p):
-            # TODO check if c_fut is success
+        def on_open(c_fut, p):
+            print("on_open")
+            ensure_no_error(c_fut)
 
-            async def cb2():
+            async def set_result():
                 open_fut.set_result(None)
-            asyncio.run_coroutine_threadsafe(cb2(), loop)
+            asyncio.run_coroutine_threadsafe(set_result(), loop)
 
             return ffi.NULL
 
-        c_resolve_fut = tankerlib.tanker_future_then(c_open_fut, cb, ffi.NULL)
+        tankerlib.tanker_future_then(c_open_fut, on_open, ffi.NULL)
 
         await open_fut
 
@@ -144,7 +141,7 @@ class Tanker:
         c_fut = tankerlib.tanker_destroy(self.c_tanker)
         wait_fut_or_die(c_fut)
 
-    def encrypt(self, clear_data, *, share_with=None):
+    async def encrypt(self, clear_data, *, share_with=None):
         if share_with:
             nb_recipients = len(share_with)
             c_ids = [str_to_c(x) for x in share_with]
@@ -170,11 +167,26 @@ class Tanker:
             len(c_clear_buffer),
             c_encrypt_options,
         )
-        wait_fut_or_die(c_encrypt_fut)
-        res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
-        return res[:]
 
-    def decrypt(self, encrypted_data):
+        encrypt_fut = asyncio.Future()
+        loop = asyncio.get_event_loop()
+
+        @ffi.callback("void*(tanker_future_t*, void*)")
+        def on_encrypt(c_fut, p):
+            ensure_no_error(c_fut)
+
+            async def set_result():
+                res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
+                encrypt_fut.set_result(res[:])
+            asyncio.run_coroutine_threadsafe(set_result(), loop)
+
+            return ffi.NULL
+
+        tankerlib.tanker_future_then(c_encrypt_fut, on_encrypt, ffi.NULL)
+
+        return await encrypt_fut
+
+    async def decrypt(self, encrypted_data):
         c_encrypted_buffer = encrypted_data
         c_expected_size = tankerlib.tanker_decrypted_size(c_encrypted_buffer, len(c_encrypted_buffer))
         c_size = unwrap_expected(c_expected_size, "uint64_t")
@@ -186,8 +198,24 @@ class Tanker:
             len(c_encrypted_buffer),
             ffi.NULL
         )
-        wait_fut_or_die(c_decrypt_fut)
-        return ffi.string(c_clear_buffer)
+
+        decrypt_fut = asyncio.Future()
+        loop = asyncio.get_event_loop()
+
+        @ffi.callback("void*(tanker_future_t*, void*)")
+        def on_decrypt(c_fut, p):
+            ensure_no_error(c_fut)
+
+            async def set_result():
+                res = ffi.string(c_clear_buffer)
+                decrypt_fut.set_result(res)
+            asyncio.run_coroutine_threadsafe(set_result(), loop)
+
+            return ffi.NULL
+
+        tankerlib.tanker_future_then(c_decrypt_fut, on_decrypt, ffi.NULL)
+
+        return await decrypt_fut
 
     def generate_user_token(self, user_id):
         c_user_id = str_to_c(user_id)
@@ -200,13 +228,29 @@ class Tanker:
         )
         return ffi.string(c_token).decode()
 
-    def accept_device(self, code):
+    async def accept_device(self, code):
         c_code = bytes_to_c(code)
         c_accept_fut = tankerlib.tanker_accept_device(
             self.c_tanker,
             c_code
         )
-        wait_fut_or_die(c_accept_fut)
+
+        accept_fut = asyncio.Future()
+        loop = asyncio.get_event_loop()
+
+        @ffi.callback("void*(tanker_future_t*, void*)")
+        def on_accept(c_fut, p):
+            ensure_no_error(c_fut)
+
+            async def set_result():
+                accept_fut.set_result(None)
+            asyncio.run_coroutine_threadsafe(set_result(), loop)
+
+            return ffi.NULL
+
+        tankerlib.tanker_future_then(c_accept_fut, on_accept, ffi.NULL)
+
+        return await accept_fut
 
     @property
     def version(self):
