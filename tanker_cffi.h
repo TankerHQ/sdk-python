@@ -10,6 +10,7 @@ typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
 void tanker_future_wait(tanker_future_t* future);
 unsigned char tanker_future_has_error(tanker_future_t* future);
 tanker_error_t* tanker_future_get_error(tanker_future_t* future);
+tanker_future_t* tanker_future_then(tanker_future_t* future, tanker_future_then_t cb, void* arg);
 
 enum tanker_error_code
 {

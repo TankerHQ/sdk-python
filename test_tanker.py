@@ -2,8 +2,6 @@ import time
 import threading
 
 from tanker import Tanker, Status as TankerStatus, Error as TankerError, get_answer
-import tanker
-from tanker import Tanker
 
 import path
 from faker import Faker
@@ -165,6 +163,27 @@ def test_add_device(tmp_path):
     phone_open_thread.join()
     print("done")
 
+
+@pytest.mark.asyncio
+async def test_anwser():
+    res = await get_answer()
+    assert res == 42
+
+
+@pytest.mark.asyncio
+async def test_async_open(tmp_path):
+    tanker = Tanker(
+        trustchain_url=TRUSTCHAIN_URL,
+        trustchain_id=TRUSTCHAIN_ID,
+        trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
+        writable_path=tmp_path,
+    )
+    fake = Faker()
+    user_id = fake.email()
+    print("Creating account for", user_id)
+    token = tanker.generate_user_token(user_id)
+    await tanker.async_open(user_id, token)
+    assert tanker.status == TankerStatus.OPEN
 
 if __name__ == "__main__":
     test_open_new_account("/tmp/test")

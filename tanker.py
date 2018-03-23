@@ -1,4 +1,7 @@
+import asyncio
+import threading
 from enum import Enum
+import time
 import os
 
 
@@ -16,6 +19,13 @@ def str_to_c(text):
 
 def bytes_to_c(buffer):
     return ffi.new("char[]", buffer)
+
+
+async def get_answer():
+    print("Thinking about an answer ...")
+    await asyncio.sleep(1)
+    print("Done thinking")
+    return 42
 
 
 @ffi.def_extern()
@@ -115,6 +125,27 @@ class Tanker:
         c_user_id = str_to_c(user_id)
         open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
         wait_fut_or_die(open_fut)
+
+    async def async_open(self, user_id, user_token):
+        c_token = str_to_c(user_token)
+        c_user_id = str_to_c(user_id)
+        c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
+        open_fut = asyncio.Future()
+        loop = asyncio.get_event_loop()
+
+        @ffi.callback("void*(tanker_future_t*, void*)")
+        def cb(c_fut, p):
+            # TODO check if c_fut is success
+
+            async def cb2():
+                open_fut.set_result(None)
+            asyncio.run_coroutine_threadsafe(cb2(), loop)
+
+            return ffi.NULL
+
+        c_resolve_fut = tankerlib.tanker_future_then(c_open_fut, cb, ffi.NULL)
+
+        await open_fut
 
     def close(self):
         c_fut = tankerlib.tanker_destroy(self.c_tanker)
