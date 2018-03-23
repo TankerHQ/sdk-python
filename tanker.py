@@ -50,6 +50,14 @@ def unwrap_expected(c_expected, c_type):
     return ffi.cast(c_type, p)
 
 
+class Status(Enum):
+    CLOSED = 0
+    OPEN = 1
+    USER_CREATION = 2
+    DEVICE_CREATION = 3
+    CLOSING = 4
+
+
 class Tanker:
     def __init__(self, *, trustchain_url="https://api.tanker.io",
                  trustchain_id, trustchain_private_key,
@@ -84,6 +92,11 @@ class Tanker:
         wait_fut_or_die(create_fut)
         p = tankerlib.tanker_future_get_voidptr(create_fut)
         self.c_tanker = ffi.cast("tanker_t*", p)
+
+    @property
+    def status(self):
+        c_status = tankerlib.tanker_get_status(self.c_tanker)
+        return Status(c_status)
 
     def _set_event_callbacks(self):
         userdata = ffi.new_handle(self)
