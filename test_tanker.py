@@ -165,12 +165,6 @@ def test_add_device(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_anwser():
-    res = await get_answer()
-    assert res == 42
-
-
-@pytest.mark.asyncio
 async def test_async_open(tmp_path):
     tanker = Tanker(
         trustchain_url=TRUSTCHAIN_URL,

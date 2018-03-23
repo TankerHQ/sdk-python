@@ -21,13 +21,6 @@ def bytes_to_c(buffer):
     return ffi.new("char[]", buffer)
 
 
-async def get_answer():
-    print("Thinking about an answer ...")
-    await asyncio.sleep(1)
-    print("Done thinking")
-    return 42
-
-
 @ffi.def_extern()
 def log_handler(category, level, message):
     if os.environ.get("DEBUG"):
