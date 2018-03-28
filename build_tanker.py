@@ -42,7 +42,8 @@ def get_all_static_libs():
 
 def on_import():
     this_path = path.Path(__file__).parent.abspath()
-    native_src_path = this_path.parent.joinpath("Native")
+    src_path = this_path.parent.parent
+    native_src_path = src_path.parent.joinpath("Native")
     tanker_include_path = native_src_path.joinpath("sdk-c/include")
     libs = get_all_static_libs()
 

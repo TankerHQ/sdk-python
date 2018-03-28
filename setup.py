@@ -1,5 +1,5 @@
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup
 
 if sys.version_info.major < 3:
     sys.exit("Error: Please upgrade to Python3")
@@ -16,7 +16,7 @@ setup(name="tanker",
       long_description=get_long_description(),
       url="https://tanker.io",
       author="Kontrol SAS",
-      packages=find_packages(),
+      packages=["tankersdk.core"],
       setup_requires=["cffi>=1.0.0"],
       cffi_modules=["build_tanker.py:ffibuilder"],
       install_requires=["cffi>=1.0.0"],

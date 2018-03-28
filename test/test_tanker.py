@@ -1,5 +1,5 @@
 import asyncio
-from tanker import Tanker, Status as TankerStatus, Error as TankerError
+from tankersdk.core import Tanker, Status as TankerStatus, Error as TankerError
 
 import path
 from faker import Faker
@@ -44,6 +44,22 @@ def test_init_tanker_invalid_url(tmp_path):
             writable_path=tmp_path
         )
     assert "parse error" in e.value.args[0]
+
+
+@pytest.mark.asyncio
+async def test_init_tanker_invalid_path():
+    tanker = Tanker(
+        trustchain_url=TRUSTCHAIN_URL,
+        trustchain_id=TRUSTCHAIN_ID,
+        trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
+        writable_path="/path/to/no-such"
+    )
+    fake = Faker()
+    user_id = fake.email()
+    token = tanker.generate_user_token(user_id)
+    with pytest.raises(TankerError) as e:
+        await tanker.open(user_id, token)
+    print(e.value)
 
 
 @pytest.mark.asyncio
