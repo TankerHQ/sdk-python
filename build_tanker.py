@@ -42,12 +42,13 @@ def get_all_static_libs():
 
 def on_import():
     this_path = path.Path(__file__).parent.abspath()
-    src_path = this_path.parent.parent
-    native_src_path = src_path.parent.joinpath("Native")
+    src_path = this_path.parent
+    native_src_path = src_path.joinpath("Native")
     tanker_include_path = native_src_path.joinpath("sdk-c/include")
+    assert tanker_include_path.exists(), "%s does not exist" % tanker_include_path
     libs = get_all_static_libs()
 
-    tanker_cffi_source = path.Path("tanker_cffi.c").text()
+    tanker_cffi_source = path.Path("cffi_src.c").text()
     ffibuilder.set_source(
         "_tanker",
         tanker_cffi_source,
@@ -57,7 +58,7 @@ def on_import():
         language='c++',
     )
 
-    tanker_cffi_defs = path.Path("tanker_cffi.h").text()
+    tanker_cffi_defs = path.Path("cffi_defs.h").text()
     ffibuilder.cdef(tanker_cffi_defs)
 
 
