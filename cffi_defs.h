@@ -77,7 +77,10 @@ struct tanker_options
 };
 
 
-tanker_expected_t* tanker_generate_user_token(char const* trustchainId, char const* trustchain_private_key, char const* user_id);
+tanker_expected_t* tanker_generate_user_token(
+    char const* trustchain_id,
+    char const* trustchain_private_key,
+    char const* user_id);
 
 
 struct tanker_encrypt_options
