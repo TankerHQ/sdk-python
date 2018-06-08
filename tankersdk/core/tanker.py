@@ -124,34 +124,6 @@ class Tanker:
         )
         wait_fut_or_die(c_future_connect)
 
-    async def open(self, user_id, user_token):
-        c_token = str_to_c(user_token)
-        c_user_id = str_to_c(user_id)
-        c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
-        open_fut = asyncio.Future()
-        loop = asyncio.get_event_loop()
-
-        @ffi.callback("void*(tanker_future_t*, void*)")
-        def on_open(c_fut, p):
-            exception = c_fut_to_exception(c_fut)
-
-            async def set_result():
-                if exception:
-                    open_fut.set_exception(exception)
-                else:
-                    open_fut.set_result(None)
-            asyncio.run_coroutine_threadsafe(set_result(), loop)
-
-            return ffi.NULL
-
-        tankerlib.tanker_future_then(c_open_fut, on_open, ffi.NULL)
-
-        await open_fut
-
-    def close(self):
-        c_fut = tankerlib.tanker_destroy(self.c_tanker)
-        wait_fut_or_die(c_fut)
-
     async def handle_tanker_future(self, c_fut, handle_result):
         fut = asyncio.Future()
         loop = asyncio.get_event_loop()
@@ -172,7 +144,17 @@ class Tanker:
             return ffi.NULL
 
         tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
-        return fut
+        return await fut
+
+    async def open(self, user_id, user_token):
+        c_token = str_to_c(user_token)
+        c_user_id = str_to_c(user_id)
+        c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
+        await self.handle_tanker_future(c_open_fut, lambda: None)
+
+    def close(self):
+        c_fut = tankerlib.tanker_destroy(self.c_tanker)
+        wait_fut_or_die(c_fut)
 
     async def encrypt(self, clear_data, *, share_with=None):
         if share_with:
@@ -220,38 +202,20 @@ class Tanker:
             ffi.NULL
         )
 
-        decrypt_fut = asyncio.Future()
-        loop = asyncio.get_event_loop()
+        def decrypt_cb():
+            return ffi.string(c_clear_buffer)
 
-        @ffi.callback("void*(tanker_future_t*, void*)")
-        def on_decrypt(c_fut, p):
-            exception = c_fut_to_exception(c_fut)
-
-            async def set_result():
-                if exception:
-                    decrypt_fut.set_exception(exception)
-                else:
-                    res = ffi.string(c_clear_buffer)
-                    decrypt_fut.set_result(res)
-            asyncio.run_coroutine_threadsafe(set_result(), loop)
-
-            return ffi.NULL
-
-        tankerlib.tanker_future_then(c_decrypt_fut, on_decrypt, ffi.NULL)
-
-        return await decrypt_fut
+        return await self.handle_tanker_future(c_decrypt_fut, decrypt_cb)
 
     def generate_user_token(self, user_id):
         c_user_id = str_to_c(user_id)
         c_trustchain_id = str_to_c(self.trustchain_id)
         c_trustchain_private_key = str_to_c(self.trustchain_private_key)
-        # FIXME: bug in native, the header pretends that
-        # tanker_generate_user_token returns a tanker_expected_t* but
-        # in fact in just returs the token directly :P
-        c_token = tankerlib.tanker_generate_user_token(
+        c_expected = tankerlib.tanker_generate_user_token(
             c_trustchain_id,
             c_trustchain_private_key,
             c_user_id)
+        c_token = unwrap_expected(c_expected, "char*")
         return ffi.string(c_token).decode()
 
     async def accept_device(self, code):
@@ -261,22 +225,7 @@ class Tanker:
             c_code
         )
 
-        accept_fut = asyncio.Future()
-        loop = asyncio.get_event_loop()
-
-        @ffi.callback("void*(tanker_future_t*, void*)")
-        def on_accept(c_fut, p):
-            ensure_no_error(c_fut)
-
-            async def set_result():
-                accept_fut.set_result(None)
-            asyncio.run_coroutine_threadsafe(set_result(), loop)
-
-            return ffi.NULL
-
-        tankerlib.tanker_future_then(c_accept_fut, on_accept, ffi.NULL)
-
-        return await accept_fut
+        return await self.handle_tanker_future(c_accept_fut, lambda: None)
 
     @property
     def version(self):

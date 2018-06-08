@@ -24,7 +24,7 @@ def test_init_tanker_ok(tmp_path):
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
         writable_path=tmp_path
     )
-    assert tanker.version == "1.4.0"
+    assert tanker.version == "1.7.0-alpha4"
     assert tanker.trustchain_url == TRUSTCHAIN_URL
 
 
