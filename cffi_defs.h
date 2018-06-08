@@ -35,8 +35,6 @@ struct tanker_error
   const char* message;
 };
 
-void tanker_error_destroy(tanker_error_t* error);
-
 void* tanker_future_get_voidptr(tanker_future_t* future);
 
 // tanker.h
