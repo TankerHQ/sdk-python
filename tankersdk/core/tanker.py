@@ -235,12 +235,13 @@ class Tanker:
         c_user_id = str_to_c(user_id)
         c_trustchain_id = str_to_c(self.trustchain_id)
         c_trustchain_private_key = str_to_c(self.trustchain_private_key)
-        c_token = tankerlib.tanker_generate_user_token(
+        c_expected = tankerlib.tanker_generate_user_token(
             c_trustchain_id,
             c_trustchain_private_key,
             c_user_id
         )
-        return ffi.string(c_token).decode()
+        token = unwrap_expected(c_expected, ffi.string)
+        return token.decode()
 
     async def accept_device(self, code):
         c_code = bytes_to_c(code)
