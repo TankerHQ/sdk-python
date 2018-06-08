@@ -124,7 +124,7 @@ class Tanker:
         )
         wait_fut_or_die(c_future_connect)
 
-    async def handle_tanker_future(self, c_fut, handle_result):
+    async def handle_tanker_future(self, c_fut, handle_result=None):
         fut = asyncio.Future()
         loop = asyncio.get_event_loop()
 
@@ -136,7 +136,10 @@ class Tanker:
                 if exception:
                     fut.set_exception(exception)
                 else:
-                    res = handle_result()
+                    if handle_result:
+                        res = handle_result()
+                    else:
+                        res = None
                     fut.set_result(res)
 
             asyncio.run_coroutine_threadsafe(set_result(), loop)
@@ -150,7 +153,7 @@ class Tanker:
         c_token = str_to_c(user_token)
         c_user_id = str_to_c(user_id)
         c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
-        await self.handle_tanker_future(c_open_fut, lambda: None)
+        await self.handle_tanker_future(c_open_fut)
 
     def close(self):
         c_fut = tankerlib.tanker_destroy(self.c_tanker)
@@ -225,7 +228,7 @@ class Tanker:
             c_code
         )
 
-        return await self.handle_tanker_future(c_accept_fut, lambda: None)
+        return await self.handle_tanker_future(c_accept_fut)
 
     @property
     def version(self):
