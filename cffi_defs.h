@@ -1,10 +1,10 @@
-extern "Python" void log_handler(const char* category, char level, const char* message);
-extern "Python" void validation_callback(void* arg, void* data);
-
 typedef struct tanker_future_t tanker_future_t;
 typedef struct tanker_future tanker_expected_t;
 typedef struct tanker_promise tanker_promise_t;
 typedef struct tanker_error tanker_error_t;
+
+extern "Python" void log_handler(const char* category, char level, const char* message);
+extern "Python" void validation_callback(void* arg, void* data);
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
 void tanker_future_wait(tanker_future_t* future);
