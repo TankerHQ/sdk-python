@@ -241,13 +241,14 @@ class Tanker:
         c_user_id = str_to_c(user_id)
         c_trustchain_id = str_to_c(self.trustchain_id)
         c_trustchain_private_key = str_to_c(self.trustchain_private_key)
-        c_expected = tankerlib.tanker_generate_user_token(
+        # FIXME: bug in native, the header pretends that
+        # tanker_generate_user_token returns a tanker_expected_t* but
+        # in fact in just returs the token directly :P
+        c_token = tankerlib.tanker_generate_user_token(
             c_trustchain_id,
             c_trustchain_private_key,
-            c_user_id
-        )
-        token = unwrap_expected(c_expected, ffi.string)
-        return token.decode()
+            c_user_id)
+        return ffi.string(c_token).decode()
 
     async def accept_device(self, code):
         c_code = bytes_to_c(code)
