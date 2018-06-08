@@ -4,6 +4,7 @@ name = "pypi"
 url = "https://pypi.org/simple"
 
 [packages]
+trio = "*"
 
 [dev-packages]
 path-py = "*"
