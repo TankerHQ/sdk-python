@@ -9,6 +9,7 @@ url = "https://pypi.org/simple"
 path-py = "*"
 pytest = "*"
 faker = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.5"
