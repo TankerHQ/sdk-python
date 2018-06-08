@@ -56,9 +56,8 @@ def wait_fut_or_die(c_fut):
 
 
 def unwrap_expected(c_expected, c_type):
-    c_as_future = ffi.cast("tanker_future_t*", c_expected)
-    ensure_no_error(c_as_future)
-    p = tankerlib.tanker_future_get_voidptr(c_as_future)
+    ensure_no_error(c_expected)
+    p = tankerlib.tanker_future_get_voidptr(c_expected)
     return ffi.cast(c_type, p)
 
 
@@ -149,6 +148,28 @@ class Tanker:
         c_fut = tankerlib.tanker_destroy(self.c_tanker)
         wait_fut_or_die(c_fut)
 
+    async def handle_tanker_future(self, c_fut, handle_result):
+        fut = asyncio.Future()
+        loop = asyncio.get_event_loop()
+
+        @ffi.callback("void*(tanker_future_t*, void*)")
+        def then_callback(c_fut, p):
+            exception = c_fut_to_exception(c_fut)
+
+            async def set_result():
+                if exception:
+                    fut.set_exception(exception)
+                else:
+                    res = handle_result()
+                    fut.set_result(res)
+
+            asyncio.run_coroutine_threadsafe(set_result(), loop)
+
+            return ffi.NULL
+
+        tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
+        return fut
+
     async def encrypt(self, clear_data, *, share_with=None):
         if share_with:
             nb_recipients = len(share_with)
@@ -176,26 +197,11 @@ class Tanker:
             c_encrypt_options,
         )
 
-        encrypt_fut = asyncio.Future()
-        loop = asyncio.get_event_loop()
+        def encrypt_cb():
+            res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
+            return res[:]
 
-        @ffi.callback("void*(tanker_future_t*, void*)")
-        def on_encrypt(c_fut, p):
-            exception = c_fut_to_exception(c_fut)
-
-            async def set_result():
-                if exception:
-                    encrypt_fut.set_exception(exception)
-                else:
-                    res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
-                    encrypt_fut.set_result(res[:])
-            asyncio.run_coroutine_threadsafe(set_result(), loop)
-
-            return ffi.NULL
-
-        tankerlib.tanker_future_then(c_encrypt_fut, on_encrypt, ffi.NULL)
-
-        return await encrypt_fut
+        return await self.handle_tanker_future(c_encrypt_fut, encrypt_cb)
 
     async def decrypt(self, encrypted_data):
         c_encrypted_buffer = encrypted_data
