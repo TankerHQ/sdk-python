@@ -56,8 +56,12 @@ def wait_fut_or_die(c_fut):
 
 
 def unwrap_expected(c_expected, c_type):
-    ensure_no_error(c_expected)
-    p = tankerlib.tanker_future_get_voidptr(c_expected)
+    # FIXME: witouth this cast we get:
+    #  TypeError: initializer for ctype 'struct tanker_future_t *'
+    #  must be a pointer to same type, not cdata 'struct tanker_future *'
+    c_as_future = ffi.cast("tanker_future_t*", c_expected)
+    ensure_no_error(c_as_future)
+    p = tankerlib.tanker_future_get_voidptr(c_as_future)
     return ffi.cast(c_type, p)
 
 
