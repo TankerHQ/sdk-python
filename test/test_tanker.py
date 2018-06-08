@@ -68,7 +68,7 @@ async def test_open_new_account(tmp_path):
     token = tanker.generate_user_token(user_id)
     await tanker.open(user_id, token)
     assert tanker.status == TankerStatus.OPEN
-    tanker.close()
+    await tanker.close()
 
 
 @pytest.mark.asyncio
@@ -84,6 +84,7 @@ async def test_open_bad_token(tmp_path):
     with pytest.raises(TankerError) as e:
         await tanker.open(user_id, "bad token")
     assert "base64" in str(e.value)
+    await tanker.close()
 
 
 @pytest.mark.asyncio
@@ -104,6 +105,7 @@ async def test_encrypt_decrypt(tmp_path):
     encrypted_data = await alice_tanker.encrypt(message)
     clear_data = await alice_tanker.decrypt(encrypted_data)
     assert clear_data == message
+    await alice_tanker.close()
 
 
 @pytest.mark.asyncio
@@ -135,6 +137,8 @@ async def test_share(tmp_path):
     encrypted = await alice_tanker.encrypt(message, share_with=[bob_id])
     decrypted = await bob_tanker.decrypt(encrypted)
     assert decrypted == message
+    await alice_tanker.close()
+    await bob_tanker.close()
 
 
 @pytest.mark.asyncio
@@ -180,7 +184,5 @@ async def test_add_device(tmp_path):
 
     await phone_tanker.open(alice_id, alice_token)
     assert phone_tanker.status == TankerStatus.OPEN
-
-
-if __name__ == "__main__":
-    test_open_new_account("/tmp/test")
+    await laptop_tanker.close()
+    await phone_tanker.close()
