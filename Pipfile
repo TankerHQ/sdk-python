@@ -5,6 +5,7 @@ url = "https://pypi.org/simple"
 
 [packages]
 trio = "*"
+sanic = "*"
 
 [dev-packages]
 path-py = "*"
