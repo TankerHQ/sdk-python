@@ -8,8 +8,8 @@ import pytest
 
 
 TRUSTCHAIN_URL = "https://dev-api.tanker.io"
-TRUSTCHAIN_ID = "P8Gxs6M4v6tORNbETX9SDdqLzi43v0sJEwcP1DmcDrc="
-TRUSTCHAIN_PRIVATE_KEY = "A3FXwUu3hvtjJbBWbIn9GlG8w+MfW9xO/laJs3XoqbwOLbBC7vlpWh1bc8rmN0uwiMtzVTsiJQkS9ZHbHHE5ig=="  # noqa
+TRUSTCHAIN_ID = "AwRG5DLBtZUf3nwKKBnPI/Ijkt6SEN+oxjXHMotvKE8="
+TRUSTCHAIN_PRIVATE_KEY = "Lfqexr+88qJuSyOaPXOwOXohKRpXvtPHreGydG5DYP+xmhAiKnmfuZQqtfOjbIfyh2hykzM9Bog+RO3Nh5OSdA=="  # noqa
 
 
 @pytest.fixture()
