@@ -242,3 +242,63 @@ class Tanker:
     def version(self):
         char_p = tankerlib.tanker_version_string()
         return ffi.string(char_p).decode()
+
+
+class Admin:
+
+    def __init__(self, url, token):
+        self.url = url
+        self.token = token
+        self._create_admin_obj()
+        self._c_trustchain = None
+
+    def _create_admin_obj(self):
+        c_url = str_to_c(self.url)
+        c_token = str_to_c(self.token)
+        admin_fut = tankerlib.tanker_admin_connect(c_url, c_token)
+        wait_fut_or_die(admin_fut)
+        p = tankerlib.tanker_future_get_voidptr(admin_fut)
+        self._c_admin = ffi.cast("tanker_admin_t*", p)
+        tankerlib.tanker_future_destroy(admin_fut)
+
+    def create_trustchain(self, name):
+        c_name = str_to_c(name)
+        trustchain_fut = tankerlib.tanker_admin_create_trustchain(self._c_admin, c_name)
+        wait_fut_or_die(trustchain_fut)
+        p = tankerlib.tanker_future_get_voidptr(trustchain_fut)
+        if self._c_trustchain is not None:
+            raise Error("Admin instance already has a trustchain")
+        self._c_trustchain = ffi.cast("tanker_trustchain_descriptor_t*", p)
+        tankerlib.tanker_future_destroy(trustchain_fut)
+
+    def delete_trustchain(self):
+        if self._c_trustchain is None:
+            raise Error("Admin instance does not have a trustchain yet")
+        delete_fut = tankerlib.tanker_admin_delete_trustchain(self._c_admin, self._c_trustchain.id)
+        wait_fut_or_die(delete_fut)
+        tankerlib.tanker_future_destroy(delete_fut)
+        tankerlib.tanker_admin_trustchain_descriptor_free(self._c_trustchain)
+        self._c_trustchain = None
+
+
+    def _get_trustchain_property(self, prop):
+        if self._c_trustchain is None:
+            raise Error("Admin instance does not have a trustchain yet")
+        attr = getattr(self._c_trustchain, prop)
+        return ffi.string(attr).decode()
+
+    @property
+    def trustchain_name(self):
+        return self._get_trustchain_property("name")
+
+    @property
+    def trustchain_public_key(self):
+        return self._get_trustchain_property("public_key")
+
+    @property
+    def trustchain_private_key(self):
+        return self._get_trustchain_property("private_key")
+
+    @property
+    def trustchain_id(self):
+        return self._get_trustchain_property("id")

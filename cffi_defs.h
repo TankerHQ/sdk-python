@@ -2,6 +2,15 @@ typedef struct tanker_future_t tanker_future_t;
 typedef struct tanker_future tanker_expected_t;
 typedef struct tanker_promise tanker_promise_t;
 typedef struct tanker_error tanker_error_t;
+typedef struct tanker_admin tanker_admin_t;
+typedef char b64char;
+typedef struct tanker_trustchain_descriptor
+{
+  char const* name;
+  b64char const* id;
+  b64char const* private_key;
+  b64char const* public_key;
+} tanker_trustchain_descriptor_t;
 
 extern "Python" void log_handler(const char* category, char level, const char* message);
 extern "Python" void verification_callback(void* arg, void* data);
@@ -10,6 +19,7 @@ typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
 void tanker_future_wait(tanker_future_t* future);
 unsigned char tanker_future_has_error(tanker_future_t* future);
 tanker_error_t* tanker_future_get_error(tanker_future_t* future);
+void tanker_future_destroy(tanker_future_t* future);
 tanker_future_t* tanker_future_then(tanker_future_t* future, tanker_future_then_t cb, void* arg);
 
 enum tanker_error_code
@@ -167,3 +177,14 @@ tanker_future_t* tanker_share(tanker_t* session,
                               uint64_t nb_resourceIds);
 
 void tanker_free_buffer(void* buffer);
+
+tanker_future_t* tanker_admin_connect(char const* trustchain_url,
+                                      char const* id_token);
+
+tanker_future_t* tanker_admin_create_trustchain(tanker_admin_t* admin,
+                                                char const* name);
+
+tanker_future_t* tanker_admin_delete_trustchain(tanker_admin_t* admin,
+                                                char const* trustchain_id);
+
+void tanker_admin_trustchain_descriptor_free(tanker_trustchain_descriptor_t* trustchain);
