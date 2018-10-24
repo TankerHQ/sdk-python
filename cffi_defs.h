@@ -4,7 +4,7 @@ typedef struct tanker_promise tanker_promise_t;
 typedef struct tanker_error tanker_error_t;
 
 extern "Python" void log_handler(const char* category, char level, const char* message);
-extern "Python" void validation_callback(void* arg, void* data);
+extern "Python" void verification_callback(void* arg, void* data);
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
 void tanker_future_wait(tanker_future_t* future);
@@ -18,11 +18,21 @@ enum tanker_error_code
   TANKER_ERROR_OTHER,
   TANKER_ERROR_INVALID_TANKER_STATUS,
   TANKER_ERROR_SERVER_ERROR,
-  TANKER_ERROR_INVALID_VALIDATION_CODE,
+  TANKER_ERROR_UNUSED1,
   TANKER_ERROR_INVALID_ARGUMENT,
   TANKER_ERROR_RESOURCE_KEY_NOT_FOUND,
   TANKER_ERROR_USER_NOT_FOUND,
   TANKER_ERROR_DECRYPT_FAILED,
+  TANKER_ERROR_INVALID_UNLOCK_EVENT_HANDLER,
+  TANKER_ERROR_CHUNK_INDEX_OUT_OF_RANGE,
+  TANKER_ERROR_VERSION_NOT_SUPPORTED,
+  TANKER_ERROR_INVALID_UNLOCK_KEY,
+  TANKER_ERROR_INTERNAL_ERROR,
+  TANKER_ERROR_CHUNK_NOT_FOUND,
+  TANKER_ERROR_INVALID_UNLOCK_PASSWORD,
+  TANKER_ERROR_INVALID_VERIFICATION_CODE,
+  TANKER_ERROR_UNLOCK_KEY_ALREADY_EXISTS,
+  TANKER_ERROR_MAX_VERIFICATION_ATTEMPTS_REACHED,
 
   TANKER_ERROR_LAST,
 };
@@ -51,9 +61,12 @@ enum tanker_status
 
 enum tanker_event
 {
-  TANKER_EVENT_WAITING_FOR_VALIDATION,
+  TANKER_EVENT_UNUSED1,
   TANKER_EVENT_SESSION_CLOSED,
-  TANKER_EVENT_DEVICE_CREATED
+  TANKER_EVENT_DEVICE_CREATED,
+  TANKER_EVENT_UNLOCK_REQUIRED,
+
+  TANKER_EVENT_LAST
 };
 
 typedef struct tanker_t tanker_t;
@@ -120,8 +133,12 @@ tanker_future_t* tanker_close(tanker_t* tanker);
 
 enum tanker_status tanker_get_status(tanker_t* tanker);
 
-tanker_future_t* tanker_accept_device(tanker_t* session,
-                                      const b64char* validation_code);
+tanker_future_t* tanker_setup_unlock(tanker_t* session,
+                                     char const* email,
+                                     char const* password);
+
+tanker_future_t* tanker_unlock_current_device_with_password(tanker_t* session,
+                                                            char const* pass);
 
 uint64_t tanker_encrypted_size(uint64_t clear_size);
 

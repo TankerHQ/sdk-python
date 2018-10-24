@@ -145,6 +145,7 @@ async def test_share(tmp_path):
 async def test_add_device(tmp_path):
     fake = Faker()
     alice_id = fake.email()
+    password = "plop"
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
     laptop_tanker = Tanker(
@@ -155,6 +156,7 @@ async def test_add_device(tmp_path):
     )
     alice_token = laptop_tanker.generate_user_token(alice_id)
     await laptop_tanker.open(alice_id, alice_token)
+    await laptop_tanker.setup_unlock(password)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
@@ -168,19 +170,16 @@ async def test_add_device(tmp_path):
 
     loop = asyncio.get_event_loop()
 
-    def on_waiting_for_validation(code):
-        print("waiting for validation with code", code)
-        print("accepting phone on laptop ...")
-
+    def on_unlock_required():
         async def cb():
             try:
-                await laptop_tanker.accept_device(code)
+                await phone_tanker.unlock_current_device_with_password(password)
             except Exception as e:
-                pytest.fail("accept failed: %s" % e)
+                pytest.fail("unlock failed: %s" % e)
 
         asyncio.run_coroutine_threadsafe(cb(), loop)
 
-    phone_tanker.on_waiting_for_validation = on_waiting_for_validation
+    phone_tanker.on_unlock_required = on_unlock_required
 
     await phone_tanker.open(alice_id, alice_token)
     assert phone_tanker.status == TankerStatus.OPEN
