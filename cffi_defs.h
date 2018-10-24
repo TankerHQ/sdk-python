@@ -2,14 +2,24 @@ typedef struct tanker_future_t tanker_future_t;
 typedef struct tanker_future tanker_expected_t;
 typedef struct tanker_promise tanker_promise_t;
 typedef struct tanker_error tanker_error_t;
+typedef struct tanker_admin tanker_admin_t;
+typedef char b64char;
+typedef struct tanker_trustchain_descriptor
+{
+  char const* name;
+  b64char const* id;
+  b64char const* private_key;
+  b64char const* public_key;
+} tanker_trustchain_descriptor_t;
 
 extern "Python" void log_handler(const char* category, char level, const char* message);
-extern "Python" void validation_callback(void* arg, void* data);
+extern "Python" void verification_callback(void* arg, void* data);
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
 void tanker_future_wait(tanker_future_t* future);
 unsigned char tanker_future_has_error(tanker_future_t* future);
 tanker_error_t* tanker_future_get_error(tanker_future_t* future);
+void tanker_future_destroy(tanker_future_t* future);
 tanker_future_t* tanker_future_then(tanker_future_t* future, tanker_future_then_t cb, void* arg);
 
 enum tanker_error_code
@@ -18,11 +28,21 @@ enum tanker_error_code
   TANKER_ERROR_OTHER,
   TANKER_ERROR_INVALID_TANKER_STATUS,
   TANKER_ERROR_SERVER_ERROR,
-  TANKER_ERROR_INVALID_VALIDATION_CODE,
+  TANKER_ERROR_UNUSED1,
   TANKER_ERROR_INVALID_ARGUMENT,
   TANKER_ERROR_RESOURCE_KEY_NOT_FOUND,
   TANKER_ERROR_USER_NOT_FOUND,
   TANKER_ERROR_DECRYPT_FAILED,
+  TANKER_ERROR_INVALID_UNLOCK_EVENT_HANDLER,
+  TANKER_ERROR_CHUNK_INDEX_OUT_OF_RANGE,
+  TANKER_ERROR_VERSION_NOT_SUPPORTED,
+  TANKER_ERROR_INVALID_UNLOCK_KEY,
+  TANKER_ERROR_INTERNAL_ERROR,
+  TANKER_ERROR_CHUNK_NOT_FOUND,
+  TANKER_ERROR_INVALID_UNLOCK_PASSWORD,
+  TANKER_ERROR_INVALID_VERIFICATION_CODE,
+  TANKER_ERROR_UNLOCK_KEY_ALREADY_EXISTS,
+  TANKER_ERROR_MAX_VERIFICATION_ATTEMPTS_REACHED,
 
   TANKER_ERROR_LAST,
 };
@@ -51,9 +71,12 @@ enum tanker_status
 
 enum tanker_event
 {
-  TANKER_EVENT_WAITING_FOR_VALIDATION,
+  TANKER_EVENT_UNUSED1,
   TANKER_EVENT_SESSION_CLOSED,
-  TANKER_EVENT_DEVICE_CREATED
+  TANKER_EVENT_DEVICE_CREATED,
+  TANKER_EVENT_UNLOCK_REQUIRED,
+
+  TANKER_EVENT_LAST
 };
 
 typedef struct tanker_t tanker_t;
@@ -120,8 +143,12 @@ tanker_future_t* tanker_close(tanker_t* tanker);
 
 enum tanker_status tanker_get_status(tanker_t* tanker);
 
-tanker_future_t* tanker_accept_device(tanker_t* session,
-                                      const b64char* validation_code);
+tanker_future_t* tanker_setup_unlock(tanker_t* session,
+                                     char const* email,
+                                     char const* password);
+
+tanker_future_t* tanker_unlock_current_device_with_password(tanker_t* session,
+                                                            char const* pass);
 
 uint64_t tanker_encrypted_size(uint64_t clear_size);
 
@@ -150,3 +177,14 @@ tanker_future_t* tanker_share(tanker_t* session,
                               uint64_t nb_resourceIds);
 
 void tanker_free_buffer(void* buffer);
+
+tanker_future_t* tanker_admin_connect(char const* trustchain_url,
+                                      char const* id_token);
+
+tanker_future_t* tanker_admin_create_trustchain(tanker_admin_t* admin,
+                                                char const* name);
+
+tanker_future_t* tanker_admin_delete_trustchain(tanker_admin_t* admin,
+                                                char const* trustchain_id);
+
+void tanker_admin_trustchain_descriptor_free(tanker_trustchain_descriptor_t* trustchain);

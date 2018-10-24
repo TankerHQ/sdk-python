@@ -1,3 +1,3 @@
-from .tanker import Tanker, Status, Error
+from .tanker import Admin, Tanker, Status, Error
 
-Tanker, Status, Error
+Admin, Tanker, Status, Error

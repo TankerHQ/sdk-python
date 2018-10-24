@@ -26,14 +26,12 @@ def log_handler(category, level, message):
 
 
 @ffi.def_extern()
-def validation_callback(args, data):
+def verification_callback(args, data):
     tanker_instance = ffi.from_handle(data)
-    c_validation_code = ffi.cast("char*", args)
-    validation_code = ffi.string(c_validation_code)
-    if tanker_instance.on_waiting_for_validation:
-        tanker_instance.on_waiting_for_validation(validation_code)
+    if tanker_instance.on_unlock_required:
+        tanker_instance.on_unlock_required()
     else:
-        print("Warning: tanker.on_waiting_for_validation not set, .open will not return")
+        print("Warning: tanker.on_unlock_required not set, .open will not return")
 
 
 def c_fut_to_exception(c_fut):
@@ -65,6 +63,32 @@ def unwrap_expected(c_expected, c_type):
     return ffi.cast(c_type, p)
 
 
+async def handle_tanker_future(c_fut, handle_result=None):
+    fut = asyncio.Future()
+    loop = asyncio.get_event_loop()
+
+    @ffi.callback("void*(tanker_future_t*, void*)")
+    def then_callback(c_fut, p):
+        exception = c_fut_to_exception(c_fut)
+
+        async def set_result():
+            if exception:
+                fut.set_exception(exception)
+            else:
+                if handle_result:
+                    res = handle_result()
+                else:
+                    res = None
+                fut.set_result(res)
+
+        asyncio.run_coroutine_threadsafe(set_result(), loop)
+
+        return ffi.NULL
+
+    tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
+    return await fut
+
+
 class Status(Enum):
     CLOSED = 0
     OPEN = 1
@@ -74,7 +98,7 @@ class Status(Enum):
 
 
 class Tanker:
-    def __init__(self, *, trustchain_url="https://api.tanker.io",
+    def __init__(self, *, trustchain_url,
                  trustchain_id, trustchain_private_key,
                  writable_path):
         self.trustchain_id = trustchain_id
@@ -85,7 +109,8 @@ class Tanker:
         self._set_log_handler()
         self._create_tanker_obj()
         self._set_event_callbacks()
-        self.on_waiting_for_validation = None
+        self.on_unlock_required = None
+        self._verification_code = None
 
     def _set_log_handler(self):
         tankerlib.tanker_set_log_handler(tankerlib.log_handler)
@@ -118,46 +143,21 @@ class Tanker:
         self._userdata = userdata  # Must keep this alive
         c_future_connect = tankerlib.tanker_event_connect(
             self.c_tanker,
-            tankerlib.TANKER_EVENT_WAITING_FOR_VALIDATION,
-            tankerlib.validation_callback,
+            tankerlib.TANKER_EVENT_UNLOCK_REQUIRED,
+            tankerlib.verification_callback,
             self._userdata,
         )
         wait_fut_or_die(c_future_connect)
-
-    async def handle_tanker_future(self, c_fut, handle_result=None):
-        fut = asyncio.Future()
-        loop = asyncio.get_event_loop()
-
-        @ffi.callback("void*(tanker_future_t*, void*)")
-        def then_callback(c_fut, p):
-            exception = c_fut_to_exception(c_fut)
-
-            async def set_result():
-                if exception:
-                    fut.set_exception(exception)
-                else:
-                    if handle_result:
-                        res = handle_result()
-                    else:
-                        res = None
-                    fut.set_result(res)
-
-            asyncio.run_coroutine_threadsafe(set_result(), loop)
-
-            return ffi.NULL
-
-        tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
-        return await fut
 
     async def open(self, user_id, user_token):
         c_token = str_to_c(user_token)
         c_user_id = str_to_c(user_id)
         c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
-        await self.handle_tanker_future(c_open_fut)
+        await handle_tanker_future(c_open_fut)
 
     async def close(self):
         c_destroy_fut = tankerlib.tanker_destroy(self.c_tanker)
-        await self.handle_tanker_future(c_destroy_fut)
+        await handle_tanker_future(c_destroy_fut)
 
     async def encrypt(self, clear_data, *, share_with=None):
         if share_with:
@@ -190,7 +190,7 @@ class Tanker:
             res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
             return res[:]
 
-        return await self.handle_tanker_future(c_encrypt_fut, encrypt_cb)
+        return await handle_tanker_future(c_encrypt_fut, encrypt_cb)
 
     async def decrypt(self, encrypted_data):
         c_encrypted_buffer = encrypted_data
@@ -208,7 +208,7 @@ class Tanker:
         def decrypt_cb():
             return ffi.string(c_clear_buffer)
 
-        return await self.handle_tanker_future(c_decrypt_fut, decrypt_cb)
+        return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
 
     def generate_user_token(self, user_id):
         c_user_id = str_to_c(user_id)
@@ -221,16 +221,84 @@ class Tanker:
         c_token = unwrap_expected(c_expected, "char*")
         return ffi.string(c_token).decode()
 
-    async def accept_device(self, code):
-        c_code = bytes_to_c(code)
-        c_accept_fut = tankerlib.tanker_accept_device(
+    async def unlock_current_device_with_password(self, password):
+        c_pwd = str_to_c(password)
+        c_accept_fut = tankerlib.tanker_unlock_current_device_with_password(
             self.c_tanker,
-            c_code
+            c_pwd
         )
+        return await handle_tanker_future(c_accept_fut)
 
-        return await self.handle_tanker_future(c_accept_fut)
+    async def setup_unlock(self, password):
+        c_pwd = str_to_c(password)
+        c_setup_unlock_fut = tankerlib.tanker_setup_unlock(
+            self.c_tanker,
+            ffi.NULL,
+            c_pwd,
+            )
+        return await handle_tanker_future(c_setup_unlock_fut)
 
     @property
     def version(self):
         char_p = tankerlib.tanker_version_string()
         return ffi.string(char_p).decode()
+
+
+class Admin:
+
+    def __init__(self, url, token):
+        self.url = url
+        self.token = token
+        self._create_admin_obj()
+        self._c_trustchain = None
+
+    def _create_admin_obj(self):
+        c_url = str_to_c(self.url)
+        c_token = str_to_c(self.token)
+        admin_fut = tankerlib.tanker_admin_connect(c_url, c_token)
+        wait_fut_or_die(admin_fut)
+        p = tankerlib.tanker_future_get_voidptr(admin_fut)
+        self._c_admin = ffi.cast("tanker_admin_t*", p)
+        tankerlib.tanker_future_destroy(admin_fut)
+
+    def create_trustchain(self, name):
+        c_name = str_to_c(name)
+        trustchain_fut = tankerlib.tanker_admin_create_trustchain(self._c_admin, c_name)
+        wait_fut_or_die(trustchain_fut)
+        p = tankerlib.tanker_future_get_voidptr(trustchain_fut)
+        if self._c_trustchain is not None:
+            raise Error("Admin instance already has a trustchain")
+        self._c_trustchain = ffi.cast("tanker_trustchain_descriptor_t*", p)
+        tankerlib.tanker_future_destroy(trustchain_fut)
+
+    def delete_trustchain(self):
+        if self._c_trustchain is None:
+            raise Error("Admin instance does not have a trustchain yet")
+        delete_fut = tankerlib.tanker_admin_delete_trustchain(self._c_admin, self._c_trustchain.id)
+        wait_fut_or_die(delete_fut)
+        tankerlib.tanker_future_destroy(delete_fut)
+        tankerlib.tanker_admin_trustchain_descriptor_free(self._c_trustchain)
+        self._c_trustchain = None
+
+
+    def _get_trustchain_property(self, prop):
+        if self._c_trustchain is None:
+            raise Error("Admin instance does not have a trustchain yet")
+        attr = getattr(self._c_trustchain, prop)
+        return ffi.string(attr).decode()
+
+    @property
+    def trustchain_name(self):
+        return self._get_trustchain_property("name")
+
+    @property
+    def trustchain_public_key(self):
+        return self._get_trustchain_property("public_key")
+
+    @property
+    def trustchain_private_key(self):
+        return self._get_trustchain_property("private_key")
+
+    @property
+    def trustchain_id(self):
+        return self._get_trustchain_property("id")
