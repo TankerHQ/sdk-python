@@ -10,7 +10,7 @@ def get_long_description():
         return fp.read()
 
 
-setup(name="tanker",
+setup(name="tankersdk",
       version="1.8.0",
       description="End to end encryption",
       long_description=get_long_description(),
