@@ -1,0 +1,24 @@
+before_script:
+  - python3 -m pipenv install --deploy
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  except:
+    - schedules
+  tags:
+    - linux
+  script:
+    - python3 -m pipenv run python ci/check.py test
+
+deploy:
+  stage: deploy
+  when: manual
+  tags:
+    - LinuxSlave-1
+  script:
+    - python3 -m pipenv run python ci/check.py deploy
+
