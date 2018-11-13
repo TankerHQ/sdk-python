@@ -21,4 +21,3 @@ deploy:
     - LinuxSlave-1
   script:
     - python3 -m pipenv run python ci/check.py deploy
-
