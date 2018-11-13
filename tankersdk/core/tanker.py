@@ -161,18 +161,20 @@ class Tanker:
 
     async def encrypt(self, clear_data, *, share_with=None):
         if share_with:
-            nb_recipients = len(share_with)
+            nb_recipients_uids = len(share_with)
             c_ids = [str_to_c(x) for x in share_with]
             c_recipients_uids = ffi.new("char*[]", c_ids)
         else:
             c_recipients_uids = ffi.NULL
-            nb_recipients = 0
+            nb_recipients_uids = 0
         c_encrypt_options = ffi.new(
             "tanker_encrypt_options_t *",
             {
                 "version": 1,
                 "recipient_uids": c_recipients_uids,
-                "nb_recipients": nb_recipients
+                "nb_recipient_uids": nb_recipients_uids,
+                "recipient_gids": ffi.NULL,
+                "nb_recipient_gids": 0,
             }
         )
         c_clear_buffer = bytes_to_c(clear_data)
