@@ -46,7 +46,7 @@ def on_import():
     native_src_path = src_path.joinpath("Native")
     tanker_include_path = native_src_path.joinpath("modules/sdk-c/include")
     assert tanker_include_path.exists(), "%s does not exist" % tanker_include_path
-    libs = get_all_static_libs()
+    libs = list(get_all_static_libs())
 
     tanker_cffi_source = path.Path("cffi_src.c").text()
     ffibuilder.set_source(
