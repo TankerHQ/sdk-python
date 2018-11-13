@@ -1,5 +1,5 @@
 before_script:
-  - python3 -m pipenv install --deploy
+  - dmenv install
 
 stages:
   - build
@@ -12,7 +12,7 @@ build:
   tags:
     - linux
   script:
-    - python3 -m pipenv run python ci/check.py test
+    - dmenv run -- python run-ci.py test
 
 deploy:
   stage: deploy
@@ -20,4 +20,4 @@ deploy:
   tags:
     - LinuxSlave-1
   script:
-    - python3 -m pipenv run python ci/check.py deploy
+    - dmenv run -- python run-ci.py deploy
