@@ -105,6 +105,7 @@ class Tanker:
         self.trustchain_url = trustchain_url
         self.trustchain_private_key = trustchain_private_key
         self.writable_path = writable_path
+        self.user_id = None
 
         self._set_log_handler()
         self._create_tanker_obj()
@@ -154,6 +155,7 @@ class Tanker:
         c_user_id = str_to_c(user_id)
         c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
         await handle_tanker_future(c_open_fut)
+        self.user_id = user_id
 
     async def close(self):
         c_destroy_fut = tankerlib.tanker_destroy(self.c_tanker)
