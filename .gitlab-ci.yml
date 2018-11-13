@@ -1,5 +1,5 @@
 before_script:
-  - dmenv install
+  - dmenv install --no-develop
 
 stages:
   - build
