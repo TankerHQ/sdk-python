@@ -11,7 +11,7 @@ def get_long_description():
 
 
 setup(name="tankersdk",
-      version="1.8.0",
+      version="1.8.0.post1",
       description="End to end encryption",
       long_description=get_long_description(),
       url="https://tanker.io",
