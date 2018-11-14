@@ -35,9 +35,7 @@ def handle_request():
         trustchain_id = config["trustchainId"]
         trustchain_private_key = config["trustchainPrivateKey"]
         user_token = tankersdk.usertoken.generate_user_token(
-            trustchain_id,
-            trustchain_private_key,
-            user_id
+            trustchain_id, trustchain_private_key, user_id
         )
         db_path.write_text(user_token)
         return user_token

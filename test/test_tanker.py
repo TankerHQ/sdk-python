@@ -8,12 +8,14 @@ import pytest
 
 
 TRUSTCHAIN_URL = "https://dev-api.tanker.io"
-ID_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9." +\
-           "eyJpc3MiOiJodHRwczovL3Rhbmtlci1kYXNoYm9hcmQuZXUuYXV0aDAuY29tLyIsInN1YiI6" +\
-           "ImF1dGgwfDVhODMxOGZhM2FmZjczMTAxMzI0YWM2YSIsImF1ZCI6ImxlY0liTzVDNk5TTGdR" +\
-           "cHo4ZVVFRVpPMUpXbFB4ZUtKIiwiaWF0IjoxNTExNDUyMDIxLCJleHAiOjI1MzM3MDc2NDgw" +\
-           "MCwibm9uY2UiOiJCQWItek9lckp1d3E1U29hY0JhNUgycUlIWkZxSUZjNCJ9." +\
-           "zqVbGFssprvF40LZOtWcBp7onWEAdModBwu-jJO2q5M"
+ID_TOKEN = (
+    "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9."
+    + "eyJpc3MiOiJodHRwczovL3Rhbmtlci1kYXNoYm9hcmQuZXUuYXV0aDAuY29tLyIsInN1YiI6"
+    + "ImF1dGgwfDVhODMxOGZhM2FmZjczMTAxMzI0YWM2YSIsImF1ZCI6ImxlY0liTzVDNk5TTGdR"
+    + "cHo4ZVVFRVpPMUpXbFB4ZUtKIiwiaWF0IjoxNTExNDUyMDIxLCJleHAiOjI1MzM3MDc2NDgw"
+    + "MCwibm9uY2UiOiJCQWItek9lckp1d3E1U29hY0JhNUgycUlIWkZxSUZjNCJ9."
+    + "zqVbGFssprvF40LZOtWcBp7onWEAdModBwu-jJO2q5M"
+)
 
 
 @pytest.fixture()
@@ -23,10 +25,7 @@ def tmp_path(tmpdir):
 
 @pytest.fixture(scope="session")
 def trustchain():
-    admin = Admin(
-        url=TRUSTCHAIN_URL,
-        token=ID_TOKEN,
-    )
+    admin = Admin(url=TRUSTCHAIN_URL, token=ID_TOKEN)
     name = "python_bindings"
     admin.create_trustchain(name)
     yield admin
@@ -35,10 +34,7 @@ def trustchain():
 
 def test_create_trustchain():
     name = "python_bindings"
-    admin = Admin(
-        url=TRUSTCHAIN_URL,
-        token=ID_TOKEN,
-    )
+    admin = Admin(url=TRUSTCHAIN_URL, token=ID_TOKEN)
     admin.create_trustchain(name)
     assert admin.trustchain_name == name
     admin.delete_trustchain()
@@ -49,7 +45,7 @@ def test_init_tanker_ok(tmp_path, trustchain):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=trustchain.trustchain_id,
         trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=tmp_path
+        writable_path=tmp_path,
     )
     assert tanker.version
     assert tanker.trustchain_url == TRUSTCHAIN_URL
@@ -61,7 +57,7 @@ def test_init_tanker_invalid_id(tmp_path, trustchain):
             trustchain_url=TRUSTCHAIN_URL,
             trustchain_id="invalid bad 64",
             trustchain_private_key=trustchain.trustchain_private_key,
-            writable_path=tmp_path
+            writable_path=tmp_path,
         )
     assert "parse error" in e.value.args[0]
 
@@ -72,7 +68,7 @@ async def test_init_tanker_invalid_path(trustchain):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=trustchain.trustchain_id,
         trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path="/path/to/no-such"
+        writable_path="/path/to/no-such",
     )
     fake = Faker()
     user_id = fake.email()
@@ -123,7 +119,7 @@ async def create_user_session(tmp_path, trustchain):
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=trustchain.trustchain_id,
         trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=user_path
+        writable_path=user_path,
     )
     user_token = tanker.generate_user_token(user_id)
     await tanker.open(user_id, user_token)

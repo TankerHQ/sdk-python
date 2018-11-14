@@ -12,33 +12,22 @@ import ci.git
 def run_setup_py(src_path, *args):
     env = os.environ.copy()
     env["TANKER_NATIVE_BUILD_PATH"] = "../Native/build/gcc8/x86_64/Release"
-    ci.dmenv.run(
-        "python", "setup.py", *args,
-        env=env,
-        cwd=src_path
-    )
-
+    ci.dmenv.run("python", "setup.py", *args, env=env, cwd=src_path)
 
 
 def build(*, workspace, src):
     ci.git.prepare_sources(
-        workspace=workspace,
-        repos=["python", "Native"],
-        submodule=False,
-        clean=True,
-        )
+        workspace=workspace, repos=["python", "Native"], submodule=False, clean=True
+    )
     with workspace / "Native":
-        builder = ci.cpp.Builder(
-            profile="gcc8",
-            bindings=True,
-            coverage=False,
-        )
+        builder = ci.cpp.Builder(profile="gcc8", bindings=True, coverage=False)
         builder.install_deps()
         builder.build()
 
     python_src_path = workspace / "python"
     ci.dmenv.install(cwd=python_src_path, develop=False)
     run_setup_py(python_src_path, "develop")
+
 
 def test(*, cwd):
     ci.dmenv.run("pytest", "-s", cwd=cwd)

@@ -27,7 +27,7 @@ async def main():
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=TRUSTCHAIN_ID,
         trustchain_private_key=TRUSTCHAIN_PRIVATE_KEY,
-        writable_path=storage_path
+        writable_path=storage_path,
     )
     tanker.on_waiting_for_validation = on_waiting_for_validation
     token = tanker.generate_user_token(user_id)
