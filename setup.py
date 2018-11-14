@@ -11,15 +11,32 @@ def get_long_description():
 
 
 setup(name="tankersdk",
-      version="1.8.0",
+      version="1.8.0.post1",
       description="End to end encryption",
       long_description=get_long_description(),
       url="https://tanker.io",
       author="Kontrol SAS",
       packages=["tankersdk.core"],
-      setup_requires=["cffi>=1.0.0"],
+      setup_requires=[
+          "cffi>=1.0.0",
+          "path.py"
+      ],
       cffi_modules=["build_tanker.py:ffibuilder"],
-      install_requires=["cffi>=1.0.0"],
+      install_requires=[
+          "cffi==1.11.6",
+          "trio",
+          "sanic",
+          "path.py",
+      ],
+      extras_require={
+          "dev": [
+              "wheel",
+              "ci",
+              "pytest",
+              "faker",
+              "pytest-asyncio",
+          ]
+      },
       classifiers=[
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",

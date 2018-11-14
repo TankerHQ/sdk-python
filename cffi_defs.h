@@ -109,8 +109,10 @@ tanker_expected_t* tanker_generate_user_token(
 struct tanker_encrypt_options
 {
   uint8_t version;
-  const b64char* const* recipient_uids;
-  uint64_t nb_recipients;
+  b64char const* const* recipient_uids;
+  uint32_t nb_recipient_uids;
+  b64char const* const* recipient_gids;
+  uint32_t nb_recipient_gids;
 };
 
 struct tanker_decrypt_options
@@ -171,10 +173,12 @@ tanker_future_t* tanker_decrypt(tanker_t* session,
                                 tanker_decrypt_options_t const* options);
 
 tanker_future_t* tanker_share(tanker_t* session,
-                              const char* const* recipient_uids,
-                              uint64_t nb_recipients,
-                              const b64char* const* resource_ids,
-                              uint64_t nb_resourceIds);
+                              char const* const* recipient_uids,
+                              uint64_t nb_recipient_uids,
+                              char const* const* recipient_gids,
+                              uint64_t nb_recipient_gids,
+                              b64char const* const* resource_ids,
+                              uint64_t nb_resource_ids);
 
 void tanker_free_buffer(void* buffer);
 

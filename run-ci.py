@@ -4,40 +4,54 @@ import os
 from path import Path
 
 import ci
+import ci.cpp
+import ci.dmenv
+import ci.git
+
+
+def run_setup_py(src_path, *args):
+    env = os.environ.copy()
+    env["TANKER_NATIVE_BUILD_PATH"] = "../Native/build/gcc8/x86_64/Release"
+    ci.dmenv.run(
+        "python", "setup.py", *args,
+        env=env,
+        cwd=src_path
+    )
+
 
 
 def build(*, workspace, src):
-    ci.prepare_sources(
+    ci.git.prepare_sources(
         workspace=workspace,
         repos=["python", "Native"],
-        src=src,
         submodule=False,
         clean=True,
         )
-    cwd = workspace / "Native"
-    ci.pipenv_install(cwd=cwd)
-    ci.pipenv_run("python", "ci/cpp.py", "update-conan-config", "--platform", "linux", cwd=cwd)
-    ci.pipenv_run("python", "ci/cpp.py", "build-and-test", "--profile", "gcc8", "--bindings", cwd=cwd)
-    cwd = workspace / "python"
-    env = os.environ.copy()
-    env["TANKER_NATIVE_BUILD_PATH"] = "../Native/build/gcc8/x86_64/Release"
-    ci.pipenv_install(cwd=cwd)
-    ci.pipenv_run("python", "setup.py", "clean", "develop", cwd=cwd, env=env)
+    with workspace / "Native":
+        builder = ci.cpp.Builder(
+            profile="gcc8",
+            bindings=True,
+            coverage=False,
+        )
+        builder.install_deps()
+        builder.build()
 
+    python_src_path = workspace / "python"
+    ci.dmenv.install(cwd=python_src_path, develop=False)
+    run_setup_py(python_src_path, "develop")
 
 def test(*, cwd):
-    ci.pipenv_install("--dev", cwd=cwd)
-    ci.pipenv_run("pytest", "-s", cwd=cwd)
+    ci.dmenv.run("pytest", "-s", cwd=cwd)
 
 
 def deploy(*, cwd):
-    ci.pipenv_run("python", "setup.py", "bdist_wheel", cwd=cwd)
+    run_setup_py(cwd, "bdist_wheel")
     build_dir = cwd / "dist"
     wheels = build_dir.files("tankersdk-*.whl")
     if len(wheels) != 1:
         raise Exception("multiple wheels found: {}".format(wheels))
-    pypi_dir = Path("/opt/pypi")
-    Path(wheels[0]).copy(pypi_dir)
+    wheel = wheels[0]
+    ci.run("scp", wheel, "pypi@10.100.0.1:packages")
 
 
 def runner(steps):
