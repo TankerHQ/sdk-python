@@ -55,7 +55,7 @@ def on_import():
         libraries=["rt", "dl", "pthread", "stdc++"],
         extra_objects=libs,
         include_dirs=[tanker_include_path],
-        language='c++',
+        language="c++",
     )
 
     tanker_cffi_defs = path.Path("cffi_defs.h").text()

@@ -15,14 +15,37 @@ def str_to_c(text):
     return ffi.new("char[]", text.encode())
 
 
+# Note: ffi.string returns a 'bytes' object
+# despite its name, so let's wrap this
+# in a better name
+def c_to_bytes(c_data):
+    return ffi.string(c_data)
+
+
+def c_to_str(c_data, encoding="utf-8"):
+    as_bytes = c_to_bytes(c_data)
+    return as_bytes.decode(encoding=encoding)
+
+
 def bytes_to_c(buffer):
     return ffi.new("char[]", buffer)
+
+
+class CCharList:
+    def __init__(self, str_list):
+        self._clist = None
+        self.data = ffi.NULL
+        self.size = 0
+        if str_list:
+            self._clist = [str_to_c(x) for x in str_list]  # Keep this alive
+            self.data = ffi.new("char*[]", self._clist)
+            self.size = len(str_list)
 
 
 @ffi.def_extern()
 def log_handler(category, level, message):
     if os.environ.get("DEBUG"):
-        print(ffi.string(message).decode(), end="")
+        print(c_to_str(message))
 
 
 @ffi.def_extern()
@@ -37,7 +60,10 @@ def verification_callback(args, data):
 def c_fut_to_exception(c_fut):
     if tankerlib.tanker_future_has_error(c_fut):
         c_error = tankerlib.tanker_future_get_error(c_fut)
-        message = ffi.string(c_error.message).decode("latin-1")
+        # Error messages coming from C may contain invalid
+        # UTF-8 sequences, so use 'latin-1' as a "lossless"
+        # encoding:
+        message = c_to_str(c_error.message, encoding="latin-1")
         print("error", message)
         return Error(message)
 
@@ -98,9 +124,9 @@ class Status(Enum):
 
 
 class Tanker:
-    def __init__(self, *, trustchain_url,
-                 trustchain_id, trustchain_private_key,
-                 writable_path):
+    def __init__(
+        self, *, trustchain_url, trustchain_id, trustchain_private_key, writable_path
+    ):
         self.trustchain_id = trustchain_id
         self.trustchain_url = trustchain_url
         self.trustchain_private_key = trustchain_private_key
@@ -127,7 +153,7 @@ class Tanker:
                 "trustchain_id": c_trustchain_id,
                 "trustchain_url": c_trustchain_url,
                 "writable_path": c_writable_path,
-            }
+            },
         )
         create_fut = tankerlib.tanker_create(tanker_options)
         wait_fut_or_die(create_fut)
@@ -161,32 +187,21 @@ class Tanker:
         c_destroy_fut = tankerlib.tanker_destroy(self.c_tanker)
         await handle_tanker_future(c_destroy_fut)
 
-    async def encrypt(self, clear_data, *, share_with_users=None, share_with_groups=None):
-        if share_with_users:
-            nb_recipients_uids = len(share_with_users)
-            c_ids = [str_to_c(x) for x in share_with_users]
-            c_recipients_uids = ffi.new("char*[]", c_ids)
-        else:
-            c_recipients_uids = ffi.NULL
-            nb_recipients_uids = 0
-
-        if share_with_groups:
-            nb_recipients_gids = len(share_with_groups)
-            c_ids = [str_to_c(x) for x in share_with_groups]
-            c_recipients_gids = ffi.new("char*[]", c_ids)
-        else:
-            c_recipients_gids = ffi.NULL
-            nb_recipients_gids = 0
+    async def encrypt(
+        self, clear_data, *, share_with_users=None, share_with_groups=None
+    ):
+        user_list = CCharList(share_with_users)
+        group_list = CCharList(share_with_groups)
 
         c_encrypt_options = ffi.new(
             "tanker_encrypt_options_t *",
             {
                 "version": 1,
-                "recipient_uids": c_recipients_uids,
-                "nb_recipient_uids": nb_recipients_uids,
-                "recipient_gids": c_recipients_gids,
-                "nb_recipient_gids": nb_recipients_gids,
-            }
+                "recipient_uids": user_list.data,
+                "nb_recipient_uids": user_list.size,
+                "recipient_gids": group_list.data,
+                "nb_recipient_gids": group_list.size,
+            },
         )
         c_clear_buffer = bytes_to_c(clear_data)
         size = tankerlib.tanker_encrypted_size(len(c_clear_buffer))
@@ -207,7 +222,9 @@ class Tanker:
 
     async def decrypt(self, encrypted_data):
         c_encrypted_buffer = encrypted_data
-        c_expected_size = tankerlib.tanker_decrypted_size(c_encrypted_buffer, len(c_encrypted_buffer))
+        c_expected_size = tankerlib.tanker_decrypted_size(
+            c_encrypted_buffer, len(c_encrypted_buffer)
+        )
         c_size = unwrap_expected(c_expected_size, "uint64_t")
         c_clear_buffer = ffi.new("uint8_t[%i]" % c_size)
         c_decrypt_fut = tankerlib.tanker_decrypt(
@@ -215,75 +232,116 @@ class Tanker:
             c_clear_buffer,
             c_encrypted_buffer,
             len(c_encrypted_buffer),
-            ffi.NULL
+            ffi.NULL,
         )
 
         def decrypt_cb():
-            return ffi.string(c_clear_buffer)
+            return c_to_bytes(c_clear_buffer)
 
         return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
+
+    def get_resource_id(self, encrypted):
+        c_expected = tankerlib.tanker_get_resource_id(encrypted, len(encrypted))
+        c_id = unwrap_expected(c_expected, "char*")
+        return c_to_str(c_id)
+
+    async def share(self, resources, *, users=None, groups=None):
+        resource_list = CCharList(resources)
+        user_list = CCharList(users)
+        group_list = CCharList(groups)
+
+        await handle_tanker_future(
+            tankerlib.tanker_share(
+                self.c_tanker,
+                user_list.data,
+                user_list.size,
+                group_list.data,
+                group_list.size,
+                resource_list.data,
+                resource_list.size,
+            )
+        )
 
     def generate_user_token(self, user_id):
         c_user_id = str_to_c(user_id)
         c_trustchain_id = str_to_c(self.trustchain_id)
         c_trustchain_private_key = str_to_c(self.trustchain_private_key)
         c_expected = tankerlib.tanker_generate_user_token(
-            c_trustchain_id,
-            c_trustchain_private_key,
-            c_user_id)
+            c_trustchain_id, c_trustchain_private_key, c_user_id
+        )
         c_token = unwrap_expected(c_expected, "char*")
-        return ffi.string(c_token).decode()
+        return c_to_str(c_token)
 
     async def unlock_current_device_with_password(self, password):
         c_pwd = str_to_c(password)
         c_accept_fut = tankerlib.tanker_unlock_current_device_with_password(
-            self.c_tanker,
-            c_pwd
+            self.c_tanker, c_pwd
         )
         return await handle_tanker_future(c_accept_fut)
 
-    async def setup_unlock(self, password):
-        c_pwd = str_to_c(password)
-        c_setup_unlock_fut = tankerlib.tanker_setup_unlock(
-            self.c_tanker,
-            ffi.NULL,
-            c_pwd,
+    async def unlock(self, *, password=None, verification_code=None):
+        if password and verification_code:
+            raise ValueError("Can't unlock both with password and verification_code")
+
+        if password is None and verification_code is None:
+            raise ValueError("Either password or verification_code must be set")
+
+        if password:
+            c_pwd = str_to_c(password)
+            c_accept_fut = tankerlib.tanker_unlock_current_device_with_password(
+                self.c_tanker, c_pwd
             )
-        return await handle_tanker_future(c_setup_unlock_fut)
+        if verification_code:
+            c_verification_code = str_to_c(verification_code)
+            c_accept_fut = tankerlib.tanker_unlock_current_device_with_verification_code(
+                self.c_tanker, c_verification_code
+            )
+
+        return await handle_tanker_future(c_accept_fut)
+
+    async def register_unlock(self, *, password=None, email=None):
+        if password:
+            c_password = str_to_c(password)
+        else:
+            c_password = ffi.NULL
+        if email:
+            c_email = str_to_c(email)
+        else:
+            c_email = ffi.NULL
+        c_register_unlock_fut = tankerlib.tanker_register_unlock(
+            self.c_tanker, c_email, c_password
+        )
+        return await handle_tanker_future(c_register_unlock_fut)
 
     async def create_group(self, user_ids):
-        c_user_ids = [str_to_c(x) for x in user_ids]
-        nb_nembers = len(user_ids)
-        c_create_group_fut = tankerlib.tanker_create_group(self.c_tanker, c_user_ids, nb_nembers)
+        user_list = CCharList(user_ids)
+        c_create_group_fut = tankerlib.tanker_create_group(
+            self.c_tanker, user_list.data, user_list.size
+        )
 
         def create_group_cb():
             c_void = tankerlib.tanker_future_get_voidptr(c_create_group_fut)
             c_str = ffi.cast("char*", c_void)
-            return ffi.string(c_str).decode()
+            return c_to_str(c_str)
 
         return await handle_tanker_future(c_create_group_fut, create_group_cb)
 
-
     async def update_group_members(self, group_id, *, add=None):
-        if not add:
-            return
-
+        add_list = CCharList(add)
         c_group_id = str_to_c(group_id)
-        c_user_ids = [str_to_c(x) for x in add]
-        nb_nembers = len(add)
-        c_update_group_fut = tankerlib.tanker_update_group_members(self.c_tanker, c_group_id, c_user_ids, nb_nembers)
+        c_update_group_fut = tankerlib.tanker_update_group_members(
+            self.c_tanker, c_group_id, add_list.data, add_list.size
+        )
 
         await handle_tanker_future(c_update_group_fut)
 
-
     @property
     def version(self):
-        char_p = tankerlib.tanker_version_string()
-        return ffi.string(char_p).decode()
+        c_str = tankerlib.tanker_version_string()
+        return c_to_str(c_str)
 
 
 class Admin:
-
     def __init__(self, url, token):
         self.url = url
         self.token = token
@@ -312,18 +370,19 @@ class Admin:
     def delete_trustchain(self):
         if self._c_trustchain is None:
             raise Error("Admin instance does not have a trustchain yet")
-        delete_fut = tankerlib.tanker_admin_delete_trustchain(self._c_admin, self._c_trustchain.id)
+        delete_fut = tankerlib.tanker_admin_delete_trustchain(
+            self._c_admin, self._c_trustchain.id
+        )
         wait_fut_or_die(delete_fut)
         tankerlib.tanker_future_destroy(delete_fut)
         tankerlib.tanker_admin_trustchain_descriptor_free(self._c_trustchain)
         self._c_trustchain = None
 
-
     def _get_trustchain_property(self, prop):
         if self._c_trustchain is None:
             raise Error("Admin instance does not have a trustchain yet")
         attr = getattr(self._c_trustchain, prop)
-        return ffi.string(attr).decode()
+        return c_to_str(attr)
 
     @property
     def trustchain_name(self):
