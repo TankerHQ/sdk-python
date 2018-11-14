@@ -15,6 +15,18 @@ def str_to_c(text):
     return ffi.new("char[]", text.encode())
 
 
+# Note: ffi.string returns a 'bytes' object
+# despite its name, so let's wrap this
+# in a better name
+def c_to_bytes(c_data):
+    return ffi.string(c_data)
+
+
+def c_to_str(c_data, encoding="utf-8"):
+    as_bytes = c_to_bytes(c_data)
+    return as_bytes.decode(encoding=encoding)
+
+
 def bytes_to_c(buffer):
     return ffi.new("char[]", buffer)
 
@@ -33,7 +45,7 @@ class CCharList:
 @ffi.def_extern()
 def log_handler(category, level, message):
     if os.environ.get("DEBUG"):
-        print(ffi.string(message).decode(), end="")
+        print(c_to_str(message))
 
 
 @ffi.def_extern()
@@ -48,7 +60,10 @@ def verification_callback(args, data):
 def c_fut_to_exception(c_fut):
     if tankerlib.tanker_future_has_error(c_fut):
         c_error = tankerlib.tanker_future_get_error(c_fut)
-        message = ffi.string(c_error.message).decode("latin-1")
+        # Error messages coming from C may contain invalid
+        # UTF-8 sequences, so use 'latin-1' as a "lossless"
+        # encoding:
+        message = c_to_str(c_error.message, encoding="latin-1")
         print("error", message)
         return Error(message)
 
@@ -221,7 +236,7 @@ class Tanker:
         )
 
         def decrypt_cb():
-            return ffi.string(c_clear_buffer)
+            return c_to_bytes(c_clear_buffer)
 
         return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
 
@@ -233,7 +248,7 @@ class Tanker:
             c_trustchain_id, c_trustchain_private_key, c_user_id
         )
         c_token = unwrap_expected(c_expected, "char*")
-        return ffi.string(c_token).decode()
+        return c_to_str(c_token)
 
     async def unlock_current_device_with_password(self, password):
         c_pwd = str_to_c(password)
@@ -265,7 +280,7 @@ class Tanker:
         def create_group_cb():
             c_void = tankerlib.tanker_future_get_voidptr(c_create_group_fut)
             c_str = ffi.cast("char*", c_void)
-            return ffi.string(c_str).decode()
+            return c_to_str(c_str)
 
         return await handle_tanker_future(c_create_group_fut, create_group_cb)
 
@@ -280,8 +295,8 @@ class Tanker:
 
     @property
     def version(self):
-        char_p = tankerlib.tanker_version_string()
-        return ffi.string(char_p).decode()
+        c_str = tankerlib.tanker_version_string()
+        return c_to_str(c_str)
 
 
 class Admin:
@@ -325,7 +340,7 @@ class Admin:
         if self._c_trustchain is None:
             raise Error("Admin instance does not have a trustchain yet")
         attr = getattr(self._c_trustchain, prop)
-        return ffi.string(attr).decode()
+        return c_to_str(attr)
 
     @property
     def trustchain_name(self):
