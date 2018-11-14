@@ -241,7 +241,7 @@ async def test_add_device(tmp_path, trustchain):
     def on_unlock_required():
         async def cb():
             try:
-                await phone_tanker.unlock_current_device_with_password(password)
+                await phone_tanker.unlock(password=password)
             except Exception as e:
                 pytest.fail("unlock failed: %s" % e)
 
