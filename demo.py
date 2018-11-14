@@ -37,7 +37,7 @@ async def main():
         print("ok")
     else:
         print(encrypted, "!=", decrypted)
-    tanker.close()
+    await tanker.close()
 
 
 if __name__ == "__main__":
