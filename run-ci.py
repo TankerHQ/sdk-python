@@ -30,7 +30,7 @@ def build(*, workspace, src, profile):
 
 
 def test(*, cwd):
-    ci.dmenv.run("pytest", "-s", cwd=cwd)
+    ci.dmenv.run("pytest", "--verbose", "--capture=no", cwd=cwd)
 
 
 def deploy(*, cwd, profile):
