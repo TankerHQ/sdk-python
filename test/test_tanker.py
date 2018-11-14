@@ -114,58 +114,81 @@ async def test_open_bad_token(tmp_path, trustchain):
     await tanker.close()
 
 
-@pytest.mark.asyncio
-async def test_encrypt_decrypt(tmp_path, trustchain):
+async def create_user_session(tmp_path, trustchain):
     fake = Faker()
-    alice_id = fake.email()
-    alice_path = tmp_path.joinpath("alice")
-    alice_path.mkdir_p()
-    alice_tanker = Tanker(
+    user_id = fake.email()
+    user_path = tmp_path.joinpath("user")
+    user_path.mkdir_p()
+    tanker = Tanker(
         trustchain_url=TRUSTCHAIN_URL,
         trustchain_id=trustchain.trustchain_id,
         trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=alice_path
+        writable_path=user_path
     )
-    alice_token = alice_tanker.generate_user_token(alice_id)
-    await alice_tanker.open(alice_id, alice_token)
+    user_token = tanker.generate_user_token(user_id)
+    await tanker.open(user_id, user_token)
+    return tanker
+
+
+@pytest.mark.asyncio
+async def test_encrypt_decrypt(tmp_path, trustchain):
+    alice_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    encrypted_data = await alice_tanker.encrypt(message)
-    clear_data = await alice_tanker.decrypt(encrypted_data)
+    encrypted_data = await alice_session.encrypt(message)
+    clear_data = await alice_session.decrypt(encrypted_data)
     assert clear_data == message
-    await alice_tanker.close()
+    await alice_session.close()
 
 
 @pytest.mark.asyncio
 async def test_share(tmp_path, trustchain):
-    fake = Faker()
-    alice_id = fake.email()
-    alice_path = tmp_path.joinpath("alice")
-    alice_path.mkdir_p()
-    alice_tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=alice_path
-    )
-    alice_token = alice_tanker.generate_user_token(alice_id)
-    await alice_tanker.open(alice_id, alice_token)
-    bob_path = tmp_path.joinpath("bob")
-    bob_path.mkdir_p()
-    bob_tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=bob_path
-    )
-    bob_id = fake.email()
-    bob_token = bob_tanker.generate_user_token(bob_id)
-    await bob_tanker.open(bob_id, bob_token)
+    alice_session = await create_user_session(tmp_path, trustchain)
+    bob_session = await create_user_session(tmp_path, trustchain)
+    bob_id = bob_session.user_id
     message = b"I love you"
-    encrypted = await alice_tanker.encrypt(message, share_with=[bob_id])
-    decrypted = await bob_tanker.decrypt(encrypted)
+    encrypted = await alice_session.encrypt(message, share_with_users=[bob_id])
+    decrypted = await bob_session.decrypt(encrypted)
     assert decrypted == message
-    await alice_tanker.close()
-    await bob_tanker.close()
+    await alice_session.close()
+    await bob_session.close()
+
+
+async def check_share_works(alice_session, group_id, bob_session, charlie_session):
+    message = b"Hi, guys"
+    encrypted = await alice_session.encrypt(message, share_with_groups=[group_id])
+
+    decrypted = await charlie_session.decrypt(encrypted)
+    assert decrypted == message
+
+    decrypted = await bob_session.decrypt(encrypted)
+    assert decrypted == message
+
+
+@pytest.mark.asyncio
+async def test_create_group(tmp_path, trustchain):
+    alice_session = await create_user_session(tmp_path, trustchain)
+    bob_session = await create_user_session(tmp_path, trustchain)
+    bob_id = bob_session.user_id
+    charlie_session = await create_user_session(tmp_path, trustchain)
+    charlie_id = charlie_session.user_id
+
+    group_id = await alice_session.create_group([bob_id, charlie_id])
+    await check_share_works(alice_session, group_id, bob_session, charlie_session)
+
+
+@pytest.mark.asyncio
+async def test_update_group(tmp_path, trustchain):
+    alice_session = await create_user_session(tmp_path, trustchain)
+    alice_id = alice_session.user_id
+    bob_session = await create_user_session(tmp_path, trustchain)
+    bob_id = bob_session.user_id
+    charlie_session = await create_user_session(tmp_path, trustchain)
+    charlie_id = charlie_session.user_id
+
+    group_id = await alice_session.create_group([alice_id, bob_id])
+    await alice_session.update_group_members(group_id, add=[charlie_id])
+
+    await check_share_works(alice_session, group_id, bob_session, charlie_session)
 
 
 @pytest.mark.asyncio

@@ -161,22 +161,31 @@ class Tanker:
         c_destroy_fut = tankerlib.tanker_destroy(self.c_tanker)
         await handle_tanker_future(c_destroy_fut)
 
-    async def encrypt(self, clear_data, *, share_with=None):
-        if share_with:
-            nb_recipients_uids = len(share_with)
-            c_ids = [str_to_c(x) for x in share_with]
+    async def encrypt(self, clear_data, *, share_with_users=None, share_with_groups=None):
+        if share_with_users:
+            nb_recipients_uids = len(share_with_users)
+            c_ids = [str_to_c(x) for x in share_with_users]
             c_recipients_uids = ffi.new("char*[]", c_ids)
         else:
             c_recipients_uids = ffi.NULL
             nb_recipients_uids = 0
+
+        if share_with_groups:
+            nb_recipients_gids = len(share_with_groups)
+            c_ids = [str_to_c(x) for x in share_with_groups]
+            c_recipients_gids = ffi.new("char*[]", c_ids)
+        else:
+            c_recipients_gids = ffi.NULL
+            nb_recipients_gids = 0
+
         c_encrypt_options = ffi.new(
             "tanker_encrypt_options_t *",
             {
                 "version": 1,
                 "recipient_uids": c_recipients_uids,
                 "nb_recipient_uids": nb_recipients_uids,
-                "recipient_gids": ffi.NULL,
-                "nb_recipient_gids": 0,
+                "recipient_gids": c_recipients_gids,
+                "nb_recipient_gids": nb_recipients_gids,
             }
         )
         c_clear_buffer = bytes_to_c(clear_data)
@@ -241,6 +250,31 @@ class Tanker:
             c_pwd,
             )
         return await handle_tanker_future(c_setup_unlock_fut)
+
+    async def create_group(self, user_ids):
+        c_user_ids = [str_to_c(x) for x in user_ids]
+        nb_nembers = len(user_ids)
+        c_create_group_fut = tankerlib.tanker_create_group(self.c_tanker, c_user_ids, nb_nembers)
+
+        def create_group_cb():
+            c_void = tankerlib.tanker_future_get_voidptr(c_create_group_fut)
+            c_str = ffi.cast("char*", c_void)
+            return ffi.string(c_str).decode()
+
+        return await handle_tanker_future(c_create_group_fut, create_group_cb)
+
+
+    async def update_group_members(self, group_id, *, add=None):
+        if not add:
+            return
+
+        c_group_id = str_to_c(group_id)
+        c_user_ids = [str_to_c(x) for x in add]
+        nb_nembers = len(add)
+        c_update_group_fut = tankerlib.tanker_update_group_members(self.c_tanker, c_group_id, c_user_ids, nb_nembers)
+
+        await handle_tanker_future(c_update_group_fut)
+
 
     @property
     def version(self):
