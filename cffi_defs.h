@@ -145,9 +145,9 @@ tanker_future_t* tanker_close(tanker_t* tanker);
 
 enum tanker_status tanker_get_status(tanker_t* tanker);
 
-tanker_future_t* tanker_setup_unlock(tanker_t* session,
-                                     char const* email,
-                                     char const* password);
+tanker_future_t* tanker_register_unlock(tanker_t* session,
+                                        char const* new_email,
+                                        char const* new_password);
 
 tanker_future_t* tanker_unlock_current_device_with_password(tanker_t* session,
                                                             char const* pass);

@@ -242,12 +242,19 @@ class Tanker:
         )
         return await handle_tanker_future(c_accept_fut)
 
-    async def setup_unlock(self, password):
-        c_pwd = str_to_c(password)
-        c_setup_unlock_fut = tankerlib.tanker_setup_unlock(
-            self.c_tanker, ffi.NULL, c_pwd
+    async def register_unlock(self, *, password=None, email=None):
+        if password:
+            c_password = str_to_c(password)
+        else:
+            c_password = ffi.NULL
+        if email:
+            c_email = str_to_c(email)
+        else:
+            c_email = ffi.NULL
+        c_register_unlock_fut = tankerlib.tanker_register_unlock(
+            self.c_tanker, c_email, c_password
         )
-        return await handle_tanker_future(c_setup_unlock_fut)
+        return await handle_tanker_future(c_register_unlock_fut)
 
     async def create_group(self, user_ids):
         user_list = CCharList(user_ids)

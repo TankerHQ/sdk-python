@@ -202,7 +202,7 @@ async def test_add_device(tmp_path, trustchain):
     )
     alice_token = laptop_tanker.generate_user_token(alice_id)
     await laptop_tanker.open(alice_id, alice_token)
-    await laptop_tanker.setup_unlock(password)
+    await laptop_tanker.register_unlock(password=password)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
