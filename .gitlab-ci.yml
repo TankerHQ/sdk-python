@@ -5,19 +5,36 @@ stages:
   - build
   - deploy
 
-build:
+build/linux:
   stage: build
   except:
     - schedules
   tags:
     - linux
   script:
-    - dmenv run -- python run-ci.py test
+    - dmenv run -- python run-ci.py test --runner linux
 
-deploy:
+build/macos:
+  stage: build
+  except:
+    - schedules
+  tags:
+    - macos
+  script:
+    - dmenv run -- python run-ci.py test --runner macos
+
+deploy/linux:
   stage: deploy
   when: manual
   tags:
-    - LinuxSlave-1
+    - linux
   script:
-    - dmenv run -- python run-ci.py deploy
+    - dmenv run -- python run-ci.py deploy --runner linux
+
+deploy/macos:
+  stage: deploy
+  when: manual
+  tags:
+    - macos
+  script:
+    - dmenv run -- python run-ci.py deploy --runner macos

@@ -52,7 +52,7 @@ def on_import():
     ffibuilder.set_source(
         "_tanker",
         tanker_cffi_source,
-        libraries=["rt", "dl", "pthread", "stdc++"],
+        libraries=["dl", "pthread", "stdc++"],
         extra_objects=libs,
         include_dirs=[tanker_include_path],
         language="c++",
