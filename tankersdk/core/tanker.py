@@ -19,6 +19,17 @@ def bytes_to_c(buffer):
     return ffi.new("char[]", buffer)
 
 
+class CCharList:
+    def __init__(self, str_list):
+        self._clist = None
+        self.data = ffi.NULL
+        self.size = 0
+        if str_list:
+            self._clist = [str_to_c(x) for x in str_list] # Keep this alive
+            self.data = ffi.new("char*[]", self._clist)
+            self.size = len(str_list)
+
+
 @ffi.def_extern()
 def log_handler(category, level, message):
     if os.environ.get("DEBUG"):
@@ -162,30 +173,17 @@ class Tanker:
         await handle_tanker_future(c_destroy_fut)
 
     async def encrypt(self, clear_data, *, share_with_users=None, share_with_groups=None):
-        if share_with_users:
-            nb_recipients_uids = len(share_with_users)
-            c_ids = [str_to_c(x) for x in share_with_users]
-            c_recipients_uids = ffi.new("char*[]", c_ids)
-        else:
-            c_recipients_uids = ffi.NULL
-            nb_recipients_uids = 0
-
-        if share_with_groups:
-            nb_recipients_gids = len(share_with_groups)
-            c_ids = [str_to_c(x) for x in share_with_groups]
-            c_recipients_gids = ffi.new("char*[]", c_ids)
-        else:
-            c_recipients_gids = ffi.NULL
-            nb_recipients_gids = 0
+        user_list = CCharList(share_with_users)
+        group_list = CCharList(share_with_groups)
 
         c_encrypt_options = ffi.new(
             "tanker_encrypt_options_t *",
             {
                 "version": 1,
-                "recipient_uids": c_recipients_uids,
-                "nb_recipient_uids": nb_recipients_uids,
-                "recipient_gids": c_recipients_gids,
-                "nb_recipient_gids": nb_recipients_gids,
+                "recipient_uids": user_list.data,
+                "nb_recipient_uids": user_list.size,
+                "recipient_gids": group_list.data,
+                "nb_recipient_gids": group_list.size,
             }
         )
         c_clear_buffer = bytes_to_c(clear_data)
@@ -252,9 +250,8 @@ class Tanker:
         return await handle_tanker_future(c_setup_unlock_fut)
 
     async def create_group(self, user_ids):
-        c_user_ids = [str_to_c(x) for x in user_ids]
-        nb_nembers = len(user_ids)
-        c_create_group_fut = tankerlib.tanker_create_group(self.c_tanker, c_user_ids, nb_nembers)
+        user_list = CCharList(user_ids)
+        c_create_group_fut = tankerlib.tanker_create_group(self.c_tanker, user_list.data, user_list.size)
 
         def create_group_cb():
             c_void = tankerlib.tanker_future_get_voidptr(c_create_group_fut)
@@ -265,13 +262,9 @@ class Tanker:
 
 
     async def update_group_members(self, group_id, *, add=None):
-        if not add:
-            return
-
+        add_list = CCharList(add)
         c_group_id = str_to_c(group_id)
-        c_user_ids = [str_to_c(x) for x in add]
-        nb_nembers = len(add)
-        c_update_group_fut = tankerlib.tanker_update_group_members(self.c_tanker, c_group_id, c_user_ids, nb_nembers)
+        c_update_group_fut = tankerlib.tanker_update_group_members(self.c_tanker, c_group_id, add_list.data, add_list.size)
 
         await handle_tanker_future(c_update_group_fut)
 
