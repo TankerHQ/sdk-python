@@ -192,3 +192,13 @@ tanker_future_t* tanker_admin_delete_trustchain(tanker_admin_t* admin,
                                                 char const* trustchain_id);
 
 void tanker_admin_trustchain_descriptor_free(tanker_trustchain_descriptor_t* trustchain);
+
+
+tanker_future_t* tanker_create_group(tanker_t* session,
+                                     char const* const* member_uids,
+                                     uint64_t nb_members);
+
+tanker_future_t* tanker_update_group_members(tanker_t* session,
+                                             char const* group_id,
+                                             char const* const* users_to_add,
+                                             uint64_t nb_users_to_add);
