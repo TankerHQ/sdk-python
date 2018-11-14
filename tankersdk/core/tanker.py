@@ -240,6 +240,28 @@ class Tanker:
 
         return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
 
+    def get_resource_id(self, encrypted):
+        c_expected = tankerlib.tanker_get_resource_id(encrypted, len(encrypted))
+        c_id = unwrap_expected(c_expected, "char*")
+        return c_to_str(c_id)
+
+    async def share(self, resources, *, users=None, groups=None):
+        resource_list = CCharList(resources)
+        user_list = CCharList(users)
+        group_list = CCharList(groups)
+
+        await handle_tanker_future(
+            tankerlib.tanker_share(
+                self.c_tanker,
+                user_list.data,
+                user_list.size,
+                group_list.data,
+                group_list.size,
+                resource_list.data,
+                resource_list.size,
+            )
+        )
+
     def generate_user_token(self, user_id):
         c_user_id = str_to_c(user_id)
         c_trustchain_id = str_to_c(self.trustchain_id)

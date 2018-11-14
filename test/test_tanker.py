@@ -137,7 +137,7 @@ async def test_encrypt_decrypt(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_share(tmp_path, trustchain):
+async def test_share_during_encrypt(tmp_path, trustchain):
     alice_session = await create_user_session(tmp_path, trustchain)
     bob_session = await create_user_session(tmp_path, trustchain)
     bob_id = bob_session.user_id
@@ -149,7 +149,25 @@ async def test_share(tmp_path, trustchain):
     await bob_session.close()
 
 
-async def check_share_works(alice_session, group_id, bob_session, charlie_session):
+@pytest.mark.asyncio
+async def test_postponed_share(tmp_path, trustchain):
+    alice_session = await create_user_session(tmp_path, trustchain)
+    bob_session = await create_user_session(tmp_path, trustchain)
+    bob_id = bob_session.user_id
+    message = b"I love you"
+    encrypted = await alice_session.encrypt(message)
+    resource_id = alice_session.get_resource_id(encrypted)
+    await alice_session.share([resource_id], users=[bob_id])
+
+    decrypted = await bob_session.decrypt(encrypted)
+    assert decrypted == message
+    await alice_session.close()
+    await bob_session.close()
+
+
+async def check_share_to_group_works(
+    alice_session, group_id, bob_session, charlie_session
+):
     message = b"Hi, guys"
     encrypted = await alice_session.encrypt(message, share_with_groups=[group_id])
 
@@ -169,7 +187,9 @@ async def test_create_group(tmp_path, trustchain):
     charlie_id = charlie_session.user_id
 
     group_id = await alice_session.create_group([bob_id, charlie_id])
-    await check_share_works(alice_session, group_id, bob_session, charlie_session)
+    await check_share_to_group_works(
+        alice_session, group_id, bob_session, charlie_session
+    )
 
 
 @pytest.mark.asyncio
@@ -184,7 +204,9 @@ async def test_update_group(tmp_path, trustchain):
     group_id = await alice_session.create_group([alice_id, bob_id])
     await alice_session.update_group_members(group_id, add=[charlie_id])
 
-    await check_share_works(alice_session, group_id, bob_session, charlie_session)
+    await check_share_to_group_works(
+        alice_session, group_id, bob_session, charlie_session
+    )
 
 
 @pytest.mark.asyncio
