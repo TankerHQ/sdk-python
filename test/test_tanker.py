@@ -10,11 +10,11 @@ import pytest
 TRUSTCHAIN_URL = "https://dev-api.tanker.io"
 ID_TOKEN = (
     "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9."
-    + "eyJpc3MiOiJodHRwczovL3Rhbmtlci1kYXNoYm9hcmQuZXUuYXV0aDAuY29tLyIsInN1YiI6"
-    + "ImF1dGgwfDVhODMxOGZhM2FmZjczMTAxMzI0YWM2YSIsImF1ZCI6ImxlY0liTzVDNk5TTGdR"
-    + "cHo4ZVVFRVpPMUpXbFB4ZUtKIiwiaWF0IjoxNTExNDUyMDIxLCJleHAiOjI1MzM3MDc2NDgw"
-    + "MCwibm9uY2UiOiJCQWItek9lckp1d3E1U29hY0JhNUgycUlIWkZxSUZjNCJ9."
-    + "zqVbGFssprvF40LZOtWcBp7onWEAdModBwu-jJO2q5M"
+    "eyJpc3MiOiJodHRwczovL3Rhbmtlci1kYXNoYm9hcmQuZXUuYXV0aDAuY29tLyIsInN1YiI6"
+    "ImF1dGgwfDVhODMxOGZhM2FmZjczMTAxMzI0YWM2YSIsImF1ZCI6ImxlY0liTzVDNk5TTGdR"
+    "cHo4ZVVFRVpPMUpXbFB4ZUtKIiwiaWF0IjoxNTExNDUyMDIxLCJleHAiOjI1MzM3MDc2NDgw"
+    "MCwibm9uY2UiOiJCQWItek9lckp1d3E1U29hY0JhNUgycUlIWkZxSUZjNCJ9."
+    "zqVbGFssprvF40LZOtWcBp7onWEAdModBwu-jJO2q5M"
 )
 
 
