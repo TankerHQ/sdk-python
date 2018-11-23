@@ -10,11 +10,11 @@ import pytest
 TRUSTCHAIN_URL = "https://dev-api.tanker.io"
 ID_TOKEN = (
     "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9."
-    + "eyJpc3MiOiJodHRwczovL3Rhbmtlci1kYXNoYm9hcmQuZXUuYXV0aDAuY29tLyIsInN1YiI6"
-    + "ImF1dGgwfDVhODMxOGZhM2FmZjczMTAxMzI0YWM2YSIsImF1ZCI6ImxlY0liTzVDNk5TTGdR"
-    + "cHo4ZVVFRVpPMUpXbFB4ZUtKIiwiaWF0IjoxNTExNDUyMDIxLCJleHAiOjI1MzM3MDc2NDgw"
-    + "MCwibm9uY2UiOiJCQWItek9lckp1d3E1U29hY0JhNUgycUlIWkZxSUZjNCJ9."
-    + "zqVbGFssprvF40LZOtWcBp7onWEAdModBwu-jJO2q5M"
+    "eyJpc3MiOiJodHRwczovL3Rhbmtlci1kYXNoYm9hcmQuZXUuYXV0aDAuY29tLyIsInN1YiI6"
+    "ImF1dGgwfDVhODMxOGZhM2FmZjczMTAxMzI0YWM2YSIsImF1ZCI6ImxlY0liTzVDNk5TTGdR"
+    "cHo4ZVVFRVpPMUpXbFB4ZUtKIiwiaWF0IjoxNTExNDUyMDIxLCJleHAiOjI1MzM3MDc2NDgw"
+    "MCwibm9uY2UiOiJCQWItek9lckp1d3E1U29hY0JhNUgycUlIWkZxSUZjNCJ9."
+    "zqVbGFssprvF40LZOtWcBp7onWEAdModBwu-jJO2q5M"
 )
 
 
@@ -123,12 +123,12 @@ async def create_user_session(tmp_path, trustchain):
     )
     user_token = tanker.generate_user_token(user_id)
     await tanker.open(user_id, user_token)
-    return tanker
+    return user_id, tanker
 
 
 @pytest.mark.asyncio
 async def test_encrypt_decrypt(tmp_path, trustchain):
-    alice_session = await create_user_session(tmp_path, trustchain)
+    _, alice_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
     encrypted_data = await alice_session.encrypt(message)
     clear_data = await alice_session.decrypt(encrypted_data)
@@ -138,9 +138,8 @@ async def test_encrypt_decrypt(tmp_path, trustchain):
 
 @pytest.mark.asyncio
 async def test_share_during_encrypt(tmp_path, trustchain):
-    alice_session = await create_user_session(tmp_path, trustchain)
-    bob_session = await create_user_session(tmp_path, trustchain)
-    bob_id = bob_session.user_id
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
     encrypted = await alice_session.encrypt(message, share_with_users=[bob_id])
     decrypted = await bob_session.decrypt(encrypted)
@@ -151,9 +150,8 @@ async def test_share_during_encrypt(tmp_path, trustchain):
 
 @pytest.mark.asyncio
 async def test_postponed_share(tmp_path, trustchain):
-    alice_session = await create_user_session(tmp_path, trustchain)
-    bob_session = await create_user_session(tmp_path, trustchain)
-    bob_id = bob_session.user_id
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
     encrypted = await alice_session.encrypt(message)
     resource_id = alice_session.get_resource_id(encrypted)
@@ -180,11 +178,9 @@ async def check_share_to_group_works(
 
 @pytest.mark.asyncio
 async def test_create_group(tmp_path, trustchain):
-    alice_session = await create_user_session(tmp_path, trustchain)
-    bob_session = await create_user_session(tmp_path, trustchain)
-    bob_id = bob_session.user_id
-    charlie_session = await create_user_session(tmp_path, trustchain)
-    charlie_id = charlie_session.user_id
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
+    charlie_id, charlie_session = await create_user_session(tmp_path, trustchain)
 
     group_id = await alice_session.create_group([bob_id, charlie_id])
     await check_share_to_group_works(
@@ -194,12 +190,9 @@ async def test_create_group(tmp_path, trustchain):
 
 @pytest.mark.asyncio
 async def test_update_group(tmp_path, trustchain):
-    alice_session = await create_user_session(tmp_path, trustchain)
-    alice_id = alice_session.user_id
-    bob_session = await create_user_session(tmp_path, trustchain)
-    bob_id = bob_session.user_id
-    charlie_session = await create_user_session(tmp_path, trustchain)
-    charlie_id = charlie_session.user_id
+    alice_id, alice_session = await create_user_session(tmp_path, trustchain)
+    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
+    charlie_id, charlie_session = await create_user_session(tmp_path, trustchain)
 
     group_id = await alice_session.create_group([alice_id, bob_id])
     await alice_session.update_group_members(group_id, add=[charlie_id])
