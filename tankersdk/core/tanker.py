@@ -3,6 +3,8 @@ from enum import Enum
 import os
 
 
+__version__ = "1.9.0-alpha1"
+
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
