@@ -34,6 +34,12 @@ def bytes_to_c_string(buffer):
 
 
 class CCharList:
+    """ Helper to convert list of Python strings to a char*[] C array
+
+    >>> my_list = CCharList["foo", "bar"]
+    >>> my_list.data   # the char* array
+    >>> my_list.size   # its size
+    """
     def __init__(self, str_list):
         self._clist = None
         self.data = ffi.NULL
