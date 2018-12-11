@@ -7,8 +7,8 @@ Run the tests
 
 
 .. code-block:: console
-   # to be ran everytime code in ../Native or build_tanker.py changes:
-   $ TANKER_NATIVE_BUILD_PATH=../Native/build python setup.py clean develop
+   # to be ran everytime code in ../sdk-native or build_tanker.py changes:
+   $ TANKER_NATIVE_BUILD_PATH=../sdk-native/build python setup.py clean develop
 
    $ pytest -s
 

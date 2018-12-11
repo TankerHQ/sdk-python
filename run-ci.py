@@ -11,15 +11,15 @@ import ci.git
 
 def run_setup_py(src_path, profile, *args):
     env = os.environ.copy()
-    env["TANKER_NATIVE_BUILD_PATH"] = f"../Native/build/{profile}/x86_64/Release"
+    env["TANKER_NATIVE_BUILD_PATH"] = f"../sdk-native/build/{profile}/x86_64/Release"
     ci.dmenv.run("python", "setup.py", *args, env=env, cwd=src_path)
 
 
 def build(*, workspace, src, profile):
     ci.git.prepare_sources(
-        workspace=workspace, repos=["python", "Native"], submodule=False, clean=True
+        workspace=workspace, repos=["python", "sdk-native"], submodule=False, clean=True
     )
-    with workspace / "Native":
+    with workspace / "sdk-native":
         builder = ci.cpp.Builder(profile=profile, bindings=True, coverage=False)
         builder.install_deps()
         builder.build()
