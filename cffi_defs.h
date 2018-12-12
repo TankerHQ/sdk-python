@@ -97,6 +97,8 @@ struct tanker_options
   b64char const* trustchain_id;
   char const* trustchain_url;
   char const* writable_path;
+  char const* sdk_type;
+  char const* sdk_version;
 };
 
 

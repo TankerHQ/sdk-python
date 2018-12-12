@@ -18,6 +18,15 @@ ID_TOKEN = (
 )
 
 
+def create_tanker(trustchain_id, *, writable_path):
+    return Tanker(
+        trustchain_id,
+        trustchain_url=TRUSTCHAIN_URL,
+        sdk_type="test",
+        writable_path=writable_path,
+    )
+
+
 @pytest.fixture()
 def tmp_path(tmpdir):
     return path.Path(str(tmpdir))
@@ -27,52 +36,39 @@ def tmp_path(tmpdir):
 def trustchain():
     admin = Admin(url=TRUSTCHAIN_URL, token=ID_TOKEN)
     name = "python_bindings"
-    admin.create_trustchain(name)
-    yield admin
-    admin.delete_trustchain()
+    trustchain = admin.create_trustchain(name)
+    yield trustchain
+    admin.delete_trustchain(trustchain.id)
 
 
 def test_create_trustchain():
     name = "python_bindings"
     admin = Admin(url=TRUSTCHAIN_URL, token=ID_TOKEN)
-    admin.create_trustchain(name)
-    assert admin.trustchain_name == name
-    admin.delete_trustchain()
+    trustchain = admin.create_trustchain(name)
+    assert trustchain.name == name
+    admin.delete_trustchain(trustchain.id)
 
 
 def test_init_tanker_ok(tmp_path, trustchain):
-    tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=tmp_path,
-    )
+    tanker = create_tanker(trustchain_id=trustchain.id, writable_path=tmp_path)
     assert tanker.version
     assert tanker.trustchain_url == TRUSTCHAIN_URL
 
 
-def test_init_tanker_invalid_id(tmp_path, trustchain):
+def test_init_tanker_invalid_id(tmp_path):
     with pytest.raises(TankerError) as e:
-        Tanker(
-            trustchain_url=TRUSTCHAIN_URL,
-            trustchain_id="invalid bad 64",
-            trustchain_private_key=trustchain.trustchain_private_key,
-            writable_path=tmp_path,
-        )
+        create_tanker(trustchain_id="invalid bad 64", writable_path=tmp_path)
     assert "parse error" in e.value.args[0]
 
 
 @pytest.mark.asyncio
 async def test_init_tanker_invalid_path(trustchain):
-    tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path="/path/to/no-such",
+    tanker = create_tanker(
+        trustchain_id=trustchain.id, writable_path="/path/to/no-such"
     )
     fake = Faker()
     user_id = fake.email()
-    token = tanker.generate_user_token(user_id)
+    token = tanker.generate_user_token(trustchain.private_key, user_id)
     with pytest.raises(TankerError) as e:
         await tanker.open(user_id, token)
     print(e.value)
@@ -80,15 +76,10 @@ async def test_init_tanker_invalid_path(trustchain):
 
 @pytest.mark.asyncio
 async def test_open_new_account(tmp_path, trustchain):
-    tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=tmp_path,
-    )
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     fake = Faker()
     user_id = fake.email()
-    token = tanker.generate_user_token(user_id)
+    token = tanker.generate_user_token(trustchain.private_key, user_id)
     await tanker.open(user_id, token)
     assert tanker.status == TankerStatus.OPEN
     await tanker.close()
@@ -96,12 +87,7 @@ async def test_open_new_account(tmp_path, trustchain):
 
 @pytest.mark.asyncio
 async def test_open_bad_token(tmp_path, trustchain):
-    tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=tmp_path,
-    )
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     fake = Faker()
     user_id = fake.email()
     with pytest.raises(TankerError) as e:
@@ -115,13 +101,8 @@ async def create_user_session(tmp_path, trustchain):
     user_id = fake.email()
     user_path = tmp_path.joinpath("user")
     user_path.mkdir_p()
-    tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=user_path,
-    )
-    user_token = tanker.generate_user_token(user_id)
+    tanker = create_tanker(trustchain.id, writable_path=user_path)
+    user_token = tanker.generate_user_token(trustchain.private_key, user_id)
     await tanker.open(user_id, user_token)
     return user_id, tanker
 
@@ -209,25 +190,15 @@ async def test_add_device(tmp_path, trustchain):
     password = "plop"
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
-    laptop_tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=laptop_path,
-    )
-    alice_token = laptop_tanker.generate_user_token(alice_id)
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    alice_token = laptop_tanker.generate_user_token(trustchain.private_key, alice_id)
     await laptop_tanker.open(alice_id, alice_token)
     await laptop_tanker.register_unlock(password=password)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
 
-    phone_tanker = Tanker(
-        trustchain_url=TRUSTCHAIN_URL,
-        trustchain_id=trustchain.trustchain_id,
-        trustchain_private_key=trustchain.trustchain_private_key,
-        writable_path=phone_path,
-    )
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
 
     loop = asyncio.get_event_loop()
 

@@ -1,4 +1,5 @@
 import asyncio
+import attr
 from enum import Enum
 import os
 
@@ -40,6 +41,7 @@ class CCharList:
     >>> my_list.data   # the char* array
     >>> my_list.size   # its size
     """
+
     def __init__(self, str_list):
         self._clist = None
         self.data = ffi.NULL
@@ -130,11 +132,17 @@ class Status(Enum):
 
 class Tanker:
     def __init__(
-        self, *, trustchain_url, trustchain_id, trustchain_private_key, writable_path
+        self,
+        trustchain_id,
+        *,
+        trustchain_url="https://api.tanker.io",
+        sdk_type="client-python",
+        writable_path
     ):
+        self.sdk_type = sdk_type
+        self.sdk_version = __version__
         self.trustchain_id = trustchain_id
         self.trustchain_url = trustchain_url
-        self.trustchain_private_key = trustchain_private_key
         self.writable_path = writable_path
 
         self._set_log_handler()
@@ -149,13 +157,17 @@ class Tanker:
         c_trustchain_url = str_to_c_string(self.trustchain_url)
         c_trustchain_id = str_to_c_string(self.trustchain_id)
         c_writable_path = str_to_c_string(self.writable_path)
+        c_sdk_type = str_to_c_string(self.sdk_type)
+        c_sdk_version = str_to_c_string(__version__)
         tanker_options = ffi.new(
             "tanker_options_t *",
             {
-                "version": 1,
+                "version": 2,
                 "trustchain_id": c_trustchain_id,
                 "trustchain_url": c_trustchain_url,
                 "writable_path": c_writable_path,
+                "sdk_type": c_sdk_type,
+                "sdk_version": c_sdk_version,
             },
         )
         create_fut = tankerlib.tanker_create(tanker_options)
@@ -267,10 +279,10 @@ class Tanker:
             )
         )
 
-    def generate_user_token(self, user_id):
+    def generate_user_token(self, trustchain_private_key, user_id):
         c_user_id = str_to_c_string(user_id)
         c_trustchain_id = str_to_c_string(self.trustchain_id)
-        c_trustchain_private_key = str_to_c_string(self.trustchain_private_key)
+        c_trustchain_private_key = str_to_c_string(trustchain_private_key)
         c_expected = tankerlib.tanker_generate_user_token(
             c_trustchain_id, c_trustchain_private_key, c_user_id
         )
@@ -346,12 +358,19 @@ class Tanker:
         return c_string_to_str(c_str)
 
 
+@attr.s
+class Trustchain:
+    name = attr.ib()
+    id = attr.ib()
+    private_key = attr.ib()
+    public_key = attr.ib()
+
+
 class Admin:
     def __init__(self, url, token):
         self.url = url
         self.token = token
         self._create_admin_obj()
-        self._c_trustchain = None
 
     def _create_admin_obj(self):
         c_url = str_to_c_string(self.url)
@@ -367,40 +386,20 @@ class Admin:
         trustchain_fut = tankerlib.tanker_admin_create_trustchain(self._c_admin, c_name)
         wait_fut_or_raise(trustchain_fut)
         c_voidp = tankerlib.tanker_future_get_voidptr(trustchain_fut)
-        if self._c_trustchain is not None:
-            raise Error("Admin instance already has a trustchain")
-        self._c_trustchain = ffi.cast("tanker_trustchain_descriptor_t*", c_voidp)
+        c_trustchain = ffi.cast("tanker_trustchain_descriptor_t*", c_voidp)
+        trustchain = Trustchain(
+            name=name,
+            id=c_string_to_str(c_trustchain.id),
+            public_key=c_string_to_str(c_trustchain.public_key),
+            private_key=c_string_to_str(c_trustchain.private_key),
+        )
+        tankerlib.tanker_admin_trustchain_descriptor_free(c_trustchain)
         tankerlib.tanker_future_destroy(trustchain_fut)
+        return trustchain
 
-    def delete_trustchain(self):
-        if self._c_trustchain is None:
-            raise Error("Admin instance does not have a trustchain yet")
+    def delete_trustchain(self, trustchain_id):
         delete_fut = tankerlib.tanker_admin_delete_trustchain(
-            self._c_admin, self._c_trustchain.id
+            self._c_admin, str_to_c_string(trustchain_id)
         )
         wait_fut_or_raise(delete_fut)
         tankerlib.tanker_future_destroy(delete_fut)
-        tankerlib.tanker_admin_trustchain_descriptor_free(self._c_trustchain)
-        self._c_trustchain = None
-
-    def _get_trustchain_property(self, prop):
-        if self._c_trustchain is None:
-            raise Error("Admin instance does not have a trustchain yet")
-        attr = getattr(self._c_trustchain, prop)
-        return c_string_to_str(attr)
-
-    @property
-    def trustchain_name(self):
-        return self._get_trustchain_property("name")
-
-    @property
-    def trustchain_public_key(self):
-        return self._get_trustchain_property("public_key")
-
-    @property
-    def trustchain_private_key(self):
-        return self._get_trustchain_property("private_key")
-
-    @property
-    def trustchain_id(self):
-        return self._get_trustchain_property("id")
