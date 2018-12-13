@@ -230,14 +230,16 @@ async def test_add_device(tmp_path, trustchain):
 async def test_revoke_device(tmp_path, trustchain):
     laptop, phone = await create_two_devices(tmp_path, trustchain)
     laptop_id = await laptop.device_id()
-    laptop_revoked = False
+    laptop_revoked = asyncio.Event()
+    loop = asyncio.get_event_loop()
 
     def on_revoked():
-        nonlocal laptop_revoked
-        laptop_revoked = True
+        async def cb():
+            laptop_revoked.set()
+
+        asyncio.run_coroutine_threadsafe(cb(), loop)
 
     laptop.on_revoked = on_revoked
     await phone.revoke_device(laptop_id)
-    time.sleep(0.5)
-    assert laptop_revoked
+    await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
     assert laptop.status == TankerStatus.CLOSED
