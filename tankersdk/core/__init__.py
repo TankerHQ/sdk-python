@@ -1,3 +1,3 @@
-from .tanker import Admin, Tanker, Status, Error
-
-Admin, Tanker, Status, Error
+from .error import Error  # noqa
+from .tanker import Tanker, Status  # noqa
+from .admin import Admin # noqa
