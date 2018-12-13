@@ -11,7 +11,7 @@ def get_long_description():
 
 
 setup(name="tankersdk",
-      version="1.8.0.post1",
+      version="1.9.0.alpha1",
       description="End to end encryption",
       long_description=get_long_description(),
       url="https://tanker.io",
@@ -23,6 +23,7 @@ setup(name="tankersdk",
       ],
       cffi_modules=["build_tanker.py:ffibuilder"],
       install_requires=[
+          "attrs",
           "cffi==1.11.6",
           "trio",
           "sanic",

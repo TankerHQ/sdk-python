@@ -43,7 +43,7 @@ def get_all_static_libs():
 def on_import():
     this_path = path.Path(__file__).parent.abspath()
     src_path = this_path.parent
-    native_src_path = src_path.joinpath("Native")
+    native_src_path = src_path.joinpath("sdk-native")
     tanker_include_path = native_src_path.joinpath("modules/sdk-c/include")
     assert tanker_include_path.exists(), "%s does not exist" % tanker_include_path
     libs = list(get_all_static_libs())

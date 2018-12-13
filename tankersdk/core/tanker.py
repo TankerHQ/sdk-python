@@ -1,45 +1,21 @@
-import asyncio
 from enum import Enum
 import os
-
 
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
+from .ffi_helpers import (
+    str_to_c_string,
+    c_string_to_str,
+    c_string_to_bytes,
+    bytes_to_c_string,
+    CCharList,
+    wait_fut_or_raise,
+    unwrap_expected,
+    handle_tanker_future,
+)
 
-class Error(Exception):
-    pass
-
-
-def str_to_c_string(text):
-    return ffi.new("char[]", text.encode())
-
-
-# Note: ffi.string returns a 'bytes' object
-# despite its name, so let's wrap this
-# in a better name
-def c_string_to_bytes(c_data):
-    return ffi.string(c_data)
-
-
-def c_string_to_str(c_data, encoding="utf-8"):
-    as_bytes = c_string_to_bytes(c_data)
-    return as_bytes.decode(encoding=encoding)
-
-
-def bytes_to_c_string(buffer):
-    return ffi.new("char[]", buffer)
-
-
-class CCharList:
-    def __init__(self, str_list):
-        self._clist = None
-        self.data = ffi.NULL
-        self.size = 0
-        if str_list:
-            self._clist = [str_to_c_string(x) for x in str_list]  # Keep this alive
-            self.data = ffi.new("char*[]", self._clist)
-            self.size = len(str_list)
+__version__ = "1.9.0-alpha1"
 
 
 @ffi.def_extern()
@@ -57,59 +33,11 @@ def verification_callback(args, data):
         print("Warning: tanker.on_unlock_required not set, .open will not return")
 
 
-def c_fut_to_exception(c_fut):
-    if tankerlib.tanker_future_has_error(c_fut):
-        c_error = tankerlib.tanker_future_get_error(c_fut)
-        # Error messages coming from C may contain invalid
-        # UTF-8 sequences, so use 'latin-1' as a "lossless"
-        # encoding:
-        message = c_string_to_str(c_error.message, encoding="latin-1")
-        print("error", message)
-        return Error(message)
-
-
-def ensure_no_error(c_fut):
-    exception = c_fut_to_exception(c_fut)
-    if exception:
-        raise exception
-
-
-def wait_fut_or_raise(c_fut):
-    tankerlib.tanker_future_wait(c_fut)
-    ensure_no_error(c_fut)
-
-
-def unwrap_expected(c_expected, c_type):
-    c_as_future = ffi.cast("tanker_future_t*", c_expected)
-    ensure_no_error(c_as_future)
-    c_voidp = tankerlib.tanker_future_get_voidptr(c_as_future)
-    return ffi.cast(c_type, c_voidp)
-
-
-async def handle_tanker_future(c_fut, handle_result=None):
-    fut = asyncio.Future()
-    loop = asyncio.get_event_loop()
-
-    @ffi.callback("void*(tanker_future_t*, void*)")
-    def then_callback(c_fut, p):
-        exception = c_fut_to_exception(c_fut)
-
-        async def set_result():
-            if exception:
-                fut.set_exception(exception)
-            else:
-                if handle_result:
-                    res = handle_result()
-                else:
-                    res = None
-                fut.set_result(res)
-
-        asyncio.run_coroutine_threadsafe(set_result(), loop)
-
-        return ffi.NULL
-
-    tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
-    return await fut
+@ffi.def_extern()
+def revoke_callback(args, data):
+    tanker_instance = ffi.from_handle(data)
+    if tanker_instance.on_revoked:
+        tanker_instance.on_revoked()
 
 
 class Status(Enum):
@@ -122,17 +50,24 @@ class Status(Enum):
 
 class Tanker:
     def __init__(
-        self, *, trustchain_url, trustchain_id, trustchain_private_key, writable_path
+        self,
+        trustchain_id,
+        *,
+        trustchain_url="https://api.tanker.io",
+        sdk_type="client-python",
+        writable_path
     ):
+        self.sdk_type = sdk_type
+        self.sdk_version = __version__
         self.trustchain_id = trustchain_id
         self.trustchain_url = trustchain_url
-        self.trustchain_private_key = trustchain_private_key
         self.writable_path = writable_path
 
         self._set_log_handler()
         self._create_tanker_obj()
         self._set_event_callbacks()
         self.on_unlock_required = None
+        self.on_revoked = None
 
     def _set_log_handler(self):
         tankerlib.tanker_set_log_handler(tankerlib.log_handler)
@@ -141,13 +76,17 @@ class Tanker:
         c_trustchain_url = str_to_c_string(self.trustchain_url)
         c_trustchain_id = str_to_c_string(self.trustchain_id)
         c_writable_path = str_to_c_string(self.writable_path)
+        c_sdk_type = str_to_c_string(self.sdk_type)
+        c_sdk_version = str_to_c_string(__version__)
         tanker_options = ffi.new(
             "tanker_options_t *",
             {
-                "version": 1,
+                "version": 2,
                 "trustchain_id": c_trustchain_id,
                 "trustchain_url": c_trustchain_url,
                 "writable_path": c_writable_path,
+                "sdk_type": c_sdk_type,
+                "sdk_version": c_sdk_version,
             },
         )
         create_fut = tankerlib.tanker_create(tanker_options)
@@ -167,6 +106,13 @@ class Tanker:
             self.c_tanker,
             tankerlib.TANKER_EVENT_UNLOCK_REQUIRED,
             tankerlib.verification_callback,
+            self._userdata,
+        )
+        wait_fut_or_raise(c_future_connect)
+        c_future_connect = tankerlib.tanker_event_connect(
+            self.c_tanker,
+            tankerlib.TANKER_EVENT_DEVICE_REVOKED,
+            tankerlib.revoke_callback,
             self._userdata,
         )
         wait_fut_or_raise(c_future_connect)
@@ -237,6 +183,21 @@ class Tanker:
 
         return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
 
+    async def device_id(self):
+        c_device_fut = tankerlib.tanker_device_id(self.c_tanker)
+
+        def device_id_cb():
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_device_fut)
+            c_str = ffi.cast("char*", c_voidp)
+            return c_string_to_str(c_str)
+
+        return await handle_tanker_future(c_device_fut, device_id_cb)
+
+    async def revoke_device(self, device_id):
+        c_device_id = str_to_c_string(device_id)
+        c_revoke_fut = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
+        await handle_tanker_future(c_revoke_fut)
+
     def get_resource_id(self, encrypted):
         c_expected = tankerlib.tanker_get_resource_id(encrypted, len(encrypted))
         c_id = unwrap_expected(c_expected, "char*")
@@ -259,10 +220,10 @@ class Tanker:
             )
         )
 
-    def generate_user_token(self, user_id):
+    def generate_user_token(self, trustchain_private_key, user_id):
         c_user_id = str_to_c_string(user_id)
         c_trustchain_id = str_to_c_string(self.trustchain_id)
-        c_trustchain_private_key = str_to_c_string(self.trustchain_private_key)
+        c_trustchain_private_key = str_to_c_string(trustchain_private_key)
         c_expected = tankerlib.tanker_generate_user_token(
             c_trustchain_id, c_trustchain_private_key, c_user_id
         )
@@ -336,63 +297,3 @@ class Tanker:
     def version(self):
         c_str = tankerlib.tanker_version_string()
         return c_string_to_str(c_str)
-
-
-class Admin:
-    def __init__(self, url, token):
-        self.url = url
-        self.token = token
-        self._create_admin_obj()
-        self._c_trustchain = None
-
-    def _create_admin_obj(self):
-        c_url = str_to_c_string(self.url)
-        c_token = str_to_c_string(self.token)
-        admin_fut = tankerlib.tanker_admin_connect(c_url, c_token)
-        wait_fut_or_raise(admin_fut)
-        c_voidp = tankerlib.tanker_future_get_voidptr(admin_fut)
-        self._c_admin = ffi.cast("tanker_admin_t*", c_voidp)
-        tankerlib.tanker_future_destroy(admin_fut)
-
-    def create_trustchain(self, name):
-        c_name = str_to_c_string(name)
-        trustchain_fut = tankerlib.tanker_admin_create_trustchain(self._c_admin, c_name)
-        wait_fut_or_raise(trustchain_fut)
-        c_voidp = tankerlib.tanker_future_get_voidptr(trustchain_fut)
-        if self._c_trustchain is not None:
-            raise Error("Admin instance already has a trustchain")
-        self._c_trustchain = ffi.cast("tanker_trustchain_descriptor_t*", c_voidp)
-        tankerlib.tanker_future_destroy(trustchain_fut)
-
-    def delete_trustchain(self):
-        if self._c_trustchain is None:
-            raise Error("Admin instance does not have a trustchain yet")
-        delete_fut = tankerlib.tanker_admin_delete_trustchain(
-            self._c_admin, self._c_trustchain.id
-        )
-        wait_fut_or_raise(delete_fut)
-        tankerlib.tanker_future_destroy(delete_fut)
-        tankerlib.tanker_admin_trustchain_descriptor_free(self._c_trustchain)
-        self._c_trustchain = None
-
-    def _get_trustchain_property(self, prop):
-        if self._c_trustchain is None:
-            raise Error("Admin instance does not have a trustchain yet")
-        attr = getattr(self._c_trustchain, prop)
-        return c_string_to_str(attr)
-
-    @property
-    def trustchain_name(self):
-        return self._get_trustchain_property("name")
-
-    @property
-    def trustchain_public_key(self):
-        return self._get_trustchain_property("public_key")
-
-    @property
-    def trustchain_private_key(self):
-        return self._get_trustchain_property("private_key")
-
-    @property
-    def trustchain_id(self):
-        return self._get_trustchain_property("id")
