@@ -1,4 +1,3 @@
-import attr
 from enum import Enum
 import os
 
@@ -34,6 +33,13 @@ def verification_callback(args, data):
         print("Warning: tanker.on_unlock_required not set, .open will not return")
 
 
+@ffi.def_extern()
+def revoke_callback(args, data):
+    tanker_instance = ffi.from_handle(data)
+    if tanker_instance.on_revoked:
+        tanker_instance.on_revoked()
+
+
 class Status(Enum):
     CLOSED = 0
     OPEN = 1
@@ -61,6 +67,7 @@ class Tanker:
         self._create_tanker_obj()
         self._set_event_callbacks()
         self.on_unlock_required = None
+        self.on_revoked = None
 
     def _set_log_handler(self):
         tankerlib.tanker_set_log_handler(tankerlib.log_handler)
@@ -99,6 +106,13 @@ class Tanker:
             self.c_tanker,
             tankerlib.TANKER_EVENT_UNLOCK_REQUIRED,
             tankerlib.verification_callback,
+            self._userdata,
+        )
+        wait_fut_or_raise(c_future_connect)
+        c_future_connect = tankerlib.tanker_event_connect(
+            self.c_tanker,
+            tankerlib.TANKER_EVENT_DEVICE_REVOKED,
+            tankerlib.revoke_callback,
             self._userdata,
         )
         wait_fut_or_raise(c_future_connect)
@@ -168,6 +182,21 @@ class Tanker:
             return c_string_to_bytes(c_clear_buffer)
 
         return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
+
+    async def device_id(self):
+        c_device_fut = tankerlib.tanker_device_id(self.c_tanker)
+
+        def device_id_cb():
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_device_fut)
+            c_str = ffi.cast("char*", c_voidp)
+            return c_string_to_str(c_str)
+
+        return await handle_tanker_future(c_device_fut, device_id_cb)
+
+    async def revoke_device(self, device_id):
+        c_device_id = str_to_c_string(device_id)
+        c_revoke_fut = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
+        await handle_tanker_future(c_revoke_fut)
 
     def get_resource_id(self, encrypted):
         c_expected = tankerlib.tanker_get_resource_id(encrypted, len(encrypted))

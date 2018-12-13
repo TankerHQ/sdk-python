@@ -1,4 +1,5 @@
 import asyncio
+import time
 from tankersdk.core import Admin, Tanker, Status as TankerStatus, Error as TankerError
 
 import path
@@ -82,6 +83,8 @@ async def test_open_new_account(tmp_path, trustchain):
     token = tanker.generate_user_token(trustchain.private_key, user_id)
     await tanker.open(user_id, token)
     assert tanker.status == TankerStatus.OPEN
+    device_id = await tanker.device_id()
+    assert device_id
     await tanker.close()
 
 
@@ -183,8 +186,7 @@ async def test_update_group(tmp_path, trustchain):
     )
 
 
-@pytest.mark.asyncio
-async def test_add_device(tmp_path, trustchain):
+async def create_two_devices(tmp_path, trustchain):
     fake = Faker()
     alice_id = fake.email()
     password = "plop"
@@ -212,8 +214,30 @@ async def test_add_device(tmp_path, trustchain):
         asyncio.run_coroutine_threadsafe(cb(), loop)
 
     phone_tanker.on_unlock_required = on_unlock_required
-
     await phone_tanker.open(alice_id, alice_token)
-    assert phone_tanker.status == TankerStatus.OPEN
-    await laptop_tanker.close()
-    await phone_tanker.close()
+    return laptop_tanker, phone_tanker
+
+
+@pytest.mark.asyncio
+async def test_add_device(tmp_path, trustchain):
+    laptop, phone = await create_two_devices(tmp_path, trustchain)
+    assert phone.status == TankerStatus.OPEN
+    await laptop.close()
+    await phone.close()
+
+
+@pytest.mark.asyncio
+async def test_revoke_device(tmp_path, trustchain):
+    laptop, phone = await create_two_devices(tmp_path, trustchain)
+    laptop_id = await laptop.device_id()
+    laptop_revoked = False
+
+    def on_revoked():
+        nonlocal laptop_revoked
+        laptop_revoked = True
+
+    laptop.on_revoked = on_revoked
+    await phone.revoke_device(laptop_id)
+    time.sleep(0.5)
+    assert laptop_revoked
+    assert laptop.status == TankerStatus.CLOSED

@@ -14,6 +14,7 @@ typedef struct tanker_trustchain_descriptor
 
 extern "Python" void log_handler(const char* category, char level, const char* message);
 extern "Python" void verification_callback(void* arg, void* data);
+extern "Python" void revoke_callback(void* arg, void* data);
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
 void tanker_future_wait(tanker_future_t* future);
@@ -75,8 +76,10 @@ enum tanker_event
   TANKER_EVENT_SESSION_CLOSED,
   TANKER_EVENT_DEVICE_CREATED,
   TANKER_EVENT_UNLOCK_REQUIRED,
+  TANKER_EVENT_DEVICE_REVOKED,
 
-  TANKER_EVENT_LAST
+  TANKER_EVENT_LAST = TANKER_EVENT_DEVICE_REVOKED
+
 };
 
 typedef struct tanker_t tanker_t;
@@ -147,12 +150,17 @@ tanker_future_t* tanker_close(tanker_t* tanker);
 
 enum tanker_status tanker_get_status(tanker_t* tanker);
 
+tanker_future_t* tanker_device_id(tanker_t* session);
+
 tanker_future_t* tanker_register_unlock(tanker_t* session,
                                         char const* new_email,
                                         char const* new_password);
 
 tanker_future_t* tanker_unlock_current_device_with_password(tanker_t* session,
                                                             char const* pass);
+
+tanker_future_t* tanker_revoke_device(tanker_t* session,
+                                      b64char const* device_id);
 
 uint64_t tanker_encrypted_size(uint64_t clear_size);
 
