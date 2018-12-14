@@ -22,7 +22,7 @@ setup(
     cffi_modules=["build_tanker.py:ffibuilder"],
     install_requires=["attrs", "cffi==1.11.5-tanker1", "trio", "path.py"],
     extras_require={
-        "dev": ["wheel", "ci", "pytest", "faker", "pytest-asyncio", "mypy"]
+        "dev": ["wheel", "ci", "black", "pytest", "faker", "pytest-asyncio", "flake8", "mypy"]
     },
     classifiers=[
         "Programming Language :: Python :: 3.3",
