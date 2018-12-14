@@ -1,35 +1,54 @@
-from typing import Dict
+from typing import Any, Dict
 import argparse
 import asyncio
 import json
+import requests
+import sys
 
 from path import Path
 from tankersdk.core import Tanker
+
+
+SERVER_URL = "http://127.0.0.1:8080"
 
 
 def load_config(cfg_path: Path) -> Dict[str, str]:
     return json.loads(cfg_path.text())  # type: ignore
 
 
+def do_request(method: str, segment: str, **kwargs: Any) -> requests.Response:
+    return requests.request(method, f"{SERVER_URL}/{segment}", **kwargs)
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("user_id")
-    parser.add_argument("-c", "--config", required=True, type=Path)
-    parser.add_argument("--storage-path", default="")
+    parser.add_argument("email")
+    parser.add_argument("--signup", action="store_true")
+    parser.add_argument("--password", required=True)
     args = parser.parse_args()
-    user_id = args.user_id
-    storage_path = args.storage_path
-    trustchain_config = load_config(args.config)
+    email = args.email
+    password = args.password
+    signup = args.signup
 
+    storage_path = Path("~/.local/share/tanker").expanduser() / email
+    storage_path.makedirs_p()
+
+    config = do_request("get", "config").json()
     tanker = Tanker(
-        trustchain_config["trustchainId"],
-        trustchain_url=trustchain_config.get("url"),
-        writable_path=storage_path,
-    )
-    token = tanker.generate_user_token(
-        trustchain_config["trustchainPrivateKey"], user_id
+        config["trustchainId"], trustchain_url=config["url"], writable_path=storage_path
     )
 
+    if signup:
+        res = do_request("post", "signup", json={"email": email, "password": password})
+        if not res.ok:
+            sys.exit(f"Could not signup: {res.text}")
+    else:
+        res = do_request("post", "login", json={"email": email, "password": password})
+        if not res.ok:
+            sys.exit(f"Could not login: {res.text}")
+
+    token = res.json()["token"]
+    user_id = res.json()["id"]
     await tanker.open(user_id, token)
 
     message = b"I love you"
