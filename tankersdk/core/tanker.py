@@ -75,7 +75,7 @@ class Tanker:
         self._create_tanker_obj()
         self._set_event_callbacks()
         self.on_unlock_required = None  # type: Optional[UnlockFunc]
-        self.on_revoked = None  #  type: Optional[RevokeFunc]
+        self.on_revoked = None  # type: Optional[RevokeFunc]
 
     def _set_log_handler(self) -> None:
         tankerlib.tanker_set_log_handler(tankerlib.log_handler)
