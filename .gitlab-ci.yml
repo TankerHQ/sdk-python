@@ -26,6 +26,8 @@ build/macos:
 deploy/linux:
   stage: deploy
   when: manual
+  only:
+    - tags
   tags:
     - linux
   script:
@@ -34,6 +36,8 @@ deploy/linux:
 deploy/macos:
   stage: deploy
   when: manual
+  only:
+    - tags
   tags:
     - macos
   script:
