@@ -24,7 +24,7 @@ setup(name="tankersdk",
       cffi_modules=["build_tanker.py:ffibuilder"],
       install_requires=[
           "attrs",
-          "cffi==1.11.6",
+          "cffi==1.11.5-tanker1",
           "trio",
           "path.py",
       ],
