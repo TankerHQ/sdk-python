@@ -26,7 +26,6 @@ setup(name="tankersdk",
           "attrs",
           "cffi==1.11.6",
           "trio",
-          "sanic",
           "path.py",
       ],
       extras_require={
