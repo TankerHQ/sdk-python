@@ -23,4 +23,7 @@ message_template = "Bump to {new_version}"
 tag_template = "v{new_version}"
 
 [[file]]
+src = "setup.py"
+
+[[file]]
 src = "tankersdk/core/tanker.py"
