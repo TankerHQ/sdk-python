@@ -1,3 +1,4 @@
+from typing import Dict
 import argparse
 import asyncio
 import json
@@ -6,11 +7,11 @@ from path import Path
 from tankersdk.core import Tanker
 
 
-def load_config(cfg_path):
-    return json.loads(cfg_path.text())
+def load_config(cfg_path: Path) -> Dict[str, str]:
+    return json.loads(cfg_path.text())  # type: ignore
 
 
-async def main():
+async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("user_id")
     parser.add_argument("-c", "--config", required=True, type=Path)
@@ -21,12 +22,13 @@ async def main():
     trustchain_config = load_config(args.config)
 
     tanker = Tanker(
+        trustchain_config["trustchainId"],
         trustchain_url=trustchain_config.get("url"),
-        trustchain_id=trustchain_config["trustchainId"],
-        trustchain_private_key=trustchain_config["trustchainPrivateKey"],
         writable_path=storage_path,
     )
-    token = tanker.generate_user_token(user_id)
+    token = tanker.generate_user_token(
+        trustchain_config["trustchainPrivateKey"], user_id
+    )
 
     await tanker.open(user_id, token)
 

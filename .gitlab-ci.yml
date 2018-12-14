@@ -12,7 +12,7 @@ build/linux:
   tags:
     - linux
   script:
-    - dmenv run -- python run-ci.py test --runner linux
+    - dmenv run -- python run-ci.py check --runner linux
 
 build/macos:
   stage: build
@@ -21,7 +21,7 @@ build/macos:
   tags:
     - macos
   script:
-    - dmenv run -- python run-ci.py test --runner macos
+    - dmenv run -- python run-ci.py check --runner macos
 
 deploy/linux:
   stage: deploy
