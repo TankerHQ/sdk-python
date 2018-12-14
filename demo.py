@@ -20,16 +20,7 @@ def do_request(method: str, segment: str, **kwargs: Any) -> requests.Response:
     return requests.request(method, f"{SERVER_URL}/{segment}", **kwargs)
 
 
-async def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("email")
-    parser.add_argument("--signup", action="store_true")
-    parser.add_argument("--password", required=True)
-    args = parser.parse_args()
-    email = args.email
-    password = args.password
-    signup = args.signup
-
+async def open_session(email: str, password: str, signup: bool = False) -> Tanker:
     storage_path = Path("~/.local/share/tanker").expanduser() / email
     storage_path.makedirs_p()
 
@@ -50,15 +41,50 @@ async def main() -> None:
     token = res.json()["token"]
     user_id = res.json()["id"]
     await tanker.open(user_id, token)
+    return tanker
 
-    message = b"I love you"
-    encrypted = await tanker.encrypt(message)
-    decrypted = await tanker.decrypt(encrypted)
 
-    if message == decrypted:
-        print("ok")
-    else:
-        print(encrypted, "!=", decrypted)
+async def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("email")
+    parser.add_argument("--signup", action="store_true")
+    parser.add_argument("--password", required=True)
+
+    subparsers = parser.add_subparsers(title="subcommands", dest="command")
+    encrypt_parser = subparsers.add_parser("encrypt")
+    encrypt_parser.add_argument("-o", "--output", required=True)
+
+    decrypt_parser = subparsers.add_parser("decrypt")
+    decrypt_parser.add_argument("input")
+
+    args = parser.parse_args()
+    email = args.email
+    password = args.password
+    signup = args.signup
+    command = args.command
+
+    if not command:
+        parser.print_help()
+        sys.exit(1)
+
+    print("Opening session ...")
+    tanker = await open_session(email, password=password, signup=signup)
+    print("Done!")
+
+    if args.command == "encrypt":
+        message = input("Please enter your message below:\n")
+        input_bytes = message.encode()
+        encrypted = await tanker.encrypt(input_bytes)
+        output_path = Path(args.output)
+        output_path.write_bytes(encrypted)
+        print("Encrypted data written to", output_path)
+    elif args.command == "decrypt":
+        print("Decryting", args.input, "...")
+        input_path = Path(args.input)
+        encrypted = input_path.bytes()
+        clear = await tanker.decrypt(encrypted)
+        print(clear.decode())
+
     await tanker.close()
 
 
