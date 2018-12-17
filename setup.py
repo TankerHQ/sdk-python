@@ -10,19 +10,34 @@ def get_long_description() -> str:
         return fp.read()
 
 
+if sys.platform == "win32":
+    cffi_modules = list()
+else:
+    cffi_modules = ["build_tanker.py:ffibuilder"]
+
+
 setup(
     name="tankersdk",
-    version="1.9.0b2",
+    version="dev",
     description="End to end encryption",
     long_description=get_long_description(),
     url="https://tanker.io",
     author="Kontrol SAS",
     packages=["tankersdk.core"],
     setup_requires=["cffi>=1.0.0", "path.py"],
-    cffi_modules=["build_tanker.py:ffibuilder"],
+    cffi_modules=cffi_modules,
     install_requires=["attrs", "cffi==1.11.5-tanker1", "trio", "path.py"],
     extras_require={
-        "dev": ["wheel", "ci", "black", "pytest", "faker", "pytest-asyncio", "flake8", "mypy"]
+        "dev": [
+            "wheel",
+            "ci",
+            "black",
+            "pytest",
+            "faker",
+            "pytest-asyncio",
+            "flake8",
+            "mypy",
+        ]
     },
     classifiers=[
         "Programming Language :: Python :: 3.3",

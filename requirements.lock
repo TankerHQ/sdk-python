@@ -1,5 +1,5 @@
 # Generated with dmenv 0.7.0, python 3.6.7, on Linux
-git+ssh://git@10.100.0.1/Tanker/ci@1ed01827371f4bbcd0f58ebc04a8cb009d9145a7#egg=ci
+git+ssh://git@10.100.0.1/Tanker/ci@967a99ca55c5f0d35caab4d22eafa129f351e07b#egg=ci
 astroid==2.1.0
 async-generator==1.10
 atomicwrites==1.2.1
@@ -62,3 +62,4 @@ typed-ast==1.1.0
 Unidecode==1.0.23
 urllib3==1.24.1
 wrapt==1.10.11
+wheel==0.32.3

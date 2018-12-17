@@ -2,26 +2,26 @@ before_script:
   - dmenv install --no-develop
 
 stages:
-  - build
+  - check
   - deploy
 
-build/linux:
-  stage: build
+check/linux:
+  stage: check
   except:
     - schedules
   tags:
     - linux
   script:
-    - dmenv run -- python run-ci.py check --runner linux
+    - dmenv run -- python run-ci.py check --profile gcc8
 
-build/macos:
-  stage: build
+check/macos:
+  stage: check
   except:
     - schedules
   tags:
     - macos
   script:
-    - dmenv run -- python run-ci.py check --runner macos
+    - dmenv run -- python run-ci.py check --profile macos
 
 deploy/linux:
   stage: deploy
@@ -31,7 +31,7 @@ deploy/linux:
   tags:
     - linux
   script:
-    - dmenv run -- python run-ci.py deploy --runner linux
+    - dmenv run -- python run-ci.py deploy --profile gcc8 --git-tag ${CI_COMMIT_TAG}
 
 deploy/macos:
   stage: deploy
@@ -41,4 +41,15 @@ deploy/macos:
   tags:
     - macos
   script:
-    - dmenv run -- python run-ci.py deploy --runner macos
+    - dmenv run -- python run-ci.py deploy --profile macos --git-tag ${CI_COMMIT_TAG}
+
+
+deploy/windows:
+  stage: deploy
+  when: manual
+  only:
+    - tags
+  tags:
+    - windows
+  script:
+    - dmenv run -- python run-ci.py deploy --profile windows --git-tag %CI_COMMIT_TAG%

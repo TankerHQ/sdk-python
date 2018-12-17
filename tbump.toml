@@ -1,11 +1,14 @@
 
 [version]
-current = "1.9.0b2"
+current = "dev"
 
 # Example of a semver regexp.
 # Make sure this matches current_version before
 # using tbump
 regex = '''
+  (dev)
+  |
+  (
   (?P<major>\d+)
   \.
   (?P<minor>\d+)
@@ -16,6 +19,7 @@ regex = '''
      |
      b(?P<beta>\d+)
   )?
+  )
   '''
 
 [git]
@@ -24,6 +28,8 @@ tag_template = "v{new_version}"
 
 [[file]]
 src = "setup.py"
+search = 'version="{current_version}"'
 
 [[file]]
 src = "tankersdk/core/tanker.py"
+search = '__version__ = "{current_version}"'

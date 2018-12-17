@@ -19,7 +19,7 @@ from .ffi_helpers import (
     handle_tanker_future,
 )
 
-__version__ = "1.9.0b2"
+__version__ = "dev"
 
 
 @ffi.def_extern()  # type: ignore
