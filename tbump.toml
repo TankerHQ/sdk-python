@@ -1,6 +1,6 @@
 
 [version]
-current = "1.9.0b1"
+current = "1.9.0b2"
 
 # Example of a semver regexp.
 # Make sure this matches current_version before
