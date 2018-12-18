@@ -124,8 +124,8 @@ class Tanker:
         await handle_tanker_future(c_open_fut)
 
     async def close(self):
-        c_destroy_fut = tankerlib.tanker_destroy(self.c_tanker)
-        await handle_tanker_future(c_destroy_fut)
+        c_close_fut = tankerlib.tanker_close(self.c_tanker)
+        await handle_tanker_future(c_close_fut)
 
     async def encrypt(
         self, clear_data, *, share_with_users=None, share_with_groups=None
