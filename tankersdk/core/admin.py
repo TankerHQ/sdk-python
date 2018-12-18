@@ -8,19 +8,19 @@ from .ffi_helpers import str_to_c_string, c_string_to_str, wait_fut_or_raise
 
 @attr.s
 class Trustchain:
-    name = attr.ib()
-    id = attr.ib()
-    private_key = attr.ib()
-    public_key = attr.ib()
+    name = attr.ib()  # type: str
+    id = attr.ib()  # type: str
+    private_key = attr.ib()  # type: str
+    public_key = attr.ib()  # type: str
 
 
 class Admin:
-    def __init__(self, url, token):
+    def __init__(self, url: str, token: str):
         self.url = url
         self.token = token
         self._create_admin_obj()
 
-    def _create_admin_obj(self):
+    def _create_admin_obj(self) -> None:
         c_url = str_to_c_string(self.url)
         c_token = str_to_c_string(self.token)
         admin_fut = tankerlib.tanker_admin_connect(c_url, c_token)
@@ -29,7 +29,7 @@ class Admin:
         self._c_admin = ffi.cast("tanker_admin_t*", c_voidp)
         tankerlib.tanker_future_destroy(admin_fut)
 
-    def create_trustchain(self, name):
+    def create_trustchain(self, name: str) -> Trustchain:
         c_name = str_to_c_string(name)
         trustchain_fut = tankerlib.tanker_admin_create_trustchain(self._c_admin, c_name)
         wait_fut_or_raise(trustchain_fut)
@@ -45,7 +45,7 @@ class Admin:
         tankerlib.tanker_future_destroy(trustchain_fut)
         return trustchain
 
-    def delete_trustchain(self, trustchain_id):
+    def delete_trustchain(self, trustchain_id: str) -> None:
         delete_fut = tankerlib.tanker_admin_delete_trustchain(
             self._c_admin, str_to_c_string(trustchain_id)
         )

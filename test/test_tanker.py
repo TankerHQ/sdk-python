@@ -1,8 +1,9 @@
+from typing import Iterator, Tuple
 import asyncio
-import time
 from tankersdk.core import Admin, Tanker, Status as TankerStatus, Error as TankerError
+from tankersdk.core.admin import Trustchain
 
-import path
+from path import Path
 from faker import Faker
 
 import pytest
@@ -19,7 +20,7 @@ ID_TOKEN = (
 )
 
 
-def create_tanker(trustchain_id, *, writable_path):
+def create_tanker(trustchain_id: str, *, writable_path: str) -> Tanker:
     return Tanker(
         trustchain_id,
         trustchain_url=TRUSTCHAIN_URL,
@@ -29,12 +30,12 @@ def create_tanker(trustchain_id, *, writable_path):
 
 
 @pytest.fixture()
-def tmp_path(tmpdir):
-    return path.Path(str(tmpdir))
+def tmp_path(tmpdir: str) -> Path:
+    return Path(str(tmpdir))
 
 
 @pytest.fixture(scope="session")
-def trustchain():
+def trustchain() -> Iterator[Trustchain]:
     admin = Admin(url=TRUSTCHAIN_URL, token=ID_TOKEN)
     name = "python_bindings"
     trustchain = admin.create_trustchain(name)
@@ -42,7 +43,7 @@ def trustchain():
     admin.delete_trustchain(trustchain.id)
 
 
-def test_create_trustchain():
+def test_create_trustchain() -> None:
     name = "python_bindings"
     admin = Admin(url=TRUSTCHAIN_URL, token=ID_TOKEN)
     trustchain = admin.create_trustchain(name)
@@ -50,20 +51,20 @@ def test_create_trustchain():
     admin.delete_trustchain(trustchain.id)
 
 
-def test_init_tanker_ok(tmp_path, trustchain):
+def test_init_tanker_ok(tmp_path: Path, trustchain: Trustchain) -> None:
     tanker = create_tanker(trustchain_id=trustchain.id, writable_path=tmp_path)
     assert tanker.version
     assert tanker.trustchain_url == TRUSTCHAIN_URL
 
 
-def test_init_tanker_invalid_id(tmp_path):
+def test_init_tanker_invalid_id(tmp_path: Path) -> None:
     with pytest.raises(TankerError) as e:
         create_tanker(trustchain_id="invalid bad 64", writable_path=tmp_path)
     assert "parse error" in e.value.args[0]
 
 
 @pytest.mark.asyncio
-async def test_init_tanker_invalid_path(trustchain):
+async def test_init_tanker_invalid_path(trustchain: Trustchain) -> None:
     tanker = create_tanker(
         trustchain_id=trustchain.id, writable_path="/path/to/no-such"
     )
@@ -76,7 +77,7 @@ async def test_init_tanker_invalid_path(trustchain):
 
 
 @pytest.mark.asyncio
-async def test_open_new_account(tmp_path, trustchain):
+async def test_open_new_account(tmp_path: Path, trustchain: Trustchain) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     fake = Faker()
     user_id = fake.email()
@@ -89,7 +90,7 @@ async def test_open_new_account(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_open_bad_token(tmp_path, trustchain):
+async def test_open_bad_token(tmp_path: Path, trustchain: Trustchain) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     fake = Faker()
     user_id = fake.email()
@@ -100,7 +101,7 @@ async def test_open_bad_token(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_open_close_open(tmp_path, trustchain):
+async def test_open_close_open(tmp_path: Path, trustchain: Trustchain) -> None:
     fake = Faker()
     user_id = fake.email()
     user_path = tmp_path.joinpath("user")
@@ -113,7 +114,9 @@ async def test_open_close_open(tmp_path, trustchain):
     await tanker.close()
 
 
-async def create_user_session(tmp_path, trustchain):
+async def create_user_session(
+    tmp_path: Path, trustchain: Trustchain
+) -> Tuple[str, Tanker]:
     fake = Faker()
     user_id = fake.email()
     user_path = tmp_path.joinpath("user")
@@ -125,7 +128,7 @@ async def create_user_session(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_encrypt_decrypt(tmp_path, trustchain):
+async def test_encrypt_decrypt(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
     encrypted_data = await alice_session.encrypt(message)
@@ -135,7 +138,7 @@ async def test_encrypt_decrypt(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_share_during_encrypt(tmp_path, trustchain):
+async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
     bob_id, bob_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
@@ -147,7 +150,7 @@ async def test_share_during_encrypt(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_postponed_share(tmp_path, trustchain):
+async def test_postponed_share(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
     bob_id, bob_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
@@ -162,8 +165,8 @@ async def test_postponed_share(tmp_path, trustchain):
 
 
 async def check_share_to_group_works(
-    alice_session, group_id, bob_session, charlie_session
-):
+    alice_session: Tanker, group_id: str, bob_session: Tanker, charlie_session: Tanker
+) -> None:
     message = b"Hi, guys"
     encrypted = await alice_session.encrypt(message, share_with_groups=[group_id])
 
@@ -175,7 +178,7 @@ async def check_share_to_group_works(
 
 
 @pytest.mark.asyncio
-async def test_create_group(tmp_path, trustchain):
+async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
     bob_id, bob_session = await create_user_session(tmp_path, trustchain)
     charlie_id, charlie_session = await create_user_session(tmp_path, trustchain)
@@ -187,7 +190,7 @@ async def test_create_group(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_update_group(tmp_path, trustchain):
+async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
     alice_id, alice_session = await create_user_session(tmp_path, trustchain)
     bob_id, bob_session = await create_user_session(tmp_path, trustchain)
     charlie_id, charlie_session = await create_user_session(tmp_path, trustchain)
@@ -200,7 +203,9 @@ async def test_update_group(tmp_path, trustchain):
     )
 
 
-async def create_two_devices(tmp_path, trustchain):
+async def create_two_devices(
+    tmp_path: Path, trustchain: Trustchain
+) -> Tuple[Tanker, Tanker]:
     fake = Faker()
     alice_id = fake.email()
     password = "plop"
@@ -218,8 +223,8 @@ async def create_two_devices(tmp_path, trustchain):
 
     loop = asyncio.get_event_loop()
 
-    def on_unlock_required():
-        async def cb():
+    def on_unlock_required() -> None:
+        async def cb() -> None:
             try:
                 await phone_tanker.unlock(password=password)
             except Exception as e:
@@ -233,7 +238,7 @@ async def create_two_devices(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_add_device(tmp_path, trustchain):
+async def test_add_device(tmp_path: Path, trustchain: Trustchain) -> None:
     laptop, phone = await create_two_devices(tmp_path, trustchain)
     assert phone.status == TankerStatus.OPEN
     await laptop.close()
@@ -241,14 +246,14 @@ async def test_add_device(tmp_path, trustchain):
 
 
 @pytest.mark.asyncio
-async def test_revoke_device(tmp_path, trustchain):
+async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
     laptop, phone = await create_two_devices(tmp_path, trustchain)
     laptop_id = await laptop.device_id()
     laptop_revoked = asyncio.Event()
     loop = asyncio.get_event_loop()
 
-    def on_revoked():
-        async def cb():
+    def on_revoked() -> None:
+        async def cb() -> None:
             laptop_revoked.set()
 
         asyncio.run_coroutine_threadsafe(cb(), loop)

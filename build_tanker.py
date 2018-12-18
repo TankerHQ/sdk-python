@@ -1,29 +1,30 @@
+from typing import Iterator, List
 import json
 import os
 import sys
 
 from cffi import FFI
-import path
+from path import Path
 
 ffibuilder = FFI()
 
 
-def get_native_build_path():
+def get_native_build_path() -> Path:
     res = os.environ.get("TANKER_NATIVE_BUILD_PATH")
     if not res:
         sys.exit("TANKER_NATIVE_BUILD_PATH not set")
-    return path.Path(res).abspath()
+    return Path(res).abspath()
 
 
-def find_libs(names, paths):
+def find_libs(names: List[str], paths: List[str]) -> Iterator[Path]:
     for name in names:
         for lib_path in paths:
-            candidate = os.path.join(lib_path, "lib" + name + ".a")
-            if os.path.exists(candidate):
+            candidate = Path(lib_path) / f"lib{name}.a"
+            if candidate.exists():
                 yield candidate
 
 
-def get_deps_libs(native_build_path):
+def get_deps_libs(native_build_path: Path) -> Iterator[Path]:
     conaninfo = json.loads(native_build_path.joinpath("conanbuildinfo.json").text())
     for dep_info in conaninfo["dependencies"]:
         print("Proccessing", dep_info["name"])
@@ -32,7 +33,7 @@ def get_deps_libs(native_build_path):
         yield from find_libs(libs, lib_paths)
 
 
-def get_all_static_libs():
+def get_all_static_libs() -> Iterator[Path]:
     native_build_path = get_native_build_path()
     for lib in ["libtanker", "libtankercore", "libtankerusertoken", "libtankercrypto"]:
         yield native_build_path.joinpath("lib", lib + ".a")
@@ -40,15 +41,15 @@ def get_all_static_libs():
     yield from get_deps_libs(native_build_path)
 
 
-def on_import():
-    this_path = path.Path(__file__).parent.abspath()
+def on_import() -> None:
+    this_path = Path(__file__).parent.abspath()
     src_path = this_path.parent
     native_src_path = src_path.joinpath("sdk-native")
     tanker_include_path = native_src_path.joinpath("modules/sdk-c/include")
     assert tanker_include_path.exists(), "%s does not exist" % tanker_include_path
     libs = list(get_all_static_libs())
 
-    tanker_cffi_source = path.Path("cffi_src.c").text()
+    tanker_cffi_source = Path("cffi_src.c").text()
     ffibuilder.set_source(
         "_tanker",
         tanker_cffi_source,
@@ -58,7 +59,7 @@ def on_import():
         language="c++",
     )
 
-    tanker_cffi_defs = path.Path("cffi_defs.h").text()
+    tanker_cffi_defs = Path("cffi_defs.h").text()
     ffibuilder.cdef(tanker_cffi_defs)
 
 
