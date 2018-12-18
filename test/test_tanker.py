@@ -99,6 +99,20 @@ async def test_open_bad_token(tmp_path, trustchain):
     await tanker.close()
 
 
+@pytest.mark.asyncio
+async def test_open_close_open(tmp_path, trustchain):
+    fake = Faker()
+    user_id = fake.email()
+    user_path = tmp_path.joinpath("user")
+    user_path.mkdir_p()
+    tanker = create_tanker(trustchain.id, writable_path=user_path)
+    user_token = tanker.generate_user_token(trustchain.private_key, user_id)
+    await tanker.open(user_id, user_token)
+    await tanker.close()
+    await tanker.open(user_id, user_token)
+    await tanker.close()
+
+
 async def create_user_session(tmp_path, trustchain):
     fake = Faker()
     user_id = fake.email()
