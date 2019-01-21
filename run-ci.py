@@ -68,6 +68,8 @@ def main() -> None:
     deploy_parser.add_argument("--git-tag", required=True)
     deploy_parser.add_argument("--profile", required=True)
 
+    subparsers.add_parser("mirror")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -88,6 +90,8 @@ def main() -> None:
     elif command == "deploy":
         git_tag = args.git_tag
         deploy(python_src_path, profile=profile, git_tag=git_tag)
+    elif command == "mirror":
+        ci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
 
 
 if __name__ == "__main__":

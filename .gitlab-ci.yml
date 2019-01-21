@@ -53,3 +53,16 @@ deploy/windows:
     - windows
   script:
     - dmenv run -- python run-ci.py deploy --profile windows --git-tag %CI_COMMIT_TAG%
+
+
+mirror:
+  tags:
+    - linux
+  stage: deploy
+  only:
+    - /\Av[0-9.]+\z/   # public release tags only
+    - master
+  except:
+    - schedules
+  script:
+    - dmenv run python run-ci.py mirror
