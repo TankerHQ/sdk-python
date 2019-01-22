@@ -72,9 +72,15 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if not args.command:
+    command = args.command
+
+    if not command:
         parser.print_help()
         sys.exit(1)
+
+    if command == "mirror":
+        ci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
+        return
 
     profile = args.profile
     workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"], clean=True)
@@ -84,14 +90,11 @@ def main() -> None:
     if profile != "windows":
         build(workspace, profile=profile)
 
-    command = args.command
     if command == "check":
         check(python_src_path)
     elif command == "deploy":
         git_tag = args.git_tag
         deploy(python_src_path, profile=profile, git_tag=git_tag)
-    elif command == "mirror":
-        ci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
 
 
 if __name__ == "__main__":
