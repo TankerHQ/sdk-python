@@ -84,7 +84,7 @@ def main() -> None:
         return
 
     profile = args.profile
-    workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"], clean=True)
+    workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"], clean=False)
     python_src_path = workspace / "sdk-python"
     ci.dmenv.install(cwd=python_src_path, develop=False)
 
