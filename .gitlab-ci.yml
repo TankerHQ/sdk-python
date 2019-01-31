@@ -1,5 +1,10 @@
+image: 10.100.0.1:5000/ci-cpp:2
+
+
 before_script:
   - dmenv install --no-develop
+  - export PATH=$(dmenv show:venv_path)/bin:$PATH
+
 
 stages:
   - check

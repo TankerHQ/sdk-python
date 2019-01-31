@@ -18,6 +18,7 @@ def run_setup_py(src_path: Path, profile: str, *args: str) -> None:
 
 
 def build(workspace: Path, *, profile: str) -> None:
+    ci.cpp.update_conan_config(sys.platform)
     with workspace / "sdk-native":
         builder = ci.cpp.Builder(profile=profile, coverage=False)
         builder.install_deps()
