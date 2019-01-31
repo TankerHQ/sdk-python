@@ -1,3 +1,6 @@
+image: 10.100.0.1:5000/ci-cpp:2
+
+
 before_script:
   - dmenv install --no-develop
 
