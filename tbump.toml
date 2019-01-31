@@ -11,9 +11,12 @@ regex = '''
   \.
   (?P<patch>\d+)
   (
+    \.
+     (
      post(?P<post>\d+)
      |
      b(?P<beta>\d+)
+     )
   )?
   )
   '''
