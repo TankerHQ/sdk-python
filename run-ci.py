@@ -45,9 +45,10 @@ def deploy(python_src_path: Path, *, profile: str, git_tag: str) -> None:
     with python_src_path:
         version = ci.bump.version_from_git_tag(git_tag)
         ci.bump.bump_files(version)
+    dist_path = python_src_path / "dist"
+    dist_path.rmtree_p()
     run_setup_py(python_src_path, profile, "bdist_wheel")
-    build_dir = python_src_path / "dist"
-    wheels = build_dir.files("tankersdk-*.whl")
+    wheels = dist_path.files("tankersdk-*.whl")
     if len(wheels) != 1:
         raise Exception("multiple wheels found: {}".format(wheels))
     wheel_path = wheels[0]
