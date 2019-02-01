@@ -1,3 +1,4 @@
+# Generated with dmenv 0.10.0, python 3.7.1, on Linux
 -e git+ssh://git@10.100.0.1/Tanker/ci@81f57fb0f75359dad5da5bb824011029ec66661b#egg=ci
 alabaster==0.7.12
 appdirs==1.4.3
@@ -13,7 +14,8 @@ cffi===1.11.5-tanker1
 chardet==3.0.4
 cli-ui==0.9.1
 Click==7.0
-colorama==0.4.1
+cmake==3.13.2.post1
+colorama==0.3.9
 conan==1.8.4
 deprecation==2.0.6
 distro==1.1.0
@@ -39,17 +41,20 @@ monotonic==1.5
 more-itertools==5.0.0
 mypy-extensions==0.4.1
 mypy==0.650
+ninja==1.8.2.post2
 node-semver==0.2.0
 outcome==1.0.0
 packaging==18.0
 patch==1.16
 path.py==11.5.0
+pip==19.0.1
 pluggy==0.8.1
 pluginbase==0.7
 psutil==5.4.8
 py==1.7.0
 pycodestyle==2.4.0
 pycparser==2.19
+pydocstyle==3.0.0
 pyflakes==2.0.0
 Pygments==2.3.1
 PyJWT==1.7.1
@@ -63,6 +68,7 @@ pytz==2018.9
 PyYAML==3.13
 requests==2.21.0
 schema==0.6.8
+setuptools==40.7.2
 six==1.12.0
 sniffio==1.0.0
 snowballstemmer==1.2.1
@@ -76,9 +82,10 @@ text-unidecode==1.2
 toml==0.10.0
 tqdm-conan==4.27.0
 trio==0.10.0
-typed-ast==1.2.0
+typed-ast==1.1.2
 Unidecode==1.0.23
 urllib3==1.24.1
 websockets==7.0
+wheel==0.32.3
 wrapt==1.11.0
 zipp==0.3.3
