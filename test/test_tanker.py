@@ -33,7 +33,7 @@ def create_tanker(trustchain_id: str, *, writable_path: str) -> Tanker:
     return Tanker(
         trustchain_id,
         trustchain_url=TEST_CONFIG["url"],
-        sdk_type="test",
+        sdk_type="sdk-python-test",
         writable_path=writable_path,
     )
 
