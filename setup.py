@@ -29,7 +29,6 @@ setup(
     install_requires=["attrs", "cffi==1.11.5-tanker1", "trio", "path.py"],
     extras_require={
         "dev": [
-            "wheel",
             "ci",
             "black",
             "pytest",
@@ -41,6 +40,7 @@ setup(
             "sphinx",
             "ghp-import",
             "sphinxcontrib-trio",
+            "wheel",
         ]
     },
     classifiers=[
