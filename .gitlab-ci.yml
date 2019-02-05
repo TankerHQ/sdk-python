@@ -1,4 +1,4 @@
-image: 10.100.0.1:5000/ci-cpp:2
+image: 10.100.0.1:5000/ci-cpp:latest
 
 
 before_script:
