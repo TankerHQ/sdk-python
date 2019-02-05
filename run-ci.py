@@ -30,6 +30,7 @@ def build(workspace: Path, *, profile: str) -> None:
 
 def check(python_src_path: Path) -> None:
     with python_src_path:
+        ci.dmenv.run("black", "--check", "tankersdk")
         env = os.environ.copy()
         env["TANKER_CONFIG_NAME"] = "dev"
         env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
