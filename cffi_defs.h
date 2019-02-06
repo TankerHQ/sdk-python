@@ -12,6 +12,8 @@ typedef struct tanker_trustchain_descriptor
   b64char const* public_key;
 } tanker_trustchain_descriptor_t;
 
+void tanker_init();
+
 extern "Python" void log_handler(const char* category, char level, const char* message);
 extern "Python" void verification_callback(void* arg, void* data);
 extern "Python" void revoke_callback(void* arg, void* data);
@@ -58,7 +60,6 @@ struct tanker_error
 
 void* tanker_future_get_voidptr(tanker_future_t* future);
 
-// tanker.h
 enum tanker_status
 {
   TANKER_STATUS_CLOSED,
