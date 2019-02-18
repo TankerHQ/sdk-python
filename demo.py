@@ -73,12 +73,13 @@ async def main() -> None:
     subparsers.add_parser("signup")
 
     encrypt_parser = subparsers.add_parser("encrypt")
-    encrypt_parser.add_argument("-m", "--message", required=True)
+    encrypt_parser.add_argument("-i", "--input", required=True)
     encrypt_parser.add_argument("-o", "--output", required=True)
     encrypt_parser.add_argument("--user", action="append", dest="users")
 
     decrypt_parser = subparsers.add_parser("decrypt")
-    decrypt_parser.add_argument("input")
+    decrypt_parser.add_argument("-i", "--input", required=True)
+    decrypt_parser.add_argument("-o", "--output", required=True)
 
     args = parser.parse_args()
     email = args.email
@@ -106,10 +107,10 @@ async def main() -> None:
     print("Done!")
 
     if args.command == "encrypt":
-        user_emails = args.users
+        user_emails = args.users or list()
         user_ids = get_user_ids(requests_session, user_emails)
-        message = args.message
-        input_bytes = message.encode()
+        input_path = Path(args.input)
+        input_bytes = input_path.bytes()
         encrypted = await tanker.encrypt(input_bytes, share_with_users=user_ids)
         output_path = Path(args.output)
         output_path.write_bytes(encrypted)
@@ -119,7 +120,9 @@ async def main() -> None:
         input_path = Path(args.input)
         encrypted = input_path.bytes()
         clear = await tanker.decrypt(encrypted)
-        print(clear.decode())
+        output_path = Path(args.output)
+        output_path.write_bytes(clear)
+        print("Decrypted data written to", output_path)
 
     await tanker.close()
 
