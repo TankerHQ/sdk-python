@@ -1,7 +1,6 @@
-from typing import Any, Dict, List
+from typing import Any, List
 import argparse
 import asyncio
-import json
 import requests
 import sys
 
