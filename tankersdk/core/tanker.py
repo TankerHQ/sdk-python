@@ -7,18 +7,16 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 from .ffi_helpers import (
+    CCharList,
     CData,
     OptionalStrList,
-    str_to_c_string,
+    bytes_to_c_buffer,
     c_buffer_to_bytes,
     c_string_to_str,
-    c_string_to_bytes,
-    bytes_to_c_string,
-    bytes_to_c_buffer,
-    CCharList,
-    wait_fut_or_raise,
-    unwrap_expected,
     handle_tanker_future,
+    str_to_c_string,
+    unwrap_expected,
+    wait_fut_or_raise,
 )
 
 __version__ = "dev"
