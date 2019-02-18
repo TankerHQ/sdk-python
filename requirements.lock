@@ -10,7 +10,7 @@ Babel==2.6.0
 black==18.9b0
 bottle==0.12.16
 certifi==2018.11.29
-cffi===1.11.5-tanker1
+cffi===1.12.1
 chardet==3.0.4
 cli-ui==0.9.1
 Click==7.0

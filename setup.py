@@ -24,9 +24,9 @@ setup(
     url="https://tanker.io",
     author="Kontrol SAS",
     packages=["tankersdk.core"],
-    setup_requires=["cffi>=1.0.0", "path.py"],
+    setup_requires=["cffi>=1.12", "path.py"],
     cffi_modules=cffi_modules,
-    install_requires=["attrs", "cffi==1.11.5-tanker1", "trio", "path.py"],
+    install_requires=["attrs", "cffi>=1.12", "trio", "path.py"],
     extras_require={
         "dev": [
             "ci",
