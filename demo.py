@@ -31,6 +31,7 @@ async def open_tanker_session(
     storage_path.makedirs_p()
 
     config = do_request(requests_session, "get", "config").json()
+    config.setdefault("url", "https://api.tanker.io")
     tanker = Tanker(
         config["trustchainId"], trustchain_url=config["url"], writable_path=storage_path
     )
