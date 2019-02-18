@@ -57,7 +57,7 @@ def deploy(python_src_path: Path, *, profile: str, git_tag: str) -> None:
         wheel_path = wheel_path.lower()
         wheel_path = wheel_path.replace(os.path.sep, "/")
         wheel_path = wheel_path.replace("c:/", "/c/")
-    ci.run("scp", wheel_path, "pypi@tanker.gitlab.local:packages")
+    ci.run("scp", wheel_path, "pypi@tanker.local:packages")
 
 
 def main() -> None:

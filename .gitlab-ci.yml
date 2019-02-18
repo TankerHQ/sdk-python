@@ -1,4 +1,4 @@
-image: docker.local:5000/ci-cpp:latest
+image: tanker.local:5000/ci-cpp:latest
 
 
 before_script:
