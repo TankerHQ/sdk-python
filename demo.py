@@ -12,10 +12,6 @@ from tankersdk.core import Tanker
 SERVER_URL = "http://127.0.0.1:8080"
 
 
-def load_config(cfg_path: Path) -> Dict[str, str]:
-    return json.loads(cfg_path.text())  # type: ignore
-
-
 def do_request(
     session: requests.Session, method: str, segment: str, **kwargs: Any
 ) -> requests.Response:
