@@ -1,4 +1,4 @@
-from typing import Callable, List, Type, Optional, TypeVar
+from typing import cast, Callable, List, Type, Optional, TypeVar
 from asyncio import Future
 import asyncio
 from _tanker import ffi
@@ -11,8 +11,8 @@ from .error import Error
 CData = Type[ffi.CData]
 
 
-def str_to_c_string(text: str) -> ffi.CData:
-    return ffi.new("char[]", text.encode())
+def str_to_c_string(text: str) -> CData:
+    return ffi.new("char[]", text.encode())  # type: ignore
 
 
 # Note: ffi.string returns a 'bytes' object
@@ -22,6 +22,14 @@ def c_string_to_bytes(c_data: CData) -> bytes:
     return ffi.string(c_data)  # type: ignore
 
 
+def c_buffer_to_bytes(c_data: CData) -> bytes:
+    res = ffi.buffer(c_data, len(c_data))  # type: ignore
+    # Make a copy of the ffi.buffer as a simple `bytes`
+    # object so that it can be used without worrying
+    # about the ffi buffer being garbage collected.
+    return cast(bytes, res[:])
+
+
 def c_string_to_str(c_data: CData, encoding: str = "utf-8") -> str:
     as_bytes = c_string_to_bytes(c_data)
     return as_bytes.decode(encoding=encoding)
@@ -29,6 +37,11 @@ def c_string_to_str(c_data: CData, encoding: str = "utf-8") -> str:
 
 def bytes_to_c_string(buffer: bytes) -> CData:
     return ffi.new("char[]", buffer)  # type: ignore
+
+
+def bytes_to_c_buffer(buffer: bytes) -> CData:
+    size = len(buffer)
+    return ffi.new("uint8_t[%i]" % size, buffer)  # type: ignore
 
 
 OptionalStrList = Optional[List[str]]

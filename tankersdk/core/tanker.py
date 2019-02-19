@@ -7,16 +7,16 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 from .ffi_helpers import (
+    CCharList,
     CData,
     OptionalStrList,
-    str_to_c_string,
+    bytes_to_c_buffer,
+    c_buffer_to_bytes,
     c_string_to_str,
-    c_string_to_bytes,
-    bytes_to_c_string,
-    CCharList,
-    wait_fut_or_raise,
-    unwrap_expected,
     handle_tanker_future,
+    str_to_c_string,
+    unwrap_expected,
+    wait_fut_or_raise,
 )
 
 __version__ = "dev"
@@ -183,7 +183,7 @@ class Tanker:
                 "nb_recipient_gids": group_list.size,
             },
         )
-        c_clear_buffer = bytes_to_c_string(clear_data)  # type: CData
+        c_clear_buffer = bytes_to_c_buffer(clear_data)  # type: CData
         clear_size = len(c_clear_buffer)  # type: ignore
         size = tankerlib.tanker_encrypted_size(clear_size)
         c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
@@ -196,11 +196,7 @@ class Tanker:
         )
 
         def encrypt_cb() -> bytes:
-            res = ffi.buffer(c_encrypted_buffer, len(c_encrypted_buffer))
-            # Make a copy of the ffi.buffer as a simple `bytes`
-            # object so that it can be used without worrying
-            # about the ffi buffer being garbage collected.
-            return cast(bytes, res[:])
+            return c_buffer_to_bytes(c_encrypted_buffer)
 
         return await handle_tanker_future(c_encrypt_fut, encrypt_cb)
 
@@ -222,7 +218,7 @@ class Tanker:
         )
 
         def decrypt_cb() -> bytes:
-            return c_string_to_bytes(c_clear_buffer)
+            return c_buffer_to_bytes(c_clear_buffer)
 
         return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
 

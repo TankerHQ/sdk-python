@@ -36,7 +36,9 @@ def check(python_src_path: Path) -> None:
         env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
         env["MYPYPATH"] = python_src_path / "stubs"
         ci.dmenv.run(
-            "mypy", "--strict", "--ignore-missing-imports", "tankersdk", "test", env=env
+            "mypy", "--strict", "--ignore-missing-imports",
+            "tankersdk", "test", "demo.py",
+            env=env
         )
         ci.dmenv.run("flake8", ".", env=env)
         ci.dmenv.run("pytest", "--verbose", "--capture=no", env=env)

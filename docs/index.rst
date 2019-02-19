@@ -1,6 +1,12 @@
 Python Tanker SDK
 =================
 
+.. toctree::
+    :hidden:
+
+    changelog
+
+
 .. module:: tankersdk.core
 
 
