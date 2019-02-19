@@ -6,6 +6,7 @@ import json
 from path import Path
 from faker import Faker
 
+import tankersdk
 from tankersdk.core import Admin, Tanker, Status as TankerStatus, Error as TankerError
 from tankersdk.core.admin import Trustchain
 
@@ -50,6 +51,11 @@ def trustchain() -> Iterator[Trustchain]:
     trustchain = admin.create_trustchain(name)
     yield trustchain
     admin.delete_trustchain(trustchain.id)
+
+
+def test_native_version() -> None:
+    native_version = tankersdk.native_version()
+    assert(native_version)
 
 
 def test_create_trustchain() -> None:
