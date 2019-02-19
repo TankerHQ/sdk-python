@@ -31,6 +31,7 @@ setup(
     ],
     cffi_modules=cffi_modules,
     install_requires=[
+        "attrs",
         "cffi>=1.12",
     ],
     extras_require={
