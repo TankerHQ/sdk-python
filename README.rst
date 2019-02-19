@@ -26,7 +26,7 @@ Documentation
 
 See `API documentation <https://tankerhq.github.io/sdk-python>`_.
 
-A more high-level documentation is beeing written. In the mean time, feel free
+A more high-level documentation is being written. In the mean time, feel free
 to read `the documentation about the JavaScript SDK
 <https://tanker.io/docs/latest/?language=javascript/>`_.
 Most of it is applicable to the Python SDK too.

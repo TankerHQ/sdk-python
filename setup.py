@@ -24,27 +24,39 @@ setup(
     url="https://tanker.io",
     author="Kontrol SAS",
     packages=["tankersdk.core"],
-    setup_requires=["cffi>=1.12", "path.py"],
+    setup_requires=[
+        # To run build_tanker.py
+        "cffi>=1.12",
+        "path.py"
+    ],
     cffi_modules=cffi_modules,
-    install_requires=["attrs", "cffi>=1.12", "trio", "path.py"],
+    install_requires=[
+        "cffi>=1.12",
+    ],
     extras_require={
         "dev": [
+            # For run-ci.py
             "ci",
+
+            # Linters
             "black",
-            "pytest",
-            "faker",
-            "pytest-asyncio",
             "flake8",
             "flake8-docstrings",
             "mypy",
+
+            # Tests
+            "pytest",
+            "faker",
+            "path.py",
+            "pytest-asyncio",
+
+            # Documentation
             "sphinx",
             "ghp-import",
             "sphinxcontrib-trio",
-            "wheel",
         ]
     },
     classifiers=[
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
