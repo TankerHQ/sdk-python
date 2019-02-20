@@ -7,7 +7,7 @@ Python Tanker SDK
     changelog
 
 
-.. module:: tankersdk.core
+.. module:: tankersdk
 
 
 API
@@ -24,7 +24,7 @@ Here's a typical usage:
 .. code-block:: python
 
    import asyncio
-   from tankersdk.core import Tanker
+   from tankersdk import Tanker
 
 
    async def main():

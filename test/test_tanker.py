@@ -7,8 +7,8 @@ from path import Path
 from faker import Faker
 
 import tankersdk
-from tankersdk.core import Admin, Tanker, Status as TankerStatus, Error as TankerError
-from tankersdk.core.admin import Trustchain
+from tankersdk import Admin, Tanker, Status as TankerStatus, Error as TankerError
+from tankersdk.admin import Trustchain
 
 import pytest
 
@@ -88,6 +88,14 @@ async def test_init_tanker_invalid_path(trustchain: Trustchain) -> None:
     with pytest.raises(TankerError) as e:
         await tanker.open(user_id, token)
     print(e.value)
+
+
+@pytest.mark.asyncio
+async def test_tanker_sdk_version(tmp_path: Path, trustchain: Trustchain) -> None:
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
+    sdk_version = tanker.sdk_version
+    print(sdk_version)
+    assert sdk_version
 
 
 @pytest.mark.asyncio

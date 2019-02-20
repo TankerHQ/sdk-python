@@ -29,5 +29,5 @@ src = "setup.py"
 search = 'version="{current_version}"'
 
 [[file]]
-src = "tankersdk/core/tanker.py"
+src = "tankersdk/version.py"
 search = '__version__ = "{current_version}"'
