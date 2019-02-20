@@ -25,7 +25,7 @@ def build(workspace: Path, *, profile: str) -> None:
         builder.build()
 
     python_src_path = workspace / "sdk-python"
-    run_setup_py(python_src_path, profile, "develop")
+    run_setup_py(python_src_path, profile, "clean", "develop")
 
 
 def check(python_src_path: Path) -> None:
