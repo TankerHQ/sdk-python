@@ -85,16 +85,14 @@ async def test_init_tanker_invalid_path(trustchain: Trustchain) -> None:
     fake = Faker()
     user_id = fake.email()
     token = tanker.generate_user_token(trustchain.private_key, user_id)
-    with pytest.raises(TankerError) as e:
+    with pytest.raises(TankerError):
         await tanker.open(user_id, token)
-    print(e.value)
 
 
 @pytest.mark.asyncio
 async def test_tanker_sdk_version(tmp_path: Path, trustchain: Trustchain) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     sdk_version = tanker.sdk_version
-    print(sdk_version)
     assert sdk_version
 
 
