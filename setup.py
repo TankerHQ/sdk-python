@@ -18,7 +18,7 @@ else:
 
 setup(
     name="tankersdk",
-    version="dev",
+    version="1.10.0b3",
     description="End to end encryption",
     long_description=get_long_description(),
     url="https://tanker.io",

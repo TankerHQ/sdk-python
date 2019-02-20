@@ -19,7 +19,7 @@ from .ffi_helpers import (
     wait_fut_or_raise,
 )
 
-__version__ = "dev"
+__version__ = "1.10.0b3"
 
 
 @ffi.def_extern()  # type: ignore
