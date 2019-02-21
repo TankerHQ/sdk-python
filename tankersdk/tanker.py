@@ -6,6 +6,7 @@ import os
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
+from .version import __version__
 from .ffi_helpers import (
     CCharList,
     CData,
@@ -18,8 +19,6 @@ from .ffi_helpers import (
     unwrap_expected,
     wait_fut_or_raise,
 )
-
-__version__ = "dev"
 
 
 @ffi.def_extern()  # type: ignore
@@ -60,7 +59,7 @@ RevokeFunc = Callable[[], None]
 
 class Tanker:
     """
-    tankersdk.core.Tanker(trustchain_id: str, *, writable_path: str)
+    tankersdk.Tanker(trustchain_id: str, *, writable_path: str)
 
     :param trustchain_id: The Trustchain ID
     :param writeable_path: A writeable path to store user data

@@ -5,7 +5,7 @@ import requests
 import sys
 
 from path import Path
-from tankersdk.core import Tanker
+from tankersdk import Tanker
 
 
 SERVER_URL = "http://127.0.0.1:8080"
