@@ -48,9 +48,6 @@ class Status(Enum):
 
     CLOSED = 0
     OPEN = 1
-    USER_CREATION = 2
-    DEVICE_CREATION = 3
-    CLOSING = 4
 
 
 UnlockFunc = Callable[[], None]
@@ -126,35 +123,76 @@ class Tanker:
         self._userdata = userdata  # Must keep this alive
         c_future_connect = tankerlib.tanker_event_connect(
             self.c_tanker,
-            tankerlib.TANKER_EVENT_UNLOCK_REQUIRED,
-            tankerlib.verification_callback,
-            self._userdata,
-        )
-        wait_fut_or_raise(c_future_connect)
-        c_future_connect = tankerlib.tanker_event_connect(
-            self.c_tanker,
             tankerlib.TANKER_EVENT_DEVICE_REVOKED,
             tankerlib.revoke_callback,
             self._userdata,
         )
         wait_fut_or_raise(c_future_connect)
 
-    async def open(self, user_id: str, user_token: str) -> None:
+    async def sign_up(
+        self,
+        identity: str,
+        *,
+        password: Optional[str] = None,
+        email: Optional[str] = None
+    ) -> None:
         """
-        Open a new Tanker session
+        Sign up to Tanker and open a session
 
-        :param user_id: The user ID
-        :param user_token: The user token
+        :param identity: The user's Tanker identity
+        :param password: The password to use for identity verification
+        :param email: The email to use for identity verification
         """
-        c_token = str_to_c_string(user_token)
-        c_user_id = str_to_c_string(user_id)
-        c_open_fut = tankerlib.tanker_open(self.c_tanker, c_user_id, c_token)
-        await handle_tanker_future(c_open_fut)
+        c_identity = str_to_c_string(identity)
+        c_password = str_to_c_string(password)
+        c_email = str_to_c_string(email)
+        c_authentication_methods = ffi.new(
+            "tanker_authentication_methods_t *",
+            {"version": 1, "password": c_password, "email": c_email},
+        )
+        c_sign_up_fut = tankerlib.tanker_sign_up(
+            self.c_tanker, c_identity, c_authentication_methods
+        )
+        await handle_tanker_future(c_sign_up_fut)
 
-    async def close(self) -> None:
+    async def sign_in(
+        self,
+        identity: str,
+        *,
+        unlock_key: Optional[str] = None,
+        verification_code: Optional[str] = None,
+        password: Optional[str] = None
+    ) -> None:
+        """
+        Sign in to Tanker, opening a session
+
+        :param identity: The user's Tanker identity
+        :param unlock_key: The raw unlock key to use for identity verification
+        :param verification_code: The email verification code to use for identity verification
+        :param password: The password to use for identity verification
+        """
+        c_identity = str_to_c_string(identity)
+        c_unlock_key = str_to_c_string(unlock_key)
+        c_verification_code = str_to_c_string(verification_code)
+        c_password = str_to_c_string(password)
+        c_sign_in_options = ffi.new(
+            "tanker_sign_in_options_t *",
+            {
+                "version": 1,
+                "unlock_key": c_unlock_key,
+                "verification_code": c_verification_code,
+                "password": c_password,
+            },
+        )
+        c_sign_in_fut = tankerlib.tanker_sign_in(
+            self.c_tanker, c_identity, c_sign_in_options
+        )
+        await handle_tanker_future(c_sign_in_fut)
+
+    async def sign_out(self) -> None:
         """Close the session."""
-        c_close_fut = tankerlib.tanker_close(self.c_tanker)
-        await handle_tanker_future(c_close_fut)
+        c_sign_out_fut = tankerlib.tanker_sign_out(self.c_tanker)
+        await handle_tanker_future(c_sign_out_fut)
 
     async def encrypt(
         self,
@@ -267,11 +305,11 @@ class Tanker:
             )
         )
 
-    def generate_user_token(self, trustchain_private_key: str, user_id: str) -> str:
+    def create_identity(self, trustchain_private_key: str, user_id: str) -> str:
         c_user_id = str_to_c_string(user_id)
         c_trustchain_id = str_to_c_string(self.trustchain_id)
         c_trustchain_private_key = str_to_c_string(trustchain_private_key)
-        c_expected = tankerlib.tanker_generate_user_token(
+        c_expected = tankerlib.tanker_create_identity(
             c_trustchain_id, c_trustchain_private_key, c_user_id
         )
         c_token = unwrap_expected(c_expected, "char*")

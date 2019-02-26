@@ -124,7 +124,7 @@ async def main() -> None:
         output_path.write_bytes(clear)
         print("Decrypted data written to", output_path)
 
-    await tanker.close()
+    await tanker.sign_out()
 
 
 if __name__ == "__main__":

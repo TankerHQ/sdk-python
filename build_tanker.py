@@ -35,7 +35,7 @@ def get_deps_libs(native_build_path: Path) -> Iterator[Path]:
 
 def get_all_static_libs() -> Iterator[Path]:
     native_build_path = get_native_build_path()
-    for lib in ["libctanker", "libtankercore", "libtankerusertoken", "libtankercrypto"]:
+    for lib in ["libctanker", "libtankercore", "libtankeridentity", "libtankercrypto"]:
         yield native_build_path.joinpath("lib", lib + ".a")
 
     yield from get_deps_libs(native_build_path)

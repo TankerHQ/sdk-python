@@ -31,21 +31,21 @@ enum tanker_error_code
   TANKER_ERROR_OTHER,
   TANKER_ERROR_INVALID_TANKER_STATUS,
   TANKER_ERROR_SERVER_ERROR,
-  TANKER_ERROR_UNUSED1,
   TANKER_ERROR_INVALID_ARGUMENT,
   TANKER_ERROR_RESOURCE_KEY_NOT_FOUND,
   TANKER_ERROR_USER_NOT_FOUND,
   TANKER_ERROR_DECRYPT_FAILED,
-  TANKER_ERROR_INVALID_UNLOCK_EVENT_HANDLER,
-  TANKER_ERROR_CHUNK_INDEX_OUT_OF_RANGE,
-  TANKER_ERROR_VERSION_NOT_SUPPORTED,
   TANKER_ERROR_INVALID_UNLOCK_KEY,
   TANKER_ERROR_INTERNAL_ERROR,
-  TANKER_ERROR_CHUNK_NOT_FOUND,
   TANKER_ERROR_INVALID_UNLOCK_PASSWORD,
   TANKER_ERROR_INVALID_VERIFICATION_CODE,
   TANKER_ERROR_UNLOCK_KEY_ALREADY_EXISTS,
   TANKER_ERROR_MAX_VERIFICATION_ATTEMPTS_REACHED,
+  TANKER_ERROR_INVALID_GROUP_SIZE,
+  TANKER_ERROR_RECIPIENT_NOT_FOUND,
+  TANKER_ERROR_GROUP_NOT_FOUND,
+  TANKER_ERROR_DEVICE_NOT_FOUND,
+  TANKER_ERROR_IDENTITY_ALREADY_REGISTERED,
 
   TANKER_ERROR_LAST,
 };
@@ -64,27 +64,24 @@ enum tanker_status
 {
   TANKER_STATUS_CLOSED,
   TANKER_STATUS_OPEN,
-  TANKER_STATUS_USER_CREATION,
-  TANKER_STATUS_DEVICE_CREATION,
-  TANKER_STATUS_CLOSING,
 
   TANKER_STATUS_LAST
 };
 
 enum tanker_event
 {
-  TANKER_EVENT_UNUSED1,
   TANKER_EVENT_SESSION_CLOSED,
   TANKER_EVENT_DEVICE_CREATED,
-  TANKER_EVENT_UNLOCK_REQUIRED,
   TANKER_EVENT_DEVICE_REVOKED,
 
-  TANKER_EVENT_LAST = TANKER_EVENT_DEVICE_REVOKED
+  TANKER_EVENT_LAST,
 
 };
 
 typedef struct tanker_t tanker_t;
 typedef struct tanker_options tanker_options_t;
+typedef struct tanker_authentication_methods tanker_authentication_methods_t;
+typedef struct tanker_sign_in_options tanker_sign_in_options_t;
 typedef struct tanker_encrypt_options tanker_encrypt_options_t;
 typedef struct tanker_decrypt_options tanker_decrypt_options_t;
 typedef char b64char;
@@ -105,12 +102,20 @@ struct tanker_options
   char const* sdk_version;
 };
 
+struct tanker_authentication_methods
+{
+  uint8_t version;
+  char const* password;
+  char const* email;
+};
 
-tanker_expected_t* tanker_generate_user_token(
-    char const* trustchain_id,
-    char const* trustchain_private_key,
-    char const* user_id);
-
+struct tanker_sign_in_options
+{
+  uint8_t version;
+  char const* unlock_key;
+  char const* verification_code;
+  char const* password;
+};
 
 struct tanker_encrypt_options
 {
@@ -143,11 +148,17 @@ tanker_future_t* tanker_event_connect(tanker_t* tanker,
 tanker_future_t* tanker_event_disconnect(tanker_t* tanker,
                                          tanker_connection_t* connection);
 
-tanker_future_t* tanker_open(tanker_t* tanker,
-                             char const* user_id,
-                             char const* user_token);
+tanker_future_t* tanker_sign_up(
+    tanker_t* tanker,
+    char const* identity,
+    tanker_authentication_methods_t const* authentication_methods);
 
-tanker_future_t* tanker_close(tanker_t* tanker);
+tanker_future_t* tanker_sign_in(
+    tanker_t* tanker,
+    char const* identity,
+    tanker_sign_in_options_t const* sign_in_options);
+
+tanker_future_t* tanker_sign_out(tanker_t* tanker);
 
 enum tanker_status tanker_get_status(tanker_t* tanker);
 
@@ -213,3 +224,7 @@ tanker_future_t* tanker_update_group_members(tanker_t* session,
                                              char const* group_id,
                                              char const* const* users_to_add,
                                              uint64_t nb_users_to_add);
+
+tanker_expected_t* tanker_create_identity(b64char const* trustchain_id,
+                                          b64char const* trustchain_private_key,
+                                          char const* user_id);
