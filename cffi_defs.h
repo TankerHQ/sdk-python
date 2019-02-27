@@ -120,8 +120,8 @@ struct tanker_sign_in_options
 struct tanker_encrypt_options
 {
   uint8_t version;
-  b64char const* const* recipient_uids;
-  uint32_t nb_recipient_uids;
+  b64char const* const* recipient_public_identities;
+  uint32_t nb_recipient_public_identities;
   b64char const* const* recipient_gids;
   uint32_t nb_recipient_gids;
 };
@@ -195,8 +195,8 @@ tanker_future_t* tanker_decrypt(tanker_t* session,
                                 tanker_decrypt_options_t const* options);
 
 tanker_future_t* tanker_share(tanker_t* session,
-                              char const* const* recipient_uids,
-                              uint64_t nb_recipient_uids,
+                              char const* const* recipient_public_identities,
+                              uint64_t nb_recipient_public_identities,
                               char const* const* recipient_gids,
                               uint64_t nb_recipient_gids,
                               b64char const* const* resource_ids,
@@ -228,3 +228,5 @@ tanker_future_t* tanker_update_group_members(tanker_t* session,
 tanker_expected_t* tanker_create_identity(b64char const* trustchain_id,
                                           b64char const* trustchain_private_key,
                                           char const* user_id);
+
+tanker_expected_t* tanker_get_public_identity(b64char const* identity);
