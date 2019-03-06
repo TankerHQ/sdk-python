@@ -33,7 +33,7 @@ deploy/linux:
   tags:
     - linux
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release --git-tag ${CI_COMMIT_TAG}
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
 
 deploy/macos:
   stage: deploy
@@ -43,7 +43,7 @@ deploy/macos:
   tags:
     - macos
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile macos-release --git-tag ${CI_COMMIT_TAG}
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile macos-release
 
 
 mirror:
