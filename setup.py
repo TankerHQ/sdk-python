@@ -33,6 +33,7 @@ setup(
     install_requires=[
         "attrs",
         "cffi>=1.12",
+        "tankersdk_identity",
     ],
     extras_require={
         "dev": [

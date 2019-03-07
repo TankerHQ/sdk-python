@@ -301,22 +301,6 @@ class Tanker:
             )
         )
 
-    def create_identity(self, trustchain_private_key: str, user_id: str) -> str:
-        c_user_id = str_to_c_string(user_id)
-        c_trustchain_id = str_to_c_string(self.trustchain_id)
-        c_trustchain_private_key = str_to_c_string(trustchain_private_key)
-        c_expected = tankerlib.tanker_create_identity(
-            c_trustchain_id, c_trustchain_private_key, c_user_id
-        )
-        c_token = unwrap_expected(c_expected, "char*")
-        return c_string_to_str(c_token)
-
-    def get_public_identity(self, identity: str) -> str:
-        c_identity = str_to_c_string(identity)
-        c_expected = tankerlib.tanker_get_public_identity(c_identity)
-        c_token = unwrap_expected(c_expected, "char*")
-        return c_string_to_str(c_token)
-
     async def unlock(
         self, *, password: Optional[str] = None, verification_code: Optional[str] = None
     ) -> None:

@@ -216,9 +216,3 @@ tanker_future_t* tanker_update_group_members(tanker_t* session,
                                              char const* group_id,
                                              char const* const* users_to_add,
                                              uint64_t nb_users_to_add);
-
-tanker_expected_t* tanker_create_identity(b64char const* trustchain_id,
-                                          b64char const* trustchain_private_key,
-                                          char const* user_id);
-
-tanker_expected_t* tanker_get_public_identity(b64char const* identity);

@@ -75,6 +75,7 @@ Sphinx==1.8.5
 sphinxcontrib-trio==1.0.2
 sphinxcontrib-websupport==1.1.0
 tabulate==0.8.3
+tankersdk-identity==1.1.0
 tbump==5.0.4
 text-unidecode==1.2
 toml==0.10.0
