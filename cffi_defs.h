@@ -15,7 +15,6 @@ typedef struct tanker_trustchain_descriptor
 void tanker_init();
 
 extern "Python" void log_handler(const char* category, char level, const char* message);
-extern "Python" void verification_callback(void* arg, void* data);
 extern "Python" void revoke_callback(void* arg, void* data);
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);

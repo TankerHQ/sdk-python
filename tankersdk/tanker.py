@@ -28,15 +28,6 @@ def log_handler(category: CData, level: CData, message: CData) -> None:
 
 
 @ffi.def_extern()  # type: ignore
-def verification_callback(args: CData, data: CData) -> None:
-    tanker_instance = ffi.from_handle(data)
-    if tanker_instance.on_unlock_required:
-        tanker_instance.on_unlock_required()
-    else:
-        print("Warning: tanker.on_unlock_required not set, .open will not return")
-
-
-@ffi.def_extern()  # type: ignore
 def revoke_callback(args: CData, data: CData) -> None:
     tanker_instance = ffi.from_handle(data)
     if tanker_instance.on_revoked:
