@@ -293,3 +293,47 @@ async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
     await phone.revoke_device(laptop_id)
     await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
     assert laptop.status == TankerStatus.CLOSED
+
+
+@pytest.mark.asyncio
+async def test_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, fake.email()
+    )
+    await laptop_tanker.sign_up(alice_identity)
+    unlock_key = await laptop_tanker.generate_and_register_unlock_key()
+    assert unlock_key
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+    await phone_tanker.sign_in(alice_identity, unlock_key=unlock_key)
+    assert phone_tanker.status == TankerStatus.OPEN
+    await laptop_tanker.sign_out()
+    await phone_tanker.sign_out()
+
+
+@pytest.mark.asyncio
+async def test_bad_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, fake.email()
+    )
+    await laptop_tanker.sign_up(alice_identity)
+    unlock_key = await laptop_tanker.generate_and_register_unlock_key()
+    assert unlock_key
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+    with pytest.raises(tankersdk.error.Error):
+        await phone_tanker.sign_in(alice_identity, unlock_key="plop")
+    assert phone_tanker.status == TankerStatus.CLOSED
+    await laptop_tanker.sign_out()

@@ -336,6 +336,27 @@ class Tanker:
         )
         await handle_tanker_future(c_register_unlock_fut)
 
+    async def generate_and_register_unlock_key(self) -> str:
+        """
+        Generate a private unlock key.
+
+        It can be used to unlock a device
+        """
+        c_generate_and_register_unlock_key_fut = tankerlib.tanker_generate_and_register_unlock_key(
+            self.c_tanker
+        )
+
+        def generate_and_register_unlock_key_cb() -> str:
+            c_voidp = tankerlib.tanker_future_get_voidptr(
+                c_generate_and_register_unlock_key_fut
+            )
+            c_str = ffi.cast("char*", c_voidp)
+            return c_string_to_str(c_str)
+
+        return await handle_tanker_future(
+            c_generate_and_register_unlock_key_fut, generate_and_register_unlock_key_cb
+        )
+
     async def create_group(self, user_ids: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""
         user_list = CCharList(user_ids)
