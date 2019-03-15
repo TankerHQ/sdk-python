@@ -14,7 +14,7 @@ check/linux:
   tags:
     - linux
   script:
-    - dmenv run -- python run-ci.py check --profile gcc8
+    - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile gcc8-release
 
 check/macos:
   stage: check
@@ -23,7 +23,7 @@ check/macos:
   tags:
     - macos
   script:
-    - dmenv run -- python run-ci.py check --profile macos
+    - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile macos-release
 
 deploy/linux:
   stage: deploy
@@ -33,7 +33,7 @@ deploy/linux:
   tags:
     - linux
   script:
-    - dmenv run -- python run-ci.py deploy --profile gcc8 --git-tag ${CI_COMMIT_TAG}
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release --git-tag ${CI_COMMIT_TAG}
 
 deploy/macos:
   stage: deploy
@@ -43,7 +43,7 @@ deploy/macos:
   tags:
     - macos
   script:
-    - dmenv run -- python run-ci.py deploy --profile macos --git-tag ${CI_COMMIT_TAG}
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile macos-release --git-tag ${CI_COMMIT_TAG}
 
 
 mirror:
