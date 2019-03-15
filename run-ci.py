@@ -13,16 +13,14 @@ import ci.tanker_configs
 
 def run_setup_py(src_path: Path, profile: str, *args: str) -> None:
     env = os.environ.copy()
-    env["TANKER_NATIVE_BUILD_PATH"] = f"../sdk-native/build/{profile}/x86_64/Release"
+    env["TANKER_NATIVE_BUILD_PATH"] = f"../sdk-native/build/{profile}"
     ci.dmenv.run("python", "setup.py", *args, env=env, cwd=src_path)
 
 
 def build(workspace: Path, *, profile: str) -> None:
-    ci.cpp.update_conan_config(sys.platform)
+    ci.cpp.update_conan_config()
     with workspace / "sdk-native":
-        builder = ci.cpp.Builder(profile=profile, coverage=False)
-        builder.install_deps()
-        builder.build()
+        ci.cpp.check(profile=profile, coverage=False, run_tests=False)
 
     python_src_path = workspace / "sdk-python"
     run_setup_py(python_src_path, profile, "clean", "develop")
@@ -64,6 +62,12 @@ def deploy(python_src_path: Path, *, profile: str, git_tag: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--isolate-conan-user-home",
+        action="store_true",
+        dest="home_isolation",
+        default=False
+    )
     subparsers = parser.add_subparsers(title="subcommands", dest="command")
 
     check_parser = subparsers.add_parser("check")
@@ -76,6 +80,8 @@ def main() -> None:
     subparsers.add_parser("mirror")
 
     args = parser.parse_args()
+    if args.home_isolation:
+        ci.cpp.set_home_isolation()
 
     command = args.command
 
