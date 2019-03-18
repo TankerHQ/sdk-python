@@ -83,7 +83,6 @@ typedef struct tanker_options tanker_options_t;
 typedef struct tanker_authentication_methods tanker_authentication_methods_t;
 typedef struct tanker_sign_in_options tanker_sign_in_options_t;
 typedef struct tanker_encrypt_options tanker_encrypt_options_t;
-typedef struct tanker_decrypt_options tanker_decrypt_options_t;
 typedef char b64char;
 typedef void (*tanker_log_handler_t)(char const* category,
                                      char level,
@@ -124,12 +123,6 @@ struct tanker_encrypt_options
   uint32_t nb_recipient_public_identities;
   b64char const* const* recipient_gids;
   uint32_t nb_recipient_gids;
-};
-
-struct tanker_decrypt_options
-{
-  uint8_t version;
-  uint64_t timeout;
 };
 
 const char* tanker_version_string(void);
@@ -191,8 +184,7 @@ tanker_future_t* tanker_encrypt(tanker_t* tanker,
 tanker_future_t* tanker_decrypt(tanker_t* session,
                                 uint8_t* decrypted_data,
                                 const uint8_t* data,
-                                uint64_t data_size,
-                                tanker_decrypt_options_t const* options);
+                                uint64_t data_size);
 
 tanker_future_t* tanker_share(tanker_t* session,
                               char const* const* recipient_public_identities,

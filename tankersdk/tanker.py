@@ -247,11 +247,7 @@ class Tanker:
         size = cast(int, c_size)
         c_clear_buffer = ffi.new("uint8_t[%i]" % size)
         c_decrypt_fut = tankerlib.tanker_decrypt(
-            self.c_tanker,
-            c_clear_buffer,
-            c_encrypted_buffer,
-            len(c_encrypted_buffer),
-            ffi.NULL,
+            self.c_tanker, c_clear_buffer, c_encrypted_buffer, len(c_encrypted_buffer)
         )
 
         def decrypt_cb() -> bytes:
