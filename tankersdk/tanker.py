@@ -28,15 +28,6 @@ def log_handler(category: CData, level: CData, message: CData) -> None:
 
 
 @ffi.def_extern()  # type: ignore
-def verification_callback(args: CData, data: CData) -> None:
-    tanker_instance = ffi.from_handle(data)
-    if tanker_instance.on_unlock_required:
-        tanker_instance.on_unlock_required()
-    else:
-        print("Warning: tanker.on_unlock_required not set, .open will not return")
-
-
-@ffi.def_extern()  # type: ignore
 def revoke_callback(args: CData, data: CData) -> None:
     tanker_instance = ffi.from_handle(data)
     if tanker_instance.on_revoked:
@@ -301,22 +292,6 @@ class Tanker:
             )
         )
 
-    def create_identity(self, trustchain_private_key: str, user_id: str) -> str:
-        c_user_id = str_to_c_string(user_id)
-        c_trustchain_id = str_to_c_string(self.trustchain_id)
-        c_trustchain_private_key = str_to_c_string(trustchain_private_key)
-        c_expected = tankerlib.tanker_create_identity(
-            c_trustchain_id, c_trustchain_private_key, c_user_id
-        )
-        c_token = unwrap_expected(c_expected, "char*")
-        return c_string_to_str(c_token)
-
-    def get_public_identity(self, identity: str) -> str:
-        c_identity = str_to_c_string(identity)
-        c_expected = tankerlib.tanker_get_public_identity(c_identity)
-        c_token = unwrap_expected(c_expected, "char*")
-        return c_string_to_str(c_token)
-
     async def unlock(
         self, *, password: Optional[str] = None, verification_code: Optional[str] = None
     ) -> None:
@@ -360,6 +335,27 @@ class Tanker:
             self.c_tanker, c_email, c_password
         )
         await handle_tanker_future(c_register_unlock_fut)
+
+    async def generate_and_register_unlock_key(self) -> str:
+        """
+        Generate a private unlock key.
+
+        It can be used to unlock a device
+        """
+        c_generate_and_register_unlock_key_fut = tankerlib.tanker_generate_and_register_unlock_key(
+            self.c_tanker
+        )
+
+        def generate_and_register_unlock_key_cb() -> str:
+            c_voidp = tankerlib.tanker_future_get_voidptr(
+                c_generate_and_register_unlock_key_fut
+            )
+            c_str = ffi.cast("char*", c_voidp)
+            return c_string_to_str(c_str)
+
+        return await handle_tanker_future(
+            c_generate_and_register_unlock_key_fut, generate_and_register_unlock_key_cb
+        )
 
     async def create_group(self, user_ids: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""

@@ -9,6 +9,7 @@ from faker import Faker
 import tankersdk
 from tankersdk import Admin, Tanker, Status as TankerStatus, Error as TankerError
 from tankersdk.admin import Trustchain
+import tankersdk_identity
 
 import pytest
 
@@ -84,7 +85,9 @@ async def test_init_tanker_invalid_path(trustchain: Trustchain) -> None:
     )
     fake = Faker()
     user_id = fake.email()
-    identity = tanker.create_identity(trustchain.private_key, user_id)
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, user_id
+    )
     with pytest.raises(TankerError):
         await tanker.sign_up(identity)
 
@@ -101,7 +104,9 @@ async def test_sign_up_new_account(tmp_path: Path, trustchain: Trustchain) -> No
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     fake = Faker()
     user_id = fake.email()
-    identity = tanker.create_identity(trustchain.private_key, user_id)
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, user_id
+    )
     await tanker.sign_up(identity)
     assert tanker.status == TankerStatus.OPEN
     device_id = await tanker.device_id()
@@ -134,7 +139,9 @@ async def test_sign_back_in(tmp_path: Path, trustchain: Trustchain) -> None:
     user_path = tmp_path.joinpath("user")
     user_path.mkdir_p()
     tanker = create_tanker(trustchain.id, writable_path=user_path)
-    identity = tanker.create_identity(trustchain.private_key, user_id)
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, user_id
+    )
     await tanker.sign_up(identity)
     await tanker.sign_out()
     await tanker.sign_in(identity)
@@ -149,7 +156,9 @@ async def create_user_session(
     user_path = tmp_path.joinpath("user")
     user_path.mkdir_p()
     tanker = create_tanker(trustchain.id, writable_path=user_path)
-    identity = tanker.create_identity(trustchain.private_key, user_id)
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, user_id
+    )
     await tanker.sign_up(identity)
     return identity, tanker
 
@@ -168,7 +177,7 @@ async def test_encrypt_decrypt(tmp_path: Path, trustchain: Trustchain) -> None:
 async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
     bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
-    bob_pub_id = bob_session.get_public_identity(bob_identity)
+    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
     message = b"I love you"
     encrypted = await alice_session.encrypt(message, share_with_users=[bob_pub_id])
     decrypted = await bob_session.decrypt(encrypted)
@@ -181,7 +190,7 @@ async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> N
 async def test_postponed_share(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
     bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
-    bob_pub_id = bob_session.get_public_identity(bob_identity)
+    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
     message = b"I love you"
     encrypted = await alice_session.encrypt(message)
     resource_id = alice_session.get_resource_id(encrypted)
@@ -209,14 +218,10 @@ async def check_share_to_group_works(
 @pytest.mark.asyncio
 async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_identity, bob_session = await create_user_session(
-        tmp_path, trustchain
-    )
-    bob_pub_id = alice_session.get_public_identity(bob_identity)
-    charlie_identity, charlie_session = await create_user_session(
-        tmp_path, trustchain
-    )
-    charlie_pub_id = alice_session.get_public_identity(charlie_identity)
+    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
+    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
+    charlie_identity, charlie_session = await create_user_session(tmp_path, trustchain)
+    charlie_pub_id = tankersdk_identity.get_public_identity(charlie_identity)
 
     group_id = await alice_session.create_group([bob_pub_id, charlie_pub_id])
     await check_share_to_group_works(
@@ -226,18 +231,12 @@ async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
 
 @pytest.mark.asyncio
 async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
-    alice_identity, alice_session = await create_user_session(
-        tmp_path, trustchain
-    )
-    alice_pub_id = alice_session.get_public_identity(alice_identity)
-    bob_identity, bob_session = await create_user_session(
-        tmp_path, trustchain
-    )
-    bob_pub_id = alice_session.get_public_identity(bob_identity)
-    charlie_identity, charlie_session = await create_user_session(
-        tmp_path, trustchain
-    )
-    charlie_pub_id = alice_session.get_public_identity(charlie_identity)
+    alice_identity, alice_session = await create_user_session(tmp_path, trustchain)
+    alice_pub_id = tankersdk_identity.get_public_identity(alice_identity)
+    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
+    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
+    charlie_identity, charlie_session = await create_user_session(tmp_path, trustchain)
+    charlie_pub_id = tankersdk_identity.get_public_identity(charlie_identity)
 
     group_id = await alice_session.create_group([alice_pub_id, bob_pub_id])
     await alice_session.update_group_members(group_id, add=[charlie_pub_id])
@@ -255,7 +254,9 @@ async def create_two_devices(
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
     laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
-    alice_identity = laptop_tanker.create_identity(trustchain.private_key, fake.email())
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, fake.email()
+    )
     await laptop_tanker.sign_up(alice_identity, password=password)
 
     phone_path = tmp_path.joinpath("phone")
@@ -292,3 +293,47 @@ async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
     await phone.revoke_device(laptop_id)
     await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
     assert laptop.status == TankerStatus.CLOSED
+
+
+@pytest.mark.asyncio
+async def test_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, fake.email()
+    )
+    await laptop_tanker.sign_up(alice_identity)
+    unlock_key = await laptop_tanker.generate_and_register_unlock_key()
+    assert unlock_key
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+    await phone_tanker.sign_in(alice_identity, unlock_key=unlock_key)
+    assert phone_tanker.status == TankerStatus.OPEN
+    await laptop_tanker.sign_out()
+    await phone_tanker.sign_out()
+
+
+@pytest.mark.asyncio
+async def test_bad_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, fake.email()
+    )
+    await laptop_tanker.sign_up(alice_identity)
+    unlock_key = await laptop_tanker.generate_and_register_unlock_key()
+    assert unlock_key
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+    with pytest.raises(tankersdk.error.Error):
+        await phone_tanker.sign_in(alice_identity, unlock_key="plop")
+    assert phone_tanker.status == TankerStatus.CLOSED
+    await laptop_tanker.sign_out()

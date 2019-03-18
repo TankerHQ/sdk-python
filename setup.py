@@ -33,6 +33,7 @@ setup(
     install_requires=[
         "attrs",
         "cffi>=1.12",
+        "tankersdk_identity",
     ],
     extras_require={
         "dev": [
@@ -47,6 +48,7 @@ setup(
 
             # Tests
             "pytest",
+            "pytest-cov",
             "faker",
             "path.py",
             "pytest-asyncio",

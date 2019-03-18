@@ -15,7 +15,6 @@ typedef struct tanker_trustchain_descriptor
 void tanker_init();
 
 extern "Python" void log_handler(const char* category, char level, const char* message);
-extern "Python" void verification_callback(void* arg, void* data);
 extern "Python" void revoke_callback(void* arg, void* data);
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
@@ -161,6 +160,8 @@ tanker_future_t* tanker_register_unlock(tanker_t* session,
                                         char const* new_email,
                                         char const* new_password);
 
+tanker_future_t* tanker_generate_and_register_unlock_key(tanker_t* session);
+
 tanker_future_t* tanker_unlock_current_device_with_password(tanker_t* session,
                                                             char const* pass);
 
@@ -216,9 +217,3 @@ tanker_future_t* tanker_update_group_members(tanker_t* session,
                                              char const* group_id,
                                              char const* const* users_to_add,
                                              uint64_t nb_users_to_add);
-
-tanker_expected_t* tanker_create_identity(b64char const* trustchain_id,
-                                          b64char const* trustchain_private_key,
-                                          char const* user_id);
-
-tanker_expected_t* tanker_get_public_identity(b64char const* identity);
