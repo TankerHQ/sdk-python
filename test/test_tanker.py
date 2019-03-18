@@ -55,7 +55,7 @@ def trustchain() -> Iterator[Trustchain]:
 
 def test_native_version() -> None:
     native_version = tankersdk.native_version()
-    assert(native_version)
+    assert native_version
 
 
 def test_create_trustchain() -> None:
@@ -151,7 +151,7 @@ async def create_user_session(
     tanker = create_tanker(trustchain.id, writable_path=user_path)
     identity = tanker.create_identity(trustchain.private_key, user_id)
     await tanker.sign_up(identity)
-    return user_id, tanker
+    return identity, tanker
 
 
 @pytest.mark.asyncio
@@ -167,9 +167,10 @@ async def test_encrypt_decrypt(tmp_path: Path, trustchain: Trustchain) -> None:
 @pytest.mark.asyncio
 async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
+    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
+    bob_pub_id = bob_session.get_public_identity(bob_identity)
     message = b"I love you"
-    encrypted = await alice_session.encrypt(message, share_with_users=[bob_id])
+    encrypted = await alice_session.encrypt(message, share_with_users=[bob_pub_id])
     decrypted = await bob_session.decrypt(encrypted)
     assert decrypted == message
     await alice_session.sign_out()
@@ -179,11 +180,12 @@ async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> N
 @pytest.mark.asyncio
 async def test_postponed_share(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
+    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
+    bob_pub_id = bob_session.get_public_identity(bob_identity)
     message = b"I love you"
     encrypted = await alice_session.encrypt(message)
     resource_id = alice_session.get_resource_id(encrypted)
-    await alice_session.share([resource_id], users=[bob_id])
+    await alice_session.share([resource_id], users=[bob_pub_id])
 
     decrypted = await bob_session.decrypt(encrypted)
     assert decrypted == message
@@ -207,10 +209,16 @@ async def check_share_to_group_works(
 @pytest.mark.asyncio
 async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
     _, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
-    charlie_id, charlie_session = await create_user_session(tmp_path, trustchain)
+    bob_identity, bob_session = await create_user_session(
+        tmp_path, trustchain
+    )
+    bob_pub_id = alice_session.get_public_identity(bob_identity)
+    charlie_identity, charlie_session = await create_user_session(
+        tmp_path, trustchain
+    )
+    charlie_pub_id = alice_session.get_public_identity(charlie_identity)
 
-    group_id = await alice_session.create_group([bob_id, charlie_id])
+    group_id = await alice_session.create_group([bob_pub_id, charlie_pub_id])
     await check_share_to_group_works(
         alice_session, group_id, bob_session, charlie_session
     )
@@ -218,12 +226,21 @@ async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
 
 @pytest.mark.asyncio
 async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
-    alice_id, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_id, bob_session = await create_user_session(tmp_path, trustchain)
-    charlie_id, charlie_session = await create_user_session(tmp_path, trustchain)
+    alice_identity, alice_session = await create_user_session(
+        tmp_path, trustchain
+    )
+    alice_pub_id = alice_session.get_public_identity(alice_identity)
+    bob_identity, bob_session = await create_user_session(
+        tmp_path, trustchain
+    )
+    bob_pub_id = alice_session.get_public_identity(bob_identity)
+    charlie_identity, charlie_session = await create_user_session(
+        tmp_path, trustchain
+    )
+    charlie_pub_id = alice_session.get_public_identity(charlie_identity)
 
-    group_id = await alice_session.create_group([alice_id, bob_id])
-    await alice_session.update_group_members(group_id, add=[charlie_id])
+    group_id = await alice_session.create_group([alice_pub_id, bob_pub_id])
+    await alice_session.update_group_members(group_id, add=[charlie_pub_id])
 
     await check_share_to_group_works(
         alice_session, group_id, bob_session, charlie_session

@@ -213,9 +213,9 @@ class Tanker:
         c_encrypt_options = ffi.new(
             "tanker_encrypt_options_t *",
             {
-                "version": 1,
-                "recipient_uids": user_list.data,
-                "nb_recipient_uids": user_list.size,
+                "version": 2,
+                "recipient_public_identities": user_list.data,
+                "nb_recipient_public_identities": user_list.size,
                 "recipient_gids": group_list.data,
                 "nb_recipient_gids": group_list.size,
             },
@@ -312,6 +312,12 @@ class Tanker:
         c_expected = tankerlib.tanker_create_identity(
             c_trustchain_id, c_trustchain_private_key, c_user_id
         )
+        c_token = unwrap_expected(c_expected, "char*")
+        return c_string_to_str(c_token)
+
+    def get_public_identity(self, identity: str) -> str:
+        c_identity = str_to_c_string(identity)
+        c_expected = tankerlib.tanker_get_public_identity(c_identity)
         c_token = unwrap_expected(c_expected, "char*")
         return c_string_to_str(c_token)
 
