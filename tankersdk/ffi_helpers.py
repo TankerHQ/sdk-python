@@ -11,7 +11,9 @@ from .error import Error
 CData = Type[ffi.CData]
 
 
-def str_to_c_string(text: str) -> CData:
+def str_to_c_string(text: Optional[str]) -> CData:
+    if text is None:
+        return ffi.NULL  # type: ignore
     return ffi.new("char[]", text.encode())  # type: ignore
 
 
