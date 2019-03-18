@@ -48,6 +48,7 @@ setup(
 
             # Tests
             "pytest",
+            "pytest-cov",
             "faker",
             "path.py",
             "pytest-asyncio",
