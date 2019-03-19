@@ -7,7 +7,7 @@ from path import Path
 from faker import Faker
 
 import tankersdk
-from tankersdk import Admin, Tanker, Status as TankerStatus, Error as TankerError
+from tankersdk import Admin, Tanker, Error as TankerError
 from tankersdk.admin import Trustchain
 import tankersdk_identity
 
@@ -108,7 +108,7 @@ async def test_sign_up_new_account(tmp_path: Path, trustchain: Trustchain) -> No
         trustchain.id, trustchain.private_key, user_id
     )
     await tanker.sign_up(identity)
-    assert tanker.status == TankerStatus.OPEN
+    assert tanker.is_open
     device_id = await tanker.device_id()
     assert device_id
     await tanker.sign_out()
@@ -271,7 +271,7 @@ async def create_two_devices(
 @pytest.mark.asyncio
 async def test_add_device(tmp_path: Path, trustchain: Trustchain) -> None:
     laptop, phone = await create_two_devices(tmp_path, trustchain)
-    assert phone.status == TankerStatus.OPEN
+    assert phone.is_open
     await laptop.sign_out()
     await phone.sign_out()
 
@@ -292,7 +292,7 @@ async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
     laptop.on_revoked = on_revoked
     await phone.revoke_device(laptop_id)
     await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
-    assert laptop.status == TankerStatus.CLOSED
+    assert not laptop.is_open
 
 
 @pytest.mark.asyncio
@@ -312,7 +312,7 @@ async def test_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
     await phone_tanker.sign_in(alice_identity, unlock_key=unlock_key)
-    assert phone_tanker.status == TankerStatus.OPEN
+    assert phone_tanker.is_open
     await laptop_tanker.sign_out()
     await phone_tanker.sign_out()
 
@@ -335,5 +335,5 @@ async def test_bad_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
     with pytest.raises(tankersdk.error.Error):
         await phone_tanker.sign_in(alice_identity, unlock_key="plop")
-    assert phone_tanker.status == TankerStatus.CLOSED
+    assert not phone_tanker.is_open
     await laptop_tanker.sign_out()

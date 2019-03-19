@@ -59,14 +59,6 @@ struct tanker_error
 
 void* tanker_future_get_voidptr(tanker_future_t* future);
 
-enum tanker_status
-{
-  TANKER_STATUS_CLOSED,
-  TANKER_STATUS_OPEN,
-
-  TANKER_STATUS_LAST
-};
-
 enum tanker_event
 {
   TANKER_EVENT_SESSION_CLOSED,
@@ -152,7 +144,7 @@ tanker_future_t* tanker_sign_in(
 
 tanker_future_t* tanker_sign_out(tanker_t* tanker);
 
-enum tanker_status tanker_get_status(tanker_t* tanker);
+bool tanker_is_open(tanker_t* tanker);
 
 tanker_future_t* tanker_device_id(tanker_t* session);
 
@@ -161,9 +153,6 @@ tanker_future_t* tanker_register_unlock(tanker_t* session,
                                         char const* new_password);
 
 tanker_future_t* tanker_generate_and_register_unlock_key(tanker_t* session);
-
-tanker_future_t* tanker_unlock_current_device_with_password(tanker_t* session,
-                                                            char const* pass);
 
 tanker_future_t* tanker_revoke_device(tanker_t* session,
                                       b64char const* device_id);
