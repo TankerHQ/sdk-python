@@ -10,12 +10,6 @@ def get_long_description() -> str:
         return fp.read()
 
 
-if sys.platform == "win32":
-    cffi_modules = list()
-else:
-    cffi_modules = ["build_tanker.py:ffibuilder"]
-
-
 setup(
     name="tankersdk",
     version="dev",
@@ -29,7 +23,7 @@ setup(
         "cffi>=1.12",
         "path.py"
     ],
-    cffi_modules=cffi_modules,
+    cffi_modules=["build_tanker.py:ffibuilder"],
     install_requires=[
         "attrs",
         "cffi>=1.12",
