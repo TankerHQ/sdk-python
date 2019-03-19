@@ -154,9 +154,6 @@ tanker_future_t* tanker_register_unlock(tanker_t* session,
 
 tanker_future_t* tanker_generate_and_register_unlock_key(tanker_t* session);
 
-tanker_future_t* tanker_unlock_current_device_with_password(tanker_t* session,
-                                                            char const* pass);
-
 tanker_future_t* tanker_revoke_device(tanker_t* session,
                                       b64char const* device_id);
 
