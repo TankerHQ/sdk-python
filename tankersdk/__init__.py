@@ -7,7 +7,7 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 from .error import Error  # noqa
-from .tanker import Tanker, Status  # noqa
+from .tanker import Tanker  # noqa
 from .admin import Admin  # noqa
 from .version import __version__  # noqa
 

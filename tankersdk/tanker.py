@@ -1,6 +1,5 @@
 from typing import cast, Callable, List, Optional
 from asyncio import Future  # noqa
-from enum import Enum
 import os
 
 from _tanker import ffi
@@ -32,13 +31,6 @@ def revoke_callback(args: CData, data: CData) -> None:
     tanker_instance = ffi.from_handle(data)
     if tanker_instance.on_revoked:
         tanker_instance.on_revoked()
-
-
-class Status(Enum):
-    """Possible state for the tanker session"""
-
-    CLOSED = 0
-    OPEN = 1
 
 
 UnlockFunc = Callable[[], None]
@@ -100,14 +92,10 @@ class Tanker:
         self.c_tanker = ffi.cast("tanker_t*", c_voidp)
 
     @property
-    def status(self) -> Status:
-        """
-        Return current session status.
-
-        See the :class:`Status` enum for the possible values
-        """
-        c_status = tankerlib.tanker_get_status(self.c_tanker)
-        return Status(c_status)
+    def is_open(self) -> bool:
+        """Return whether the Tanker session is open"""
+        c_bool = tankerlib.tanker_is_open(self.c_tanker)
+        return cast(bool, c_bool)
 
     def _set_event_callbacks(self) -> None:
         userdata = ffi.new_handle(self)
