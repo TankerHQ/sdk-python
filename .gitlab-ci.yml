@@ -1,49 +1,58 @@
 before_script:
   - dmenv install --no-develop
-  - export PATH=$(dmenv show:venv_path)/bin:$PATH
 
 
 stages:
   - check
   - deploy
 
-check/linux:
+.check:
   stage: check
   except:
     - schedules
-  tags:
-    - linux
+
+check/linux:
+  extends: .check
+  tags: [linux]
   script:
     - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile gcc8-release
 
 check/macos:
-  stage: check
-  except:
-    - schedules
-  tags:
-    - macos
+  extends: .check
+  tags: [macos]
   script:
     - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile macos-release
 
-deploy/linux:
+check/windows:
+  extends: .check
+  tags: [windows]
+  script:
+    - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile vs2017-release
+
+
+.deploy:
   stage: deploy
   when: manual
   only:
     - tags
-  tags:
-    - linux
+
+deploy/linux:
+  extends: .deploy
+  tags: [linux]
   script:
     - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
 
 deploy/macos:
-  stage: deploy
-  when: manual
-  only:
-    - tags
-  tags:
-    - macos
+  extends: .deploy
+  tags: [macos]
   script:
     - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile macos-release
+
+deploy/windows:
+  extends: .deploy
+  tags: [windows]
+  script:
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile vs2017-release
 
 
 mirror:

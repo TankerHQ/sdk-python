@@ -16,10 +16,18 @@ def get_native_build_path() -> Path:
     return Path(res).abspath()
 
 
+def get_lib_name(name):
+    if sys.platform == "win32":
+        return name + ".lib"
+    else:
+        return "lib" + name + ".a"
+
+
 def find_libs(names: List[str], paths: List[str]) -> Iterator[Path]:
     for name in names:
         for lib_path in paths:
-            candidate = Path(lib_path) / f"lib{name}.a"
+            lib_name = get_lib_name(name)
+            candidate = Path(lib_path) / lib_name
             if candidate.exists():
                 yield candidate
 
@@ -35,8 +43,9 @@ def get_deps_libs(native_build_path: Path) -> Iterator[Path]:
 
 def get_all_static_libs() -> Iterator[Path]:
     native_build_path = get_native_build_path()
-    for lib in ["libctanker", "libtankercore", "libtankeridentity", "libtankercrypto"]:
-        yield native_build_path.joinpath("lib", lib + ".a")
+    for lib in ["ctanker", "tankercore", "tankeridentity", "tankercrypto"]:
+        lib_name = get_lib_name(lib)
+        yield native_build_path.joinpath("lib", lib_name)
 
     yield from get_deps_libs(native_build_path)
 
@@ -50,13 +59,19 @@ def on_import() -> None:
     libs = list(get_all_static_libs())
 
     tanker_cffi_source = Path("cffi_src.c").text()
+    if sys.platform == "win32":
+        system_libs = ["crypt32"]
+    else:
+        system_libs = ["dl", "pthread", "stdc++"]
+    native_build_path = get_native_build_path()
+    include_dirs = [tanker_include_path, native_build_path]
     ffibuilder.set_source(
         "_tanker",
         tanker_cffi_source,
-        libraries=["dl", "pthread", "stdc++"],
+        libraries=system_libs,
         extra_objects=libs,
-        include_dirs=[tanker_include_path],
-        language="c++",
+        include_dirs=include_dirs,
+        language="c",
     )
 
     tanker_cffi_defs = Path("cffi_defs.h").text()
