@@ -1,6 +1,8 @@
-from typing import cast, Callable, List, Optional
 from asyncio import Future  # noqa
+from enum import Enum
 import os
+
+from typing import cast, Callable, List, Optional
 
 from _tanker import ffi
 from _tanker import lib as tankerlib
@@ -31,6 +33,12 @@ def revoke_callback(args: CData, data: CData) -> None:
     tanker_instance = ffi.from_handle(data)
     if tanker_instance.on_revoked:
         tanker_instance.on_revoked()
+
+
+class SignInResult(Enum):
+    OK = 0
+    IDENTITY_NOT_REGISTERED = 1
+    IDENTITY_VERIFICATION_NEEDED = 2
 
 
 UnlockFunc = Callable[[], None]
@@ -141,7 +149,7 @@ class Tanker:
         unlock_key: Optional[str] = None,
         verification_code: Optional[str] = None,
         password: Optional[str] = None
-    ) -> None:
+    ) -> SignInResult:
         """
         Sign in to Tanker, opening a session
 
@@ -166,7 +174,12 @@ class Tanker:
         c_sign_in_fut = tankerlib.tanker_sign_in(
             self.c_tanker, c_identity, c_sign_in_options
         )
-        await handle_tanker_future(c_sign_in_fut)
+
+        def sign_in_cb() -> SignInResult:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_sign_in_fut)
+            return SignInResult(int(ffi.cast("int", c_voidp)))
+
+        return await handle_tanker_future(c_sign_in_fut, sign_in_cb)
 
     async def sign_out(self) -> None:
         """Close the session."""

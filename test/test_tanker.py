@@ -143,9 +143,13 @@ async def test_sign_back_in(tmp_path: Path, trustchain: Trustchain) -> None:
         trustchain.id, trustchain.private_key, user_id
     )
     await tanker.sign_up(identity)
+    assert tanker.is_open
     await tanker.sign_out()
-    await tanker.sign_in(identity)
+    assert not tanker.is_open
+    assert await tanker.sign_in(identity) == tankersdk.SignInResult.OK
+    assert tanker.is_open
     await tanker.sign_out()
+    assert not tanker.is_open
 
 
 async def create_user_session(
@@ -293,6 +297,27 @@ async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
     await phone.revoke_device(laptop_id)
     await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
     assert not laptop.is_open
+
+
+@pytest.mark.asyncio
+async def test_no_password(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, fake.email()
+    )
+    await laptop_tanker.sign_up(alice_identity, password="plop")
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+
+    res = await phone_tanker.sign_in(alice_identity)
+    assert res == tankersdk.SignInResult.IDENTITY_VERIFICATION_NEEDED
+    assert not phone_tanker.is_open
 
 
 @pytest.mark.asyncio
