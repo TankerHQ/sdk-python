@@ -22,7 +22,7 @@ from .ffi_helpers import (
 
 @ffi.def_extern()  # type: ignore
 def log_handler(record: CData) -> None:
-    if os.environ.get("DEBUG"):
+    if os.environ.get("TANKER_SDK_DEBUG"):
         message = c_string_to_str(record.message)
         category = c_string_to_str(record.category)
         print(category, ": ", message, sep="")
