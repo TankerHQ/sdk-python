@@ -46,8 +46,12 @@ def tmp_path(tmpdir: str) -> Path:
 
 
 @pytest.fixture(scope="session")
-def trustchain() -> Iterator[Trustchain]:
-    admin = Admin(url=TEST_CONFIG["url"], token=TEST_CONFIG["idToken"])
+def admin() -> Iterator[Admin]:
+    yield Admin(url=TEST_CONFIG["url"], token=TEST_CONFIG["idToken"])
+
+
+@pytest.fixture(scope="session")
+def trustchain(admin: Admin) -> Iterator[Trustchain]:
     name = "python_bindings"
     trustchain = admin.create_trustchain(name)
     yield trustchain
@@ -335,5 +339,55 @@ async def test_bad_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
     with pytest.raises(tankersdk.error.Error):
         await phone_tanker.sign_in(alice_identity, unlock_key="plop")
+    assert not phone_tanker.is_open
+    await laptop_tanker.sign_out()
+
+
+@pytest.mark.asyncio
+async def test_unlock_email(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    email = fake.email()
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, email
+    )
+    await laptop_tanker.sign_up(alice_identity, email=email)
+    verif_code = admin.get_verification_code(trustchain.id, email)
+    assert len(verif_code) == 8
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+
+    await phone_tanker.sign_in(alice_identity, verification_code=verif_code)
+    assert phone_tanker.is_open
+    await laptop_tanker.sign_out()
+    await phone_tanker.sign_out()
+
+
+@pytest.mark.asyncio
+async def test_bad_verif_code(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    email = fake.email()
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, email
+    )
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+    await laptop_tanker.sign_up(alice_identity, email=email)
+    with pytest.raises(tankersdk.error.Error):
+        await phone_tanker.sign_in(alice_identity, verification_code="12345678")
+    assert not phone_tanker.is_open
+    with pytest.raises(tankersdk.error.Error):
+        await phone_tanker.sign_in(alice_identity, verification_code="azerty")
+    assert not phone_tanker.is_open
+    with pytest.raises(tankersdk.error.Error):
+        await phone_tanker.sign_in(alice_identity, verification_code="")
     assert not phone_tanker.is_open
     await laptop_tanker.sign_out()
