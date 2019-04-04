@@ -51,3 +51,13 @@ class Admin:
         )
         wait_fut_or_raise(delete_fut)
         tankerlib.tanker_future_destroy(delete_fut)
+
+    def get_verification_code(self, trustchain_id: str, email: str) -> str:
+        get_verif_fut = tankerlib.tanker_admin_get_verification_code(
+            self._c_admin, str_to_c_string(trustchain_id), str_to_c_string(email)
+        )
+        wait_fut_or_raise(get_verif_fut)
+        c_voidp = tankerlib.tanker_future_get_voidptr(get_verif_fut)
+        c_str = ffi.cast("char*", c_voidp)
+        tankerlib.tanker_future_destroy(get_verif_fut)
+        return c_string_to_str(c_str)
