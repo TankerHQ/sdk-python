@@ -340,6 +340,9 @@ async def test_bad_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
     with pytest.raises(tankersdk.error.Error):
         await phone_tanker.sign_in(alice_identity, unlock_key="plop")
     assert not phone_tanker.is_open
+    with pytest.raises(tankersdk.error.Error):
+        await phone_tanker.sign_in(alice_identity, unlock_key="")
+    assert not phone_tanker.is_open
     await laptop_tanker.sign_out()
 
 
