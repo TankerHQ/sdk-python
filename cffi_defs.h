@@ -206,3 +206,6 @@ tanker_future_t* tanker_update_group_members(tanker_t* session,
                                              char const* group_id,
                                              char const* const* users_to_add,
                                              uint64_t nb_users_to_add);
+
+tanker_future_t* tanker_admin_get_verification_code(
+    tanker_admin_t* admin, char const* trustchain_id, char const* user_email);
