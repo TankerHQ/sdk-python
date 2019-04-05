@@ -23,9 +23,14 @@ from .ffi_helpers import (
 
 
 @ffi.def_extern()  # type: ignore
-def log_handler(category: CData, level: CData, message: CData) -> None:
-    if os.environ.get("DEBUG"):
-        print(c_string_to_str(message))
+def log_handler(record: CData) -> None:
+    if os.environ.get("TANKER_SDK_DEBUG"):
+        message = c_string_to_str(record.message)
+        category = c_string_to_str(record.category)
+        print(category, ": ", message, sep="")
+
+
+tankerlib.tanker_set_log_handler(tankerlib.log_handler)
 
 
 @ffi.def_extern()  # type: ignore
@@ -68,14 +73,10 @@ class Tanker:
         self.trustchain_url = trustchain_url or "https://api.tanker.io"
         self.writable_path = writable_path
 
-        self._set_log_handler()
         self._create_tanker_obj()
         self._set_event_callbacks()
         self.on_unlock_required = None  # type: Optional[UnlockFunc]
         self.on_revoked = None  # type: Optional[RevokeFunc]
-
-    def _set_log_handler(self) -> None:
-        tankerlib.tanker_set_log_handler(tankerlib.log_handler)
 
     def _create_tanker_obj(self) -> None:
         c_trustchain_url = str_to_c_string(self.trustchain_url)

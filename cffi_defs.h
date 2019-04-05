@@ -14,7 +14,28 @@ typedef struct tanker_trustchain_descriptor
 
 void tanker_init();
 
-extern "Python" void log_handler(const char* category, char level, const char* message);
+enum tanker_log_level
+{
+  TANKER_LOG_DEBUG = 1,
+  TANKER_LOG_INFO,
+  TANKER_LOG_WARNING,
+  TANKER_LOG_ERROR,
+};
+
+
+struct tanker_log_record
+{
+  char const* category;
+  uint32_t level;
+  char const* file;
+  uint32_t line;
+  char const* message;
+};
+typedef struct tanker_log_record tanker_log_record_t;
+typedef void (*tanker_log_handler_t)(tanker_log_record_t const* record);
+extern "Python" void log_handler(tanker_log_record_t*);
+
+
 extern "Python" void revoke_callback(void* arg, void* data);
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
@@ -75,10 +96,6 @@ typedef struct tanker_authentication_methods tanker_authentication_methods_t;
 typedef struct tanker_sign_in_options tanker_sign_in_options_t;
 typedef struct tanker_encrypt_options tanker_encrypt_options_t;
 typedef char b64char;
-typedef void (*tanker_log_handler_t)(char const* category,
-                                     char level,
-                                     const char* message);
-
 typedef struct tanker_connection_t tanker_connection_t;
 typedef void (*tanker_event_callback_t)(void* arg, void* data);
 
