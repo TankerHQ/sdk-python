@@ -24,29 +24,22 @@ setup(
         "path.py"
     ],
     cffi_modules=["build_tanker.py:ffibuilder"],
-    install_requires=[
-        "attrs",
-        "cffi>=1.12",
-        "tankersdk_identity",
-    ],
+    install_requires=["attrs", "cffi>=1.12", "tankersdk_identity"],
     extras_require={
         "dev": [
             # For run-ci.py
             "ci",
-
             # Linters
             "black",
             "flake8",
             "flake8-docstrings",
             "mypy",
-
             # Tests
             "pytest",
             "pytest-cov",
             "faker",
             "path.py",
             "pytest-asyncio",
-
             # Documentation
             "sphinx",
             "ghp-import",
