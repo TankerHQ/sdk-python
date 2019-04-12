@@ -43,7 +43,17 @@ def get_deps_libs(native_build_path: Path) -> Iterator[Path]:
 
 def get_all_static_libs() -> Iterator[Path]:
     native_build_path = get_native_build_path()
-    for lib in ["ctanker", "tankercore", "tankeridentity", "tankercrypto", "tankerserialization"]:
+    # fmt: off
+    native_libs = [
+        "ctanker",
+        "tankercore",
+        "tankeridentity",
+        "tankercrypto",
+        "tankerserialization",
+        "tankerformat"
+    ]
+    # fmt: on
+    for lib in native_libs:
         lib_name = get_lib_name(lib)
         yield native_build_path.joinpath("lib", lib_name)
 
