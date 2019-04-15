@@ -1,15 +1,33 @@
 before_script:
   - dmenv install --no-develop
 
-
 stages:
   - check
   - deploy
 
+
+select/native-from-sources:
+  stage: check
+  when: manual
+  only:
+     - pushes
+  script:
+      - dmenv install --no-develop
+      - dmenv run -- python run-ci.py trigger --native-from-sources
+
+select/deployed-native:
+  stage: check
+  when: manual
+  only:
+     - pushes
+  script:
+      - dmenv install --no-develop
+      - dmenv run -- python run-ci.py trigger
+
 .check:
   stage: check
   except:
-    - schedules
+    - pushes
 
 check/linux:
   extends: .check
