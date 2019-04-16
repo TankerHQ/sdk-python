@@ -14,6 +14,7 @@ from .ffi_helpers import (
     OptionalStrList,
     bytes_to_c_buffer,
     c_buffer_to_bytes,
+    c_string_to_bytes,
     c_string_to_str,
     handle_tanker_future,
     str_to_c_string,
@@ -25,9 +26,13 @@ from .ffi_helpers import (
 @ffi.def_extern()  # type: ignore
 def log_handler(record: CData) -> None:
     if os.environ.get("TANKER_SDK_DEBUG"):
-        message = c_string_to_str(record.message)
+        message_bytes = c_string_to_bytes(record.message)
         category = c_string_to_str(record.category)
-        print(category, ": ", message, sep="")
+        try:
+            message = message_bytes.decode("ascii")
+        except UnicodeDecodeError:
+            message = repr(message_bytes)
+        print(category, message, sep=": ")
 
 
 tankerlib.tanker_set_log_handler(tankerlib.log_handler)
