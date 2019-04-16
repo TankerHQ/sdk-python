@@ -26,6 +26,10 @@ from .ffi_helpers import (
 @ffi.def_extern()  # type: ignore
 def log_handler(record: CData) -> None:
     if os.environ.get("TANKER_SDK_DEBUG"):
+        #  We can't assume that print() on Windows knows how to handle non-ASCII characters
+        #  (it depends on a lot of things)
+        #  So to be safe we check if the message from Native is readable in ASCII, and
+        #  if this fails we print `repr(message)` so that no information is lost.
         message_bytes = c_string_to_bytes(record.message)
         category = c_string_to_str(record.category)
         try:
