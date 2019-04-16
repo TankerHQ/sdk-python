@@ -31,6 +31,7 @@ def on_import() -> None:
     build_info = conan_out / "conanbuildinfo.json"
     if not build_info.exists():
         ui.warning("%s does not exist" % build_info)
+        ui.warning("building dummy Python extension")
         ffibuilder.set_source("_tanker", "")
         ffibuilder.cdef("")
         return
