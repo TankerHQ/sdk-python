@@ -83,7 +83,6 @@ void* tanker_future_get_voidptr(tanker_future_t* future);
 enum tanker_event
 {
   TANKER_EVENT_SESSION_CLOSED,
-  TANKER_EVENT_DEVICE_CREATED,
   TANKER_EVENT_DEVICE_REVOKED,
 
   TANKER_EVENT_LAST,
