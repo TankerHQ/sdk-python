@@ -59,10 +59,9 @@ async def open_tanker_session(
     return tanker
 
 
-def get_user_ids(requests_session: requests.Session, emails: List[str]) -> List[str]:
+def get_identities(requests_session: requests.Session, emails: List[str]) -> List[str]:
     all_users = do_request(requests_session, "get", "users").json()
-    by_email = dict([(x["email"], x["id"]) for x in all_users])
-    return [by_email[x] for x in emails]
+    return [x["publicIdentity"] for x in all_users if x["email"] in emails]
 
 
 async def main() -> None:
@@ -110,11 +109,11 @@ async def main() -> None:
 
     if args.command == "encrypt":
         user_emails = args.users or list()
-        user_ids = get_user_ids(requests_session, user_emails)
+        identities = get_identities(requests_session, user_emails)
         input_path = Path(args.input)
         input_bytes = input_path.bytes()
         print("Encrypting", args.input, "...")
-        encrypted = await tanker.encrypt(input_bytes, share_with_users=user_ids)
+        encrypted = await tanker.encrypt(input_bytes, share_with_users=identities)
         output_path = Path(args.output)
         output_path.write_bytes(encrypted)
         print("Encrypted data written to", output_path)
