@@ -5,7 +5,7 @@ import sys
 from path import Path
 import requests
 
-import ci.cpp
+import ci.conan
 import ci.git
 import ci.sdk_python
 
@@ -49,7 +49,7 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.home_isolation:
-        ci.cpp.set_home_isolation()
+        ci.conan.set_home_isolation()
 
     command = args.command
 
