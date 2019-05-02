@@ -393,3 +393,13 @@ class Tanker:
         )
 
         await handle_tanker_future(c_update_group_fut)
+
+    async def claim_provisional_identity(
+        self, provisional_identity: str, verification_code: str
+    ) -> None:
+        c_verification_code = str_to_c_string(verification_code)
+        c_provisional_identity = str_to_c_string(provisional_identity)
+        c_claim_fut = tankerlib.tanker_claim_provisional_identity(
+            self.c_tanker, c_provisional_identity, c_verification_code
+        )
+        await handle_tanker_future(c_claim_fut)
