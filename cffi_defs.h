@@ -225,3 +225,8 @@ tanker_future_t* tanker_update_group_members(tanker_t* session,
 
 tanker_future_t* tanker_admin_get_verification_code(
     tanker_admin_t* admin, char const* trustchain_id, char const* user_email);
+
+tanker_future_t* tanker_claim_provisional_identity(
+    tanker_t* session,
+    char const* provisional_identity,
+    char const* verification_code);

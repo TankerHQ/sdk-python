@@ -1,10 +1,11 @@
-from typing import Dict, Iterator, Tuple, cast
 import asyncio
+from collections import namedtuple
 import os
 import json
 
 from path import Path
 from faker import Faker
+from typing import cast, Dict, Iterator, Tuple
 
 import tankersdk
 from tankersdk import Admin, Tanker, Error as TankerError
@@ -419,3 +420,98 @@ async def test_bad_verif_code(tmp_path: Path, trustchain: Trustchain) -> None:
         await phone_tanker.sign_in(alice_identity, verification_code="")
     assert not phone_tanker.is_open
     await laptop_tanker.sign_out()
+
+
+@pytest.mark.asyncio
+async def test_decrypt_unclaimed_resource(
+        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    fake = Faker()
+    bob_email = fake.email()
+    bob_provisional_identity = tankersdk_identity.create_provisional_identity(
+        trustchain.id, bob_email)
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    message = b"I love you"
+    encrypted = await alice_session.encrypt(message, share_with_users=[bob_provisional_identity])
+    _, bob_session = await create_user_session(tmp_path, trustchain)
+    with pytest.raises(tankersdk.error.Error):
+        await bob_session.decrypt(encrypted)
+
+
+User = namedtuple("User", ["session", "identity", "provisional_identity", "email"])
+
+
+async def share_and_claim(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> Tuple[User, bytes, bytes]:
+    fake = Faker()
+    bob_email = fake.email()
+    bob_provisional_identity = tankersdk_identity.create_provisional_identity(
+        trustchain.id, bob_email)
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    message = b"I love you"
+    encrypted = await alice_session.encrypt(message, share_with_users=[bob_provisional_identity])
+    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
+    verif_code = admin.get_verification_code(trustchain.id, bob_email)
+    await bob_session.claim_provisional_identity(bob_provisional_identity, verif_code)
+    bob = User(
+        session=bob_session,
+        identity=bob_identity,
+        provisional_identity=bob_provisional_identity,
+        email=bob_email,
+    )
+    return bob, encrypted, message
+
+
+@pytest.mark.asyncio
+async def test_claim_identity(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    bob, encrypted, message = await share_and_claim(tmp_path, trustchain, admin)
+    decrypted = await bob.session.decrypt(encrypted)
+    assert decrypted == message
+
+
+@pytest.mark.asyncio
+async def test_claim_identity_after_sign_out_sign_in(
+        tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
+    bob, encrypted, message = await share_and_claim(tmp_path, trustchain, admin)
+    await bob.session.sign_out()
+    await bob.session.sign_in(bob.identity)
+    decrypted = await bob.session.decrypt(encrypted)
+    assert decrypted == message
+
+
+@pytest.mark.asyncio
+async def test_already_claimed_identity(
+        tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
+    bob, _, _ = await share_and_claim(tmp_path, trustchain, admin)
+    verif_code = admin.get_verification_code(trustchain.id, bob.email)
+    with pytest.raises(tankersdk.error.Error):
+        await bob.session.claim_provisional_identity(bob.provisional_identity, verif_code)
+
+
+@pytest.mark.asyncio
+async def test_claim_with_incorrect_code(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    bob_email = fake.email()
+    bob_provisional_identity = tankersdk_identity.create_provisional_identity(
+        trustchain.id, bob_email)
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    _, bob_session = await create_user_session(tmp_path, trustchain)
+    message = b"I love you"
+    await alice_session.encrypt(message, share_with_users=[bob_provisional_identity])
+    with pytest.raises(tankersdk.error.Error):
+        await bob_session.claim_provisional_identity(bob_provisional_identity, "badCode")
+
+
+@pytest.mark.asyncio
+async def test_nothing_to_claim(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    fake = Faker()
+    bob_email = fake.email()
+    bob_provisional_identity = tankersdk_identity.create_provisional_identity(
+        trustchain.id, bob_email)
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    _, bob_session = await create_user_session(tmp_path, trustchain)
+    verif_code = admin.get_verification_code(trustchain.id, bob_email)
+    with pytest.raises(tankersdk.error.Error):
+        await bob_session.claim_provisional_identity(bob_provisional_identity, verif_code)
