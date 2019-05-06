@@ -4,7 +4,7 @@ import asyncio
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
-from .error import Error
+from .error import Error, ErrorCode
 
 
 # TODO: cffi stubs
@@ -76,7 +76,7 @@ def c_fut_to_exception(c_fut: CData) -> Optional[Error]:
         # encoding:
         message = c_string_to_str(c_error.message, encoding="latin-1")
         print("error", message)
-        return Error(message)
+        return Error(message, ErrorCode(c_error.code))
     else:
         return None
 
