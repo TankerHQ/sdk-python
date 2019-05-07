@@ -533,3 +533,39 @@ async def test_nothing_to_claim(tmp_path: Path, trustchain: Trustchain, admin: A
     with pytest.raises(TankerError) as error:
         await bob_session.claim_provisional_identity(bob_provisional_identity, verif_code)
     assert error.value.code == ErrorCode.NOTHING_TO_CLAIM
+
+
+@pytest.mark.asyncio
+async def test_register_unlock_password(tmp_path: Path, trustchain: Trustchain) -> None:
+    fake = Faker()
+    password = "plop"
+    new_password = "zzzz"
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir_p()
+    laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, fake.email()
+    )
+    await laptop_tanker.sign_up(alice_identity, password=password)
+    await laptop_tanker.register_unlock(password=new_password)
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir_p()
+    phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+
+    # Old password should not work
+    with pytest.raises(TankerError) as error:
+        await phone_tanker.sign_in(alice_identity, password=password)
+    assert error.value.code == ErrorCode.INVALID_UNLOCK_PASSWORD
+    assert not phone_tanker.is_open
+
+    await phone_tanker.sign_in(alice_identity, password=new_password)
+    assert phone_tanker.is_open
+
+
+@pytest.mark.asyncio
+async def test_register_unlock_empty(tmp_path: Path, trustchain: Trustchain) -> None:
+    _, alice_session = await create_user_session(tmp_path, trustchain)
+    with pytest.raises(TankerError) as error:
+        await alice_session.register_unlock()
+    assert error.value.code == ErrorCode.SERVER_ERROR
