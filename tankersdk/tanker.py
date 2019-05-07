@@ -303,29 +303,6 @@ class Tanker:
             )
         )
 
-    async def unlock(
-        self, *, password: Optional[str] = None, verification_code: Optional[str] = None
-    ) -> None:
-        """Unlock the current device use either a `password` or a `verification_code`"""
-        if password and verification_code:
-            raise ValueError("Can't unlock with both password and verification_code")
-
-        if password is None and verification_code is None:
-            raise ValueError("Either password or verification_code must be set")
-
-        if password:
-            c_pwd = str_to_c_string(password)
-            c_accept_fut = tankerlib.tanker_unlock_current_device_with_password(
-                self.c_tanker, c_pwd
-            )
-        if verification_code:
-            c_verification_code = str_to_c_string(verification_code)
-            c_accept_fut = tankerlib.tanker_unlock_current_device_with_verification_code(
-                self.c_tanker, c_verification_code
-            )
-
-        await handle_tanker_future(c_accept_fut)
-
     async def register_unlock(
         self, *, password: Optional[str] = None, email: Optional[str] = None
     ) -> None:

@@ -435,9 +435,12 @@ async def test_decrypt_unclaimed_resource(
     bob_email = fake.email()
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
         trustchain.id, bob_email)
+    bob_public_provisional_identity = tankersdk_identity.get_public_identity(
+        bob_provisional_identity)
     _, alice_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    encrypted = await alice_session.encrypt(message, share_with_users=[bob_provisional_identity])
+    encrypted = await alice_session.encrypt(
+        message, share_with_users=[bob_public_provisional_identity])
     _, bob_session = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await bob_session.decrypt(encrypted)
@@ -454,9 +457,12 @@ async def share_and_claim(
     bob_email = fake.email()
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
         trustchain.id, bob_email)
+    bob_public_provisional_identity = tankersdk_identity.get_public_identity(
+        bob_provisional_identity)
     _, alice_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    encrypted = await alice_session.encrypt(message, share_with_users=[bob_provisional_identity])
+    encrypted = await alice_session.encrypt(
+        message, share_with_users=[bob_public_provisional_identity])
     bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
     verif_code = admin.get_verification_code(trustchain.id, bob_email)
     await bob_session.claim_provisional_identity(bob_provisional_identity, verif_code)
@@ -504,10 +510,12 @@ async def test_claim_with_incorrect_code(tmp_path: Path, trustchain: Trustchain)
     bob_email = fake.email()
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
         trustchain.id, bob_email)
+    bob_public_provisional_identity = tankersdk_identity.get_public_identity(
+        bob_provisional_identity)
     _, alice_session = await create_user_session(tmp_path, trustchain)
     _, bob_session = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    await alice_session.encrypt(message, share_with_users=[bob_provisional_identity])
+    await alice_session.encrypt(message, share_with_users=[bob_public_provisional_identity])
     with pytest.raises(TankerError) as error:
         await bob_session.claim_provisional_identity(bob_provisional_identity, "badCode")
     assert error.value.code == ErrorCode.INVALID_VERIFICATION_CODE
