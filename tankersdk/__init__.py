@@ -6,7 +6,7 @@ from typing import cast
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
-from .error import Error  # noqa
+from .error import Error, ErrorCode  # noqa
 from .tanker import Tanker, SignInResult  # noqa
 from .admin import Admin  # noqa
 from .version import __version__  # noqa
