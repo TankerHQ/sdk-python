@@ -6,6 +6,8 @@ build/
 dist/
 .venv/
 .mypy_cache
+htmlcov/
+.coverage
 
 # vim
 *.un~

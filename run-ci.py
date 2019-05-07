@@ -66,6 +66,8 @@ def build_and_check(args):
     builder = Builder(src_path, tanker_conan_ref, args.profile)
     builder.build()
     builder.test()
+    coverage_dir = src_path / "htmlcov"
+    coverage_dir.copytree(Path.getcwd() / "coverage")
 
 
 def deploy(*, src_path: Path = Path.getcwd()) -> None:

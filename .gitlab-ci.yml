@@ -13,6 +13,10 @@ check/linux:
   tags: [linux]
   script:
     - dmenv run -- python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile gcc8-release
+  artifacts:
+    paths:
+      - coverage
+    expire_in: 7 days
 
 check/macos:
   extends: .check
@@ -74,7 +78,6 @@ deploy/windows:
   script:
     - dmenv run -- python run-ci.py --isolate-conan-user-home deploy
 
-
 mirror:
   tags:
     - linux
@@ -86,3 +89,18 @@ mirror:
     - schedules
   script:
     - dmenv run python run-ci.py mirror
+
+pages:
+  stage: deploy
+  only:
+    - master
+  dependencies:
+    - check/linux
+  script:
+    - mv coverage/ public/
+  artifacts:
+    paths:
+      - public
+    expire_in: 7 days
+  tags:
+    - linux
