@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from collections import namedtuple
 import os
 import json
@@ -13,6 +14,10 @@ from tankersdk.admin import Trustchain
 import tankersdk_identity
 
 import pytest
+
+
+def encode(string: str) -> str:
+    return base64.b64encode(string.encode()).decode()
 
 
 def assert_env(name: str) -> str:
@@ -569,3 +574,53 @@ async def test_register_unlock_empty(tmp_path: Path, trustchain: Trustchain) -> 
     with pytest.raises(TankerError) as error:
         await alice.session.register_unlock()
     assert error.value.code == ErrorCode.SERVER_ERROR
+
+
+@pytest.mark.asyncio
+async def test_user_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+    user_id = encode("*" * 32)
+    identity_obj = {
+        "trustchain_id": trustchain.id,
+        "target": "user",
+        "value": user_id,
+    }
+    identity = encode(json.dumps(identity_obj))
+    alice = await create_user_session(tmp_path, trustchain)
+    with pytest.raises(TankerError) as error:
+        await alice.session.create_group([identity])
+    assert error.value.code == ErrorCode.USER_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_decrypt_failed(tmp_path: Path, trustchain: Trustchain) -> None:
+    alice = await create_user_session(tmp_path, trustchain)
+    with pytest.raises(TankerError) as error:
+        await alice.session.decrypt(b"zz")
+    assert error.value.code == ErrorCode.DECRYPT_FAILED
+
+
+@pytest.mark.asyncio
+async def test_recipient_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+    group_id = encode("*" * 32)
+    alice = await create_user_session(tmp_path, trustchain)
+    with pytest.raises(TankerError) as error:
+        await alice.session.encrypt(b"zz", share_with_groups=[group_id])
+    assert error.value.code == ErrorCode.RECIPIENT_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_group_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+    group_id = encode("*" * 32)
+    alice = await create_user_session(tmp_path, trustchain)
+    with pytest.raises(TankerError) as error:
+        await alice.session.update_group_members(group_id, add=[alice.public_identity])
+    assert error.value.code == ErrorCode.GROUP_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_device_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+    device_id = encode("*" * 32)
+    alice = await create_user_session(tmp_path, trustchain)
+    with pytest.raises(TankerError) as error:
+        await alice.session.revoke_device(device_id)
+    assert error.value.code == ErrorCode.DEVICE_NOT_FOUND
