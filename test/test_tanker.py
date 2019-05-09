@@ -577,6 +577,30 @@ async def test_register_unlock_empty(tmp_path: Path, trustchain: Trustchain) -> 
 
 
 @pytest.mark.asyncio
+async def test_create_group_with_prov_id(
+        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
+    message = b"I love you all, my group"
+    group_id = await alice.session.create_group([bob.public_provisional_identity])
+    encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
+    await bob.session.claim_provisional_identity(bob.private_provisional_identity, bob.verif_code)
+    decrypted = await bob.session.decrypt(encrypted)
+    assert decrypted == message
+
+
+@pytest.mark.asyncio
+async def test_add_group_with_prov_id(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
+    message = b"Hi, this is for a group"
+    group_id = await alice.session.create_group([alice.public_identity])
+    encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
+    await alice.session.update_group_members(group_id, add=[bob.public_provisional_identity])
+    await bob.session.claim_provisional_identity(bob.private_provisional_identity, bob.verif_code)
+    decrypted = await bob.session.decrypt(encrypted)
+    assert decrypted == message
+
+
+@pytest.mark.asyncio
 async def test_user_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     user_id = encode("*" * 32)
     identity_obj = {
