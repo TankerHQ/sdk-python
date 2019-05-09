@@ -158,102 +158,102 @@ async def test_sign_back_in(tmp_path: Path, trustchain: Trustchain) -> None:
     assert not tanker.is_open
 
 
+User = namedtuple(
+    "User",
+    [
+        "session",
+        "public_identity",
+        "private_identity",
+    ],
+)
+
+
 async def create_user_session(
     tmp_path: Path, trustchain: Trustchain
-) -> Tuple[str, Tanker]:
+) -> User:
     fake = Faker()
     user_id = fake.email()
     user_path = tmp_path.joinpath("user")
     user_path.mkdir_p()
     tanker = create_tanker(trustchain.id, writable_path=user_path)
-    identity = tankersdk_identity.create_identity(
+    private_identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, user_id
     )
-    await tanker.sign_up(identity)
-    return identity, tanker
+    public_identity = tankersdk_identity.get_public_identity(private_identity)
+    await tanker.sign_up(private_identity)
+    return User(
+        session=tanker,
+        private_identity=private_identity,
+        public_identity=public_identity,
+    )
 
 
 @pytest.mark.asyncio
 async def test_encrypt_decrypt(tmp_path: Path, trustchain: Trustchain) -> None:
-    _, alice_session = await create_user_session(tmp_path, trustchain)
+    alice = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    encrypted_data = await alice_session.encrypt(message)
-    clear_data = await alice_session.decrypt(encrypted_data)
+    encrypted_data = await alice.session.encrypt(message)
+    clear_data = await alice.session.decrypt(encrypted_data)
     assert clear_data == message
-    await alice_session.sign_out()
+    await alice.session.sign_out()
 
 
 @pytest.mark.asyncio
 async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> None:
-    _, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
-    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
+    alice = await create_user_session(tmp_path, trustchain)
+    bob = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    encrypted = await alice_session.encrypt(message, share_with_users=[bob_pub_id])
-    decrypted = await bob_session.decrypt(encrypted)
+    encrypted = await alice.session.encrypt(message, share_with_users=[bob.public_identity])
+    decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
-    await alice_session.sign_out()
-    await bob_session.sign_out()
+    await alice.session.sign_out()
+    await bob.session.sign_out()
 
 
 @pytest.mark.asyncio
 async def test_postponed_share(tmp_path: Path, trustchain: Trustchain) -> None:
-    _, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
-    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
+    alice = await create_user_session(tmp_path, trustchain)
+    bob = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    encrypted = await alice_session.encrypt(message)
-    resource_id = alice_session.get_resource_id(encrypted)
-    await alice_session.share([resource_id], users=[bob_pub_id])
+    encrypted = await alice.session.encrypt(message)
+    resource_id = alice.session.get_resource_id(encrypted)
+    await alice.session.share([resource_id], users=[bob.public_identity])
 
-    decrypted = await bob_session.decrypt(encrypted)
+    decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
-    await alice_session.sign_out()
-    await bob_session.sign_out()
+    await alice.session.sign_out()
+    await bob.session.sign_out()
 
 
-async def check_share_to_group_works(
-    alice_session: Tanker, group_id: str, bob_session: Tanker, charlie_session: Tanker
-) -> None:
+async def check_share_with_group_works(
+        alice: User, group_id: str, bob: User, charlie: User) -> None:
     message = b"Hi, guys"
-    encrypted = await alice_session.encrypt(message, share_with_groups=[group_id])
-
-    decrypted = await charlie_session.decrypt(encrypted)
+    encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
+    decrypted = await charlie.session.decrypt(encrypted)
     assert decrypted == message
-
-    decrypted = await bob_session.decrypt(encrypted)
+    decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
 
 @pytest.mark.asyncio
 async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
-    _, alice_session = await create_user_session(tmp_path, trustchain)
-    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
-    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
-    charlie_identity, charlie_session = await create_user_session(tmp_path, trustchain)
-    charlie_pub_id = tankersdk_identity.get_public_identity(charlie_identity)
+    alice = await create_user_session(tmp_path, trustchain)
+    bob = await create_user_session(tmp_path, trustchain)
+    charlie = await create_user_session(tmp_path, trustchain)
 
-    group_id = await alice_session.create_group([bob_pub_id, charlie_pub_id])
-    await check_share_to_group_works(
-        alice_session, group_id, bob_session, charlie_session
-    )
+    group_id = await alice.session.create_group([bob.public_identity, charlie.public_identity])
+    await check_share_with_group_works(alice, group_id, bob, charlie)
 
 
 @pytest.mark.asyncio
 async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
-    alice_identity, alice_session = await create_user_session(tmp_path, trustchain)
-    alice_pub_id = tankersdk_identity.get_public_identity(alice_identity)
-    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
-    bob_pub_id = tankersdk_identity.get_public_identity(bob_identity)
-    charlie_identity, charlie_session = await create_user_session(tmp_path, trustchain)
-    charlie_pub_id = tankersdk_identity.get_public_identity(charlie_identity)
+    alice = await create_user_session(tmp_path, trustchain)
+    bob = await create_user_session(tmp_path, trustchain)
+    charlie = await create_user_session(tmp_path, trustchain)
 
-    group_id = await alice_session.create_group([alice_pub_id, bob_pub_id])
-    await alice_session.update_group_members(group_id, add=[charlie_pub_id])
-
-    await check_share_to_group_works(
-        alice_session, group_id, bob_session, charlie_session
-    )
+    group_id = await alice.session.create_group([alice.public_identity, bob.public_identity])
+    await alice.session.update_group_members(group_id, add=[charlie.public_identity])
+    await check_share_with_group_works(alice, group_id, bob, charlie)
 
 
 async def create_two_devices(
@@ -271,7 +271,6 @@ async def create_two_devices(
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
-
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
 
     await phone_tanker.sign_in(alice_identity, password=password)
@@ -428,50 +427,62 @@ async def test_bad_verif_code(tmp_path: Path, trustchain: Trustchain) -> None:
     await laptop_tanker.sign_out()
 
 
-@pytest.mark.asyncio
-async def test_decrypt_unclaimed_resource(
-        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+PreUser = namedtuple(
+    "PreUser",
+    [
+        "session",
+        "public_identity",
+        "private_identity",
+        "public_provisional_identity",
+        "private_provisional_identity",
+        "email",
+        "verif_code",
+    ],
+)
+
+
+async def set_up_preshare(
+        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> Tuple[User, PreUser]:
     fake = Faker()
     bob_email = fake.email()
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
         trustchain.id, bob_email)
     bob_public_provisional_identity = tankersdk_identity.get_public_identity(
         bob_provisional_identity)
-    _, alice_session = await create_user_session(tmp_path, trustchain)
+    alice = await create_user_session(tmp_path, trustchain)
+    bob = await create_user_session(tmp_path, trustchain)
+    pre_bob = PreUser(
+        session=bob.session,
+        public_identity=bob.public_identity,
+        private_identity=bob.private_identity,
+        public_provisional_identity=bob_public_provisional_identity,
+        private_provisional_identity=bob_provisional_identity,
+        email=bob_email,
+        verif_code=admin.get_verification_code(trustchain.id, bob_email),
+    )
+    return alice, pre_bob
+
+
+@pytest.mark.asyncio
+async def test_decrypt_unclaimed_resource(
+        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
-    encrypted = await alice_session.encrypt(
-        message, share_with_users=[bob_public_provisional_identity])
-    _, bob_session = await create_user_session(tmp_path, trustchain)
+    encrypted = await alice.session.encrypt(
+        message, share_with_users=[bob.public_provisional_identity])
     with pytest.raises(TankerError) as error:
-        await bob_session.decrypt(encrypted)
+        await bob.session.decrypt(encrypted)
     assert error.value.code == ErrorCode.RESOURCE_KEY_NOT_FOUND
-
-
-User = namedtuple("User", ["session", "identity", "provisional_identity", "email"])
 
 
 async def share_and_claim(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
-) -> Tuple[User, bytes, bytes]:
-    fake = Faker()
-    bob_email = fake.email()
-    bob_provisional_identity = tankersdk_identity.create_provisional_identity(
-        trustchain.id, bob_email)
-    bob_public_provisional_identity = tankersdk_identity.get_public_identity(
-        bob_provisional_identity)
-    _, alice_session = await create_user_session(tmp_path, trustchain)
+) -> Tuple[PreUser, bytes, bytes]:
+    alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
-    encrypted = await alice_session.encrypt(
-        message, share_with_users=[bob_public_provisional_identity])
-    bob_identity, bob_session = await create_user_session(tmp_path, trustchain)
-    verif_code = admin.get_verification_code(trustchain.id, bob_email)
-    await bob_session.claim_provisional_identity(bob_provisional_identity, verif_code)
-    bob = User(
-        session=bob_session,
-        identity=bob_identity,
-        provisional_identity=bob_provisional_identity,
-        email=bob_email,
-    )
+    encrypted = await alice.session.encrypt(
+        message, share_with_users=[bob.public_provisional_identity])
+    await bob.session.claim_provisional_identity(bob.private_provisional_identity, bob.verif_code)
     return bob, encrypted, message
 
 
@@ -488,7 +499,7 @@ async def test_claim_identity_after_sign_out_sign_in(
 ) -> None:
     bob, encrypted, message = await share_and_claim(tmp_path, trustchain, admin)
     await bob.session.sign_out()
-    await bob.session.sign_in(bob.identity)
+    await bob.session.sign_in(bob.private_identity)
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
@@ -500,38 +511,27 @@ async def test_already_claimed_identity(
     bob, _, _ = await share_and_claim(tmp_path, trustchain, admin)
     verif_code = admin.get_verification_code(trustchain.id, bob.email)
     with pytest.raises(TankerError) as error:
-        await bob.session.claim_provisional_identity(bob.provisional_identity, verif_code)
+        await bob.session.claim_provisional_identity(bob.private_provisional_identity, verif_code)
     assert error.value.code == ErrorCode.SERVER_ERROR
 
 
 @pytest.mark.asyncio
-async def test_claim_with_incorrect_code(tmp_path: Path, trustchain: Trustchain) -> None:
-    fake = Faker()
-    bob_email = fake.email()
-    bob_provisional_identity = tankersdk_identity.create_provisional_identity(
-        trustchain.id, bob_email)
-    bob_public_provisional_identity = tankersdk_identity.get_public_identity(
-        bob_provisional_identity)
-    _, alice_session = await create_user_session(tmp_path, trustchain)
-    _, bob_session = await create_user_session(tmp_path, trustchain)
+async def test_claim_with_incorrect_code(
+        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
-    await alice_session.encrypt(message, share_with_users=[bob_public_provisional_identity])
+    await alice.session.encrypt(message, share_with_users=[bob.public_provisional_identity])
     with pytest.raises(TankerError) as error:
-        await bob_session.claim_provisional_identity(bob_provisional_identity, "badCode")
+        await bob.session.claim_provisional_identity(bob.private_provisional_identity, "badCode")
     assert error.value.code == ErrorCode.INVALID_VERIFICATION_CODE
 
 
 @pytest.mark.asyncio
 async def test_nothing_to_claim(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
-    fake = Faker()
-    bob_email = fake.email()
-    bob_provisional_identity = tankersdk_identity.create_provisional_identity(
-        trustchain.id, bob_email)
-    _, alice_session = await create_user_session(tmp_path, trustchain)
-    _, bob_session = await create_user_session(tmp_path, trustchain)
-    verif_code = admin.get_verification_code(trustchain.id, bob_email)
+    _, bob = await set_up_preshare(tmp_path, trustchain, admin)
     with pytest.raises(TankerError) as error:
-        await bob_session.claim_provisional_identity(bob_provisional_identity, verif_code)
+        await bob.session.claim_provisional_identity(
+            bob.private_provisional_identity, bob.verif_code)
     assert error.value.code == ErrorCode.NOTHING_TO_CLAIM
 
 
@@ -565,7 +565,7 @@ async def test_register_unlock_password(tmp_path: Path, trustchain: Trustchain) 
 
 @pytest.mark.asyncio
 async def test_register_unlock_empty(tmp_path: Path, trustchain: Trustchain) -> None:
-    _, alice_session = await create_user_session(tmp_path, trustchain)
+    alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
-        await alice_session.register_unlock()
+        await alice.session.register_unlock()
     assert error.value.code == ErrorCode.SERVER_ERROR
