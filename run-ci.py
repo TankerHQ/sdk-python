@@ -3,26 +3,91 @@ import os
 import sys
 
 from path import Path
-import requests
 
+import ci
+import ci.bump
 import ci.conan
 import ci.git
-import ci.sdk_python
+import ci.dmenv
+import ci.tanker_configs
+
+DEPLOYED_TANKER = "tanker/2.0.0-alpha6@tanker/stable"
+LOCAL_TANKER = "tanker/dev@tanker/dev"
 
 
-def trigger_check(*, native_from_sources):
-    ci_job_token = os.environ["CI_JOB_TOKEN"]
-    project_id = os.environ["CI_PROJECT_ID"]
-    ref = os.environ["CI_COMMIT_REF_NAME"]
-    response = requests.post(
-        f"http://tanker.local:8000/api/v4/projects/{project_id}/trigger/pipeline",
-        data={
-            "token": ci_job_token,
-            "ref": ref,
-            "variables[NATIVE_FROM_SOURCES]": str(native_from_sources),
-        },
-    )
-    response.raise_for_status()
+class Builder:
+    def __init__(self, src_path: Path, tanker_conan_ref: str, profile: str):
+        self.profile = profile
+        self.src_path = src_path
+        self.tanker_conan_ref = tanker_conan_ref
+
+    def _run_setup_py(self, *args: str) -> None:
+        ci.dmenv.run("python", "setup.py", *args, cwd=self.src_path)
+
+    def build(self) -> None:
+        self._run_setup_py("native", "--tanker-conan-ref",
+                           self.tanker_conan_ref, "--profile", self.profile)
+        self._run_setup_py("clean", "build", "develop")
+
+    def test(self) -> None:
+        ci.dmenv.run("python", "lint.py", cwd=self.src_path)
+
+        env = os.environ.copy()
+        env["TANKER_CONFIG_NAME"] = "dev"
+        env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
+        env["TANKER_SDK_DEBUG"] = "1"
+        ci.dmenv.run(
+            "pytest",
+            "--verbose",
+            "--capture=no",
+            "--cov=tankersdk",
+            "--cov-report",
+            "html",
+            env=env,
+            cwd=self.src_path,
+        )
+
+
+def build_and_check(args):
+    src_path = Path.getcwd()
+    tanker_conan_ref = LOCAL_TANKER
+
+    if args.use_tanker == "deployed":
+        tanker_conan_ref = DEPLOYED_TANKER
+    elif args.use_tanker == "local":
+        ci.conan.export(src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev")
+    elif args.use_tanker == "same-as-branch":
+        workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
+        src_path = workspace / "sdk-python"
+        ci.conan.export(src_path=workspace / "sdk-native", ref_or_channel="tanker/dev")
+    else:
+        sys.exit()
+
+    builder = Builder(src_path, tanker_conan_ref, args.profile)
+    builder.build()
+    builder.test()
+
+
+def deploy(*, src_path: Path = Path.getcwd()) -> None:
+    tag = os.environ.get("CI_COMMIT_TAG")
+    if tag is None:
+        raise Exception("No tag found, cannot deploy")
+    with src_path:
+        version = ci.bump.version_from_git_tag(tag)
+        ci.bump.bump_files(version)
+    dist_path = src_path / "dist"
+    dist_path.rmtree_p()
+
+    ci.dmenv.run("python", "setup.py", "bdist_wheel", cwd=src_path)
+    wheels = dist_path.files("tankersdk-*.whl")
+    if len(wheels) != 1:
+        raise Exception("multiple wheels found: {}".format(wheels))
+    wheel_path = wheels[0]
+    if sys.platform == "win32":
+        wheel_path = wheel_path.lower()
+        wheel_path = wheel_path.replace(os.path.sep, "/")
+        wheel_path = wheel_path.replace("c:/", "/c/")
+    ci.run("scp", wheel_path, "pypi@tanker.local:packages")
 
 
 def main() -> None:
@@ -36,16 +101,15 @@ def main() -> None:
 
     subparsers = parser.add_subparsers(title="subcommands", dest="command")
 
-    trigger_parser = subparsers.add_parser("trigger")
-    trigger_parser.add_argument("--native-from-sources", action="store_true")
+    build_and_check_parser = subparsers.add_parser("build-and-check")
+    build_and_check_parser.add_argument("--use-tanker",
+                                        choices=['deployed', 'local', 'same-as-branch'],
+                                        default='local')
+    build_and_check_parser.add_argument("--profile", required=True)
 
     subparsers.add_parser("mirror")
 
-    check_parser = subparsers.add_parser("check")
-    check_parser.add_argument("--profile", required=True)
-
-    deploy_parser = subparsers.add_parser("deploy")
-    deploy_parser.add_argument("--profile", required=True)
+    subparsers.add_parser("deploy")
 
     args = parser.parse_args()
     if args.home_isolation:
@@ -61,27 +125,10 @@ def main() -> None:
         ci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
         return
 
-    if command == "trigger":
-        native_from_sources = args.native_from_sources
-        trigger_check(native_from_sources=native_from_sources)
-        return
-
-    profile = args.profile
-    native_from_sources = os.environ["NATIVE_FROM_SOURCES"] == "True"
-    if native_from_sources:
-        workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
-        python_src_path = workspace / "sdk-python"
-    else:
-        python_src_path = Path(".")
-
-    python_ci = ci.sdk_python.CI(
-        python_src_path, native_from_sources=native_from_sources, profile=profile
-    )
-    python_ci.build()
-    if command == "check":
-        python_ci.check()
+    if command == "build-and-check":
+        build_and_check(args)
     elif command == "deploy":
-        python_ci.deploy()
+        deploy()
 
 
 if __name__ == "__main__":
