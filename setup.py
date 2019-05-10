@@ -18,8 +18,7 @@ def get_long_description() -> str:
 class NativeCommand(distutils.cmd.Command):
     descripton = "Handle sdk-native dependency"
     user_options = [
-        ("release", None, "build in release"),
-        ("deployed", None, "use deployed version"),
+        ("tanker-conan-ref=", None, "tanker package to use"),
         ("profile=", None, "name of the conan profile"),
     ]
 
@@ -37,46 +36,25 @@ class NativeCommand(distutils.cmd.Command):
                 sys.exit("conan failed")
 
     def initialize_options(self):
-        self.release = False
-        self.deployed = False
+        self.tanker_conan_ref = "tanker/dev@tanker/dev"
         self.profile = "default"
 
     def finalize_options(self):
         pass
 
     def run(self):
-        if not self.deployed:
-            self.build_from_sources()
-        self.run_conan_install()
-
-    def run_conan_install(self):
         ui.info_1("Running conan install")
         # fmt: off
         cmd = [
-            "install", self.conan_path,
+            "install", self.tanker_conan_ref,
             "--update",
             "--profile", self.profile,
             "--build", "missing",
             "--install-folder", self.conan_out_path,
+            "--generator=json",
         ]
         # fmt: on
-        if not self.deployed:
-            cmd.extend(["--options", "native_from_sources=True"])
         self.run_conan(*cmd)
-
-    def build_from_sources(self):
-        ui.info_1("Building Native SDK from sources")
-        native_src_path = (Path("..") / "sdk-native").abspath()
-        # fmt: off
-        self.run_conan(
-            "create",
-            "--update",
-            "--build", "missing",
-            "--profile", self.profile,
-            native_src_path,
-            "tanker/testing"
-        )
-        # fmt: on
 
 
 setup(

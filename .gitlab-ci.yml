@@ -5,47 +5,49 @@ stages:
   - check
   - deploy
 
-
-select/native-from-sources:
-  stage: check
-  when: manual
-  only:
-     - pushes
-  script:
-      - dmenv install --no-develop
-      - dmenv run -- python run-ci.py trigger --native-from-sources
-
-select/deployed-native:
-  stage: check
-  when: manual
-  only:
-     - pushes
-  script:
-      - dmenv install --no-develop
-      - dmenv run -- python run-ci.py trigger
-
 .check:
   stage: check
-  except:
-    - pushes
 
 check/linux:
   extends: .check
   tags: [linux]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile gcc8-release
+    - dmenv run -- python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile gcc8-release
 
 check/macos:
   extends: .check
   tags: [macos]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile macos-release
+    - dmenv run -- python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile macos-release
 
 check/windows:
   extends: .check
   tags: [windows]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home check --profile vs2017-release
+    - dmenv run -- python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile vs2017-release
+
+
+.check-deployed:
+  stage: check
+  when: manual
+
+check/deployed-linux:
+  extends: .check-deployed
+  tags: [linux]
+  script:
+    - dmenv run -- python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile gcc8-release
+
+check/deployed-macos:
+  extends: .check-deployed
+  tags: [macos]
+  script:
+    - dmenv run -- python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile macos-release
+
+check/deployed-windows:
+  extends: .check-deployed
+  tags: [windows]
+  script:
+    - dmenv run -- python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile vs2017-release
 
 
 .deploy:
@@ -58,19 +60,19 @@ deploy/linux:
   extends: .deploy
   tags: [linux]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy
 
 deploy/macos:
   extends: .deploy
   tags: [macos]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile macos-release
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy
 
 deploy/windows:
   extends: .deploy
   tags: [windows]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile vs2017-release
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy
 
 
 mirror:
