@@ -267,10 +267,6 @@ struct tanker_options
   char const* sdk_version;      /*!< Must not be NULL. */
 };
 
-#define TANKER_OPTIONS_INIT         \
-  {                                 \
-    2, NULL, NULL, NULL, NULL, NULL \
-  }
 struct tanker_email_verification
 {
   uint8_t version;
@@ -278,10 +274,6 @@ struct tanker_email_verification
   char const* verification_code;
 };
 
-#define TANKER_EMAIL_VERIFICATION_INIT \
-  {                                    \
-    1, NULL, NULL                      \
-  }
 struct tanker_verification
 {
   uint8_t version;
@@ -296,14 +288,6 @@ struct tanker_verification
   };
 };
 
-#define TANKER_VERIFICATION_INIT \
-  {                              \
-    1, 0,                        \
-    {                            \
-      NULL                       \
-    }                            \
-  }
-
 struct tanker_verification_method
 {
   uint8_t version;
@@ -316,14 +300,6 @@ struct tanker_verification_method
   };
 };
 
-#define TANKER_VERIFICATION_METHOD_INIT \
-  {                                     \
-    1, 0,                               \
-    {                                   \
-      NULL                              \
-    }                                   \
-  }
-
 struct tanker_encrypt_options
 {
   uint8_t version;
@@ -332,11 +308,6 @@ struct tanker_encrypt_options
   b64char const* const* recipient_gids;
   uint32_t nb_recipient_gids;
 };
-
-#define TANKER_ENCRYPT_OPTIONS_INIT \
-  {                                 \
-    2, NULL, 0, NULL, 0             \
-  }
 
 /*!
  * \brief a struct containing the result of an attach_provisional_identity()
