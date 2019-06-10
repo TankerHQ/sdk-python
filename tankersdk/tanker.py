@@ -49,14 +49,40 @@ def revoke_callback(args: CData, data: CData) -> None:
         tanker_instance.on_revoked()
 
 
-class SignInResult(Enum):
-    OK = 0
-    IDENTITY_NOT_REGISTERED = 1
-    IDENTITY_VERIFICATION_NEEDED = 2
+# TODO: remove me
+
+
+class Status(Enum):
+    STOPPED = 0
+    READY = 1
+    IDENTITY_REGISTRATION_NEEDED = 2
+    IDENTITY_VERIFICATION_NEEDED = 3
+
+
+class VerificationMethodType(Enum):
+    EMAIL = 1
+    PASSPHRASE = 2
+    VERIFICATION_KEY = 2
+
+
+class VerificationMethod:
+    def __init__(
+        self, method_type: VerificationMethodType, *, email: Optional[str] = None
+    ):
+        self.method_type = method_type
+        if method_type == VerificationMethodType.EMAIL and not email:
+            raise ValueError("need an email value if method_type is Method.Email")
+        self.email = email
 
 
 UnlockFunc = Callable[[], None]
 RevokeFunc = Callable[[], None]
+
+
+class AttachResult:
+    def __init__(self, status: Status):
+        self.status = status
+        self.verification_method: Optional[VerificationMethod] = None
 
 
 class Tanker:
@@ -74,7 +100,7 @@ class Tanker:
         *,
         trustchain_url: Optional[str] = None,
         sdk_type: str = "client-python",
-        writable_path: str
+        writable_path: str,
     ):
         self.sdk_type = sdk_type
         self.sdk_version = __version__
@@ -109,12 +135,6 @@ class Tanker:
         c_voidp = tankerlib.tanker_future_get_voidptr(create_fut)
         self.c_tanker = ffi.cast("tanker_t*", c_voidp)
 
-    @property
-    def is_open(self) -> bool:
-        """Return whether the Tanker session is open"""
-        c_bool = tankerlib.tanker_is_open(self.c_tanker)
-        return cast(bool, c_bool)
-
     def _set_event_callbacks(self) -> None:
         userdata = ffi.new_handle(self)
         self._userdata = userdata  # Must keep this alive
@@ -126,13 +146,11 @@ class Tanker:
         )
         wait_fut_or_raise(c_future_connect)
 
-    async def sign_up(
-        self,
-        identity: str,
-        *,
-        password: Optional[str] = None,
-        email: Optional[str] = None
-    ) -> None:
+    @property
+    def status(self) -> Status:
+        return Status(tankerlib.tanker_status(self.c_tanker))
+
+    async def start(self, identity: str) -> Status:
         """
         Sign up to Tanker and open a session
 
@@ -141,59 +159,17 @@ class Tanker:
         :param email: The email to use for identity verification
         """
         c_identity = str_to_c_string(identity)
-        c_password = str_to_c_string(password)
-        c_email = str_to_c_string(email)
-        c_authentication_methods = ffi.new(
-            "tanker_authentication_methods_t *",
-            {"version": 1, "password": c_password, "email": c_email},
-        )
-        c_sign_up_fut = tankerlib.tanker_sign_up(
-            self.c_tanker, c_identity, c_authentication_methods
-        )
-        await handle_tanker_future(c_sign_up_fut)
+        c_start_fut = tankerlib.tanker_start(self.c_tanker, c_identity)
 
-    async def sign_in(
-        self,
-        identity: str,
-        *,
-        unlock_key: Optional[str] = None,
-        verification_code: Optional[str] = None,
-        password: Optional[str] = None
-    ) -> SignInResult:
-        """
-        Sign in to Tanker, opening a session
+        def start_cb() -> Status:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_start_fut)
+            return Status(int(ffi.cast("int", c_voidp)))
 
-        :param identity: The user's Tanker identity
-        :param unlock_key: The raw unlock key to use for identity verification
-        :param verification_code: The email verification code to use for identity verification
-        :param password: The password to use for identity verification
-        """
-        c_identity = str_to_c_string(identity)
-        c_unlock_key = str_to_c_string(unlock_key)
-        c_verification_code = str_to_c_string(verification_code)
-        c_password = str_to_c_string(password)
-        c_sign_in_options = ffi.new(
-            "tanker_sign_in_options_t *",
-            {
-                "version": 1,
-                "unlock_key": c_unlock_key,
-                "verification_code": c_verification_code,
-                "password": c_password,
-            },
-        )
-        c_sign_in_fut = tankerlib.tanker_sign_in(
-            self.c_tanker, c_identity, c_sign_in_options
-        )
+        return await handle_tanker_future(c_start_fut, start_cb)
 
-        def sign_in_cb() -> SignInResult:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_sign_in_fut)
-            return SignInResult(int(ffi.cast("int", c_voidp)))
-
-        return await handle_tanker_future(c_sign_in_fut, sign_in_cb)
-
-    async def sign_out(self) -> None:
+    async def stop(self) -> None:
         """Close the session."""
-        c_sign_out_fut = tankerlib.tanker_sign_out(self.c_tanker)
+        c_sign_out_fut = tankerlib.tanker_stop(self.c_tanker)
         await handle_tanker_future(c_sign_out_fut)
 
     async def encrypt(
@@ -201,7 +177,7 @@ class Tanker:
         clear_data: bytes,
         *,
         share_with_users: OptionalStrList = None,
-        share_with_groups: OptionalStrList = None
+        share_with_groups: OptionalStrList = None,
     ) -> bytes:
         """
         Encrypt `clear_data`
@@ -284,7 +260,7 @@ class Tanker:
         resources: List[str],
         *,
         users: OptionalStrList = None,
-        groups: OptionalStrList = None
+        groups: OptionalStrList = None,
     ) -> None:
         """Share the given list of resources to users or groups"""
         resource_list = CCharList(resources)
@@ -303,47 +279,116 @@ class Tanker:
             )
         )
 
-    async def register_unlock(
-        self, *, password: Optional[str] = None, email: Optional[str] = None
+    @classmethod
+    def create_c_verification(
+        cls,
+        passphrase: Optional[str] = None,
+        verification_key: Optional[str] = None,
+        email: Optional[str] = None,
+        verification_code: Optional[str] = None,
+    ) -> CData:
+        # Note: we store some objects in `cls` so that they don't
+        # get garbage collected
+        c_verification = ffi.new("tanker_verification_t *", {"version": 1})
+        if verification_key is not None:
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
+            )
+            cls._verification_key = str_to_c_string(verification_key)  # type: ignore
+            c_verification.verification_key = cls._verification_key  # type: ignore
+        if passphrase is not None:
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_PASSPHRASE
+            )
+            cls._passphrase = str_to_c_string(passphrase)  # type: ignore
+            c_verification.passphrase = cls._passphrase  # type: ignore
+        if email is not None:
+            if verification_code is None:
+                raise ValueError(
+                    "Connot create an 'email' verification without a 'verification_code'"
+                )
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_EMAIL
+            )
+            cls._email_verification = {  # type: ignore
+                "version": 1,
+                "email": str_to_c_string(email),
+                "verification_code": str_to_c_string(verification_code),
+            }
+            c_verification.email_verification = cls._email_verification  # type: ignore
+        cls._c_verification = c_verification  # type: ignore
+        return c_verification  # type: ignore
+
+    async def register_identity(
+        self,
+        *,
+        verification_key: Optional[str] = None,
+        passphrase: Optional[str] = None,
+        email: Optional[str] = None,
+        verification_code: Optional[str] = None,
     ) -> None:
-        """
-        Register one or more unlock methods.
-
-        At least one of `password` or `email` should be set.
-        """
-        if password:
-            c_password = str_to_c_string(password)
-        else:
-            c_password = ffi.NULL
-        if email:
-            c_email = str_to_c_string(email)
-        else:
-            c_email = ffi.NULL
-        c_register_unlock_fut = tankerlib.tanker_register_unlock(
-            self.c_tanker, c_email, c_password
+        c_verification = self.create_c_verification(
+            verification_key=verification_key,
+            passphrase=passphrase,
+            email=email,
+            verification_code=verification_code,
         )
-        await handle_tanker_future(c_register_unlock_fut)
 
-    async def generate_and_register_unlock_key(self) -> str:
+        c_future = tankerlib.tanker_register_identity(self.c_tanker, c_verification)
+        await handle_tanker_future(c_future)
+
+    async def verify_identity(
+        self,
+        *,
+        verification_key: Optional[str] = None,
+        passphrase: Optional[str] = None,
+        email: Optional[str] = None,
+        verification_code: Optional[str] = None,
+    ) -> None:
+        c_verification = self.create_c_verification(
+            verification_key=verification_key,
+            passphrase=passphrase,
+            email=email,
+            verification_code=verification_code,
+        )
+        c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification)
+        await handle_tanker_future(c_future)
+
+    async def generate_verification_key(self) -> str:
         """
         Generate a private unlock key.
 
         It can be used to unlock a device
         """
-        c_generate_and_register_unlock_key_fut = tankerlib.tanker_generate_and_register_unlock_key(
-            self.c_tanker
-        )
+        c_future = tankerlib.tanker_generate_verification_key(self.c_tanker)
 
-        def generate_and_register_unlock_key_cb() -> str:
-            c_voidp = tankerlib.tanker_future_get_voidptr(
-                c_generate_and_register_unlock_key_fut
-            )
+        def callback() -> str:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
             c_str = ffi.cast("char*", c_voidp)
             return c_string_to_str(c_str)
 
-        return await handle_tanker_future(
-            c_generate_and_register_unlock_key_fut, generate_and_register_unlock_key_cb
+        # TODO: use c_future, callback in all calls
+        return await handle_tanker_future(c_future, callback)
+
+    async def set_verification_method(
+        self,
+        *,
+        verification_key: Optional[str] = None,
+        passphrase: Optional[str] = None,
+        email: Optional[str] = None,
+        verification_code: Optional[str] = None,
+    ) -> None:
+        c_verification = self.create_c_verification(
+            verification_key=verification_key,
+            passphrase=passphrase,
+            email=email,
+            verification_code=verification_code,
         )
+        c_future = tankerlib.tanker_set_verification_method(
+            self.c_tanker, c_verification
+        )
+
+        return await handle_tanker_future(c_future)
 
     async def create_group(self, user_ids: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""
@@ -371,12 +416,42 @@ class Tanker:
 
         await handle_tanker_future(c_update_group_fut)
 
-    async def claim_provisional_identity(
-        self, provisional_identity: str, verification_code: str
-    ) -> None:
-        c_verification_code = str_to_c_string(verification_code)
-        c_provisional_identity = str_to_c_string(provisional_identity)
-        c_claim_fut = tankerlib.tanker_claim_provisional_identity(
-            self.c_tanker, c_provisional_identity, c_verification_code
+    async def attach_provisional_identity(
+        self, provisional_identity: str
+    ) -> AttachResult:
+        c_future = tankerlib.tanker_attach_provisional_identity(
+            self.c_tanker, str_to_c_string(provisional_identity)
         )
-        await handle_tanker_future(c_claim_fut)
+
+        def callback() -> AttachResult:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
+            c_attach_result = ffi.cast("tanker_attach_result_t*", c_voidp)
+            status = Status(c_attach_result.status)
+            result = AttachResult(status)
+            if status == Status.IDENTITY_VERIFICATION_NEEDED:
+                c_method = c_attach_result.method
+                c_method_type = c_method.verification_method_type
+                method_type = VerificationMethodType(c_method_type)
+                if method_type == VerificationMethodType.EMAIL:
+                    verification_method = VerificationMethod(
+                        VerificationMethodType.EMAIL,
+                        email=c_string_to_str(c_method.email),
+                    )
+                else:
+                    verification_method = VerificationMethod(method_type)
+                result.verification_method = verification_method
+            return result
+
+        return await handle_tanker_future(c_future, callback)
+
+    async def verify_provisional_identity(
+        self, *, email: str, verification_code: str
+    ) -> None:
+        verification_method = self.create_c_verification(
+            email=email, verification_code=verification_code
+        )
+        c_future = tankerlib.tanker_verify_provisional_identity(
+            self.c_tanker, verification_method
+        )
+
+        await handle_tanker_future(c_future)
