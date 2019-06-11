@@ -115,11 +115,13 @@ async def handle_tanker_future(
 
         async def set_result() -> None:
             if exception:
-
                 fut.set_exception(exception)
             else:
                 if handle_result:
-                    res = handle_result()  # type: Optional[T]
+                    try:
+                        res = handle_result()  # type: Optional[T]
+                    except BaseException as e:  # noqa
+                        fut.set_exception(e)
                 else:
                     res = None
                 fut.set_result(res)
