@@ -578,17 +578,6 @@ async def test_claim_with_incorrect_code(
 
 
 @pytest.mark.asyncio
-async def test_returns_ready_status_when_nothing_to_claim(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
-) -> None:
-    _, bob = await set_up_preshare(tmp_path, trustchain, admin)
-    result = await bob.session.attach_provisional_identity(
-        bob.private_provisional_identity
-    )
-    assert result.status == TankerStatus.READY
-
-
-@pytest.mark.asyncio
 async def test_update_verification_passphrase(
     tmp_path: Path, trustchain: Trustchain
 ) -> None:
