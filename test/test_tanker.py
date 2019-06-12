@@ -489,7 +489,7 @@ async def set_up_preshare(
 
 
 @pytest.mark.asyncio
-async def test_decrypt_unclaimed_resource(
+async def test_cannot_decrypt_if_provisional_identity_not_attached(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
@@ -502,8 +502,7 @@ async def test_decrypt_unclaimed_resource(
     assert error.value.code == ErrorCode.NOT_FOUND
 
 
-# TODO: claim -> attach
-async def share_and_claim(
+async def share_and_attach_provisional_identity(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> Tuple[PreUser, bytes, bytes]:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
@@ -527,19 +526,19 @@ async def share_and_claim(
 
 
 @pytest.mark.asyncio
-async def test_claim_identity_simple(
+async def test_attach_provisional_identity_simple(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
-    bob, encrypted, message = await share_and_claim(tmp_path, trustchain, admin)
+    bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, trustchain, admin)
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
 
 @pytest.mark.asyncio
-async def test_claim_identity_after_sign_out_sign_in(
+async def test_attach_provisional_identity_after_sign_out(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
-    bob, encrypted, message = await share_and_claim(tmp_path, trustchain, admin)
+    bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, trustchain, admin)
     await bob.session.stop()
     await bob.session.start(bob.private_identity)
     decrypted = await bob.session.decrypt(encrypted)
@@ -550,7 +549,7 @@ async def test_claim_identity_after_sign_out_sign_in(
 async def test_already_attached_identity(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
-    bob, _, _ = await share_and_claim(tmp_path, trustchain, admin)
+    bob, _, _ = await share_and_attach_provisional_identity(tmp_path, trustchain, admin)
     attach_result = await bob.session.attach_provisional_identity(
         bob.private_provisional_identity
     )
@@ -559,7 +558,7 @@ async def test_already_attached_identity(
 
 
 @pytest.mark.asyncio
-async def test_claim_with_incorrect_code(
+async def test_attach_provisional_identity_with_incorrect_code(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
