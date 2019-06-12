@@ -49,9 +49,6 @@ def revoke_callback(args: CData, data: CData) -> None:
         tanker_instance.on_revoked()
 
 
-# TODO: remove me
-
-
 class Status(Enum):
     STOPPED = 0
     READY = 1
@@ -159,18 +156,18 @@ class Tanker:
         :param email: The email to use for identity verification
         """
         c_identity = str_to_c_string(identity)
-        c_start_fut = tankerlib.tanker_start(self.c_tanker, c_identity)
+        c_future = tankerlib.tanker_start(self.c_tanker, c_identity)
 
-        def start_cb() -> Status:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_start_fut)
+        def callback() -> Status:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
             return Status(int(ffi.cast("int", c_voidp)))
 
-        return await handle_tanker_future(c_start_fut, start_cb)
+        return await handle_tanker_future(c_future, callback)
 
     async def stop(self) -> None:
         """Close the session."""
-        c_sign_out_fut = tankerlib.tanker_stop(self.c_tanker)
-        await handle_tanker_future(c_sign_out_fut)
+        c_future = tankerlib.tanker_stop(self.c_tanker)
+        await handle_tanker_future(c_future)
 
     async def encrypt(
         self,
@@ -202,7 +199,7 @@ class Tanker:
         clear_size = len(c_clear_buffer)  # type: ignore
         size = tankerlib.tanker_encrypted_size(clear_size)
         c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
-        c_encrypt_fut = tankerlib.tanker_encrypt(
+        c_future = tankerlib.tanker_encrypt(
             self.c_tanker,
             c_encrypted_buffer,
             c_clear_buffer,
@@ -210,10 +207,10 @@ class Tanker:
             c_encrypt_options,
         )
 
-        def encrypt_cb() -> bytes:
+        def callback() -> bytes:
             return c_buffer_to_bytes(c_encrypted_buffer)
 
-        return await handle_tanker_future(c_encrypt_fut, encrypt_cb)
+        return await handle_tanker_future(c_future, callback)
 
     async def decrypt(self, encrypted_data: bytes) -> bytes:
         """Decrypt `encrypted_data`"""
@@ -224,30 +221,30 @@ class Tanker:
         c_size = unwrap_expected(c_expected_size, "uint64_t")
         size = cast(int, c_size)
         c_clear_buffer = ffi.new("uint8_t[%i]" % size)
-        c_decrypt_fut = tankerlib.tanker_decrypt(
+        c_future = tankerlib.tanker_decrypt(
             self.c_tanker, c_clear_buffer, c_encrypted_buffer, len(c_encrypted_buffer)
         )
 
-        def decrypt_cb() -> bytes:
+        def callback() -> bytes:
             return c_buffer_to_bytes(c_clear_buffer)
 
-        return await handle_tanker_future(c_decrypt_fut, decrypt_cb)
+        return await handle_tanker_future(c_future, callback)
 
     async def device_id(self) -> str:
         """:return: the current device id"""
-        c_device_fut = tankerlib.tanker_device_id(self.c_tanker)
+        c_future = tankerlib.tanker_device_id(self.c_tanker)
 
-        def device_id_cb() -> str:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_device_fut)
+        def callback() -> str:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
             c_str = ffi.cast("char*", c_voidp)
             return c_string_to_str(c_str)
 
-        return await handle_tanker_future(c_device_fut, device_id_cb)
+        return await handle_tanker_future(c_future, callback)
 
     async def revoke_device(self, device_id: str) -> None:
         c_device_id = str_to_c_string(device_id)
-        c_revoke_fut = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
-        await handle_tanker_future(c_revoke_fut)
+        c_future = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
+        await handle_tanker_future(c_future)
 
     def get_resource_id(self, encrypted: bytes) -> str:
         """Get resource ID from `encrypted` data"""
@@ -267,17 +264,17 @@ class Tanker:
         user_list = CCharList(users)
         group_list = CCharList(groups)
 
-        await handle_tanker_future(
-            tankerlib.tanker_share(
-                self.c_tanker,
-                user_list.data,
-                user_list.size,
-                group_list.data,
-                group_list.size,
-                resource_list.data,
-                resource_list.size,
-            )
+        c_future = tankerlib.tanker_share(
+            self.c_tanker,
+            user_list.data,
+            user_list.size,
+            group_list.data,
+            group_list.size,
+            resource_list.data,
+            resource_list.size,
         )
+
+        await handle_tanker_future(c_future)
 
     @classmethod
     def create_c_verification(
@@ -367,7 +364,6 @@ class Tanker:
             c_str = ffi.cast("char*", c_voidp)
             return c_string_to_str(c_str)
 
-        # TODO: use c_future, callback in all calls
         return await handle_tanker_future(c_future, callback)
 
     async def set_verification_method(
@@ -393,16 +389,16 @@ class Tanker:
     async def create_group(self, user_ids: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""
         user_list = CCharList(user_ids)
-        c_create_group_fut = tankerlib.tanker_create_group(
+        c_future = tankerlib.tanker_create_group(
             self.c_tanker, user_list.data, user_list.size
         )
 
-        def create_group_cb() -> str:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_create_group_fut)
+        def callback() -> str:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
             c_str = ffi.cast("char*", c_voidp)
             return c_string_to_str(c_str)
 
-        return await handle_tanker_future(c_create_group_fut, create_group_cb)
+        return await handle_tanker_future(c_future, callback)
 
     async def update_group_members(
         self, group_id: str, *, add: OptionalStrList = None
@@ -410,11 +406,11 @@ class Tanker:
         """Add some users to an existing group"""
         add_list = CCharList(add)
         c_group_id = str_to_c_string(group_id)
-        c_update_group_fut = tankerlib.tanker_update_group_members(
+        c_future = tankerlib.tanker_update_group_members(
             self.c_tanker, c_group_id, add_list.data, add_list.size
         )
 
-        await handle_tanker_future(c_update_group_fut)
+        await handle_tanker_future(c_future)
 
     async def attach_provisional_identity(
         self, provisional_identity: str
