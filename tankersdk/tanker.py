@@ -72,7 +72,6 @@ class VerificationMethod:
         self.email = email
 
 
-UnlockFunc = Callable[[], None]
 RevokeFunc = Callable[[], None]
 
 
@@ -107,7 +106,6 @@ class Tanker:
 
         self._create_tanker_obj()
         self._set_event_callbacks()
-        self.on_unlock_required = None  # type: Optional[UnlockFunc]
         self.on_revoked = None  # type: Optional[RevokeFunc]
 
     def _create_tanker_obj(self) -> None:
