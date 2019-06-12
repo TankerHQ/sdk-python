@@ -257,7 +257,6 @@ async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
     await check_share_with_group_works(alice, group_id, bob, charlie)
 
 
-# FIXME: this is create_two_devices with passphrase
 async def create_two_devices(
     tmp_path: Path, trustchain: Trustchain
 ) -> Tuple[str, Tanker, Tanker]:
@@ -400,7 +399,9 @@ async def test_email_verification(
     )
     await laptop_tanker.start(alice_identity)
     verification_code = admin.get_verification_code(trustchain.id, email)
-    await laptop_tanker.register_identity(email=email, verification_code=verification_code)
+    await laptop_tanker.register_identity(
+        email=email, verification_code=verification_code
+    )
     assert len(verification_code) == 8
 
     phone_path = tmp_path.joinpath("phone")
@@ -433,7 +434,9 @@ async def test_bad_verification_code(
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
     await laptop_tanker.start(alice_identity)
     verification_code = admin.get_verification_code(trustchain.id, email)
-    await laptop_tanker.register_identity(email=email, verification_code=verification_code)
+    await laptop_tanker.register_identity(
+        email=email, verification_code=verification_code
+    )
     await phone_tanker.start(alice_identity)
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(email=email, verification_code="12345678")
@@ -528,7 +531,9 @@ async def share_and_attach_provisional_identity(
 async def test_attach_provisional_identity_simple(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
-    bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, trustchain, admin)
+    bob, encrypted, message = await share_and_attach_provisional_identity(
+        tmp_path, trustchain, admin
+    )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
@@ -537,7 +542,9 @@ async def test_attach_provisional_identity_simple(
 async def test_attach_provisional_identity_after_sign_out(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
-    bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, trustchain, admin)
+    bob, encrypted, message = await share_and_attach_provisional_identity(
+        tmp_path, trustchain, admin
+    )
     await bob.session.stop()
     await bob.session.start(bob.private_identity)
     decrypted = await bob.session.decrypt(encrypted)
