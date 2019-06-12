@@ -139,16 +139,13 @@ async def test_start_invalid_identity(tmp_path: Path, trustchain: Trustchain) ->
     await tanker.stop()
 
 
-# TODO: remove user_path
 @pytest.mark.asyncio
 async def test_create_account_then_sign_in(
     tmp_path: Path, trustchain: Trustchain
 ) -> None:
     fake = Faker()
     user_id = fake.email()
-    user_path = tmp_path.joinpath("user")
-    user_path.mkdir_p()
-    tanker = create_tanker(trustchain.id, writable_path=user_path)
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, user_id
     )
@@ -168,7 +165,7 @@ User = namedtuple("User", ["session", "public_identity", "private_identity"])
 async def create_user_session(tmp_path: Path, trustchain: Trustchain) -> User:
     fake = Faker()
     user_id = fake.email()
-    user_path = tmp_path.joinpath("user")
+    user_path = tmp_path.joinpath(user_id)
     user_path.mkdir_p()
     tanker = create_tanker(trustchain.id, writable_path=user_path)
     private_identity = tankersdk_identity.create_identity(
