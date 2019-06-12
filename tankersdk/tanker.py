@@ -50,6 +50,8 @@ def revoke_callback(args: CData, data: CData) -> None:
 
 
 class Status(Enum):
+    """Represent the status of a Tanker session"""
+
     STOPPED = 0
     READY = 1
     IDENTITY_REGISTRATION_NEEDED = 2
@@ -57,12 +59,20 @@ class Status(Enum):
 
 
 class VerificationMethodType(Enum):
+    """Types of available methods for identity verification"""
+
     EMAIL = 1
     PASSPHRASE = 2
     VERIFICATION_KEY = 2
 
 
 class VerificationMethod:
+    """Represent a verification method
+
+    :ivar method_type: An instance of :py:class:`VerificationMethodType` enum
+    :ivar email: The email to use for verification, if `method_type` is `EMAIL`
+    """
+
     def __init__(
         self, method_type: VerificationMethodType, *, email: Optional[str] = None
     ):
@@ -76,8 +86,17 @@ RevokeFunc = Callable[[], None]
 
 
 class AttachResult:
+    """Represent the result of a call to `attach_provisional_identity`
+
+    :ivar status:  An instance of :py:class:`Status` enum
+
+    :ivar verification_method: An instance of :py:class:`VerificationMethod`,
+                               if status is  `IDENTITY_VERIFICATION_NEEDED`
+    """
+
     def __init__(self, status: Status):
         self.status = status
+
         self.verification_method: Optional[VerificationMethod] = None
 
 
@@ -95,6 +114,8 @@ class Tanker:
         trustchain_id: str,
         *,
         trustchain_url: Optional[str] = None,
+        # Note: the sdk-type is used for analytics. Set it to something else
+        # if you are not a Tanker customer (for instance, when running tests)
         sdk_type: str = "client-python",
         writable_path: str,
     ):
@@ -143,15 +164,14 @@ class Tanker:
 
     @property
     def status(self) -> Status:
+        """Retrieve the status of the current session, as a :py:class:`Status` instance"""
         return Status(tankerlib.tanker_status(self.c_tanker))
 
     async def start(self, identity: str) -> Status:
-        """
-        Sign up to Tanker and open a session
+        """Start a new Tanker session
 
         :param identity: The user's Tanker identity
-        :param password: The password to use for identity verification
-        :param email: The email to use for identity verification
+        :return: A :py:class:`Status` enum
         """
         c_identity = str_to_c_string(identity)
         c_future = tankerlib.tanker_start(self.c_tanker, c_identity)
@@ -163,7 +183,7 @@ class Tanker:
         return await handle_tanker_future(c_future, callback)
 
     async def stop(self) -> None:
-        """Close the session."""
+        """Stop the Tanker  session"""
         c_future = tankerlib.tanker_stop(self.c_tanker)
         await handle_tanker_future(c_future)
 
@@ -174,10 +194,9 @@ class Tanker:
         share_with_users: OptionalStrList = None,
         share_with_groups: OptionalStrList = None,
     ) -> bytes:
-        """
-        Encrypt `clear_data`
+        """Encrypt `clear_data`
 
-        :param share_with_users: An (optional) list of user IDs to share with
+        :param share_with_users: An (optional) list of identities to share with
         :param share_with_groups: A list of groups to share with
         """
         user_list = CCharList(share_with_users)
@@ -240,6 +259,7 @@ class Tanker:
         return await handle_tanker_future(c_future, callback)
 
     async def revoke_device(self, device_id: str) -> None:
+        """Revoke the given device"""
         c_device_id = str_to_c_string(device_id)
         c_future = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
         await handle_tanker_future(c_future)
@@ -322,6 +342,10 @@ class Tanker:
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
     ) -> None:
+        """Register an identity
+
+        Note that if `email` is used, `verification_code` must be set too
+        """
         c_verification = self.create_c_verification(
             verification_key=verification_key,
             passphrase=passphrase,
@@ -340,6 +364,10 @@ class Tanker:
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
     ) -> None:
+        """Verify an identity
+
+        Note that if `email` is used, `verification_code` must be set too
+        """
         c_verification = self.create_c_verification(
             verification_key=verification_key,
             passphrase=passphrase,
@@ -350,10 +378,9 @@ class Tanker:
         await handle_tanker_future(c_future)
 
     async def generate_verification_key(self) -> str:
-        """
-        Generate a private unlock key.
+        """Generate a private unlock key
 
-        It can be used to unlock a device
+        This can be used to verify an indentity later on
         """
         c_future = tankerlib.tanker_generate_verification_key(self.c_tanker)
 
@@ -372,6 +399,7 @@ class Tanker:
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
     ) -> None:
+        """Set or update a verification method"""
         c_verification = self.create_c_verification(
             verification_key=verification_key,
             passphrase=passphrase,
@@ -413,6 +441,10 @@ class Tanker:
     async def attach_provisional_identity(
         self, provisional_identity: str
     ) -> AttachResult:
+        """Attach a provisional identity
+
+        :return: an instance of :py:class:`AttachResult`
+        """
         c_future = tankerlib.tanker_attach_provisional_identity(
             self.c_tanker, str_to_c_string(provisional_identity)
         )
@@ -441,6 +473,7 @@ class Tanker:
     async def verify_provisional_identity(
         self, *, email: str, verification_code: str
     ) -> None:
+        """Verify a provisional identity"""
         verification_method = self.create_c_verification(
             email=email, verification_code=verification_code
         )

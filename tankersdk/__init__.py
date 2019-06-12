@@ -7,7 +7,13 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 from .error import Error, ErrorCode  # noqa
-from .tanker import Tanker, Status, VerificationMethodType  # noqa
+from .tanker import (  # noqa
+    Tanker,
+    Status,
+    VerificationMethod,
+    VerificationMethodType,
+    AttachResult,
+)
 from .admin import Admin  # noqa
 from .version import __version__  # noqa
 
