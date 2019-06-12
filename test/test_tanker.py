@@ -386,7 +386,6 @@ async def test_invalid_verification_key(tmp_path: Path, trustchain: Trustchain) 
     await laptop_tanker.stop()
 
 
-# TODO: verif_code -> verification_code
 @pytest.mark.asyncio
 async def test_email_verification(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
@@ -400,9 +399,9 @@ async def test_email_verification(
         trustchain.id, trustchain.private_key, email
     )
     await laptop_tanker.start(alice_identity)
-    verif_code = admin.get_verification_code(trustchain.id, email)
-    await laptop_tanker.register_identity(email=email, verification_code=verif_code)
-    assert len(verif_code) == 8
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await laptop_tanker.register_identity(email=email, verification_code=verification_code)
+    assert len(verification_code) == 8
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
@@ -410,8 +409,8 @@ async def test_email_verification(
 
     await phone_tanker.start(alice_identity)
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
-    verif_code = admin.get_verification_code(trustchain.id, email)
-    await phone_tanker.verify_identity(email=email, verification_code=verif_code)
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await phone_tanker.verify_identity(email=email, verification_code=verification_code)
     assert phone_tanker.status == TankerStatus.READY
     await laptop_tanker.stop()
     await phone_tanker.stop()
@@ -419,7 +418,7 @@ async def test_email_verification(
 
 # TODO bad -> invalid
 @pytest.mark.asyncio
-async def test_bad_verif_code(
+async def test_bad_verification_code(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
     fake = Faker()
@@ -434,8 +433,8 @@ async def test_bad_verif_code(
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
     await laptop_tanker.start(alice_identity)
-    verif_code = admin.get_verification_code(trustchain.id, email)
-    await laptop_tanker.register_identity(email=email, verification_code=verif_code)
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await laptop_tanker.register_identity(email=email, verification_code=verification_code)
     await phone_tanker.start(alice_identity)
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(email=email, verification_code="12345678")
@@ -459,7 +458,7 @@ PreUser = namedtuple(
         "public_provisional_identity",
         "private_provisional_identity",
         "email",
-        "verif_code",
+        "verification_code",
     ],
 )
 
@@ -484,7 +483,7 @@ async def set_up_preshare(
         public_provisional_identity=bob_public_provisional_identity,
         private_provisional_identity=bob_provisional_identity,
         email=bob_email,
-        verif_code=admin.get_verification_code(trustchain.id, bob_email),
+        verification_code=admin.get_verification_code(trustchain.id, bob_email),
     )
     return alice, pre_bob
 
@@ -520,9 +519,9 @@ async def share_and_claim(
     assert actual_method.email == bob.email
     assert actual_method.method_type == tankersdk.VerificationMethodType.EMAIL
 
-    verif_code = admin.get_verification_code(trustchain.id, bob.email)
+    verification_code = admin.get_verification_code(trustchain.id, bob.email)
     await bob.session.verify_provisional_identity(
-        email=bob.email, verification_code=verif_code
+        email=bob.email, verification_code=verification_code
     )
     return bob, encrypted, message
 
@@ -617,7 +616,7 @@ async def test_create_group_with_prov_id(
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     await bob.session.verify_provisional_identity(
-        email=bob.email, verification_code=bob.verif_code
+        email=bob.email, verification_code=bob.verification_code
     )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
@@ -636,7 +635,7 @@ async def test_add_to_group_with_prov_id(
     )
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     await bob.session.verify_provisional_identity(
-        email=bob.email, verification_code=bob.verif_code
+        email=bob.email, verification_code=bob.verification_code
     )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
