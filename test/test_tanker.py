@@ -416,7 +416,6 @@ async def test_email_verification(
     await phone_tanker.stop()
 
 
-# TODO bad -> invalid
 @pytest.mark.asyncio
 async def test_bad_verification_code(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
