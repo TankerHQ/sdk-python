@@ -68,6 +68,7 @@ Session management
    .. autoattribute:: status
    .. automethod:: register_identity
    .. automethod:: verify_identity
+   .. automethod:: set_verification_method
    .. automethod:: get_verification_methods
    .. automethod:: revoke_device
 
