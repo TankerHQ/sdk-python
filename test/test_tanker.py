@@ -11,7 +11,7 @@ from typing import cast, Dict, Iterator, Tuple
 import tankersdk
 from tankersdk import Admin, Tanker, Error as TankerError, ErrorCode
 from tankersdk import Status as TankerStatus
-from tankersdk.tanker import CVerification
+from tankersdk.tanker import CVerification, VerificationMethodType
 from tankersdk.admin import Trustchain
 import tankersdk_identity
 
@@ -746,3 +746,39 @@ async def test_device_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     with pytest.raises(TankerError) as error:
         await alice.session.revoke_device(device_id)
     assert error.value.code == ErrorCode.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_get_verification_methods(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
+    faker = Faker()
+    email = faker.email()
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, email
+    )
+    await tanker.start(identity)
+    passphrase = "my passphrase"
+    await tanker.register_identity(passphrase=passphrase)
+    await tanker.stop()
+
+    await tanker.start(identity)
+    methods = await tanker.get_verification_methods()
+    assert len(methods) == 1
+    (actual_method,) = methods
+    assert actual_method.method_type == VerificationMethodType.PASSPHRASE
+
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await tanker.set_verification_method(
+        email=email, verification_code=verification_code
+    )
+
+    methods = await tanker.get_verification_methods()
+    assert len(methods) == 2
+    email_methods = [
+        x for x in methods if x.method_type == VerificationMethodType.EMAIL
+    ]
+    assert len(email_methods) == 1
+    (email_method,) = email_methods
+    assert email_method.email == email

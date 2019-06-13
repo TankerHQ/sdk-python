@@ -81,6 +81,18 @@ class VerificationMethod:
             raise ValueError("need an email value if method_type is Method.Email")
         self.email = email
 
+    @classmethod
+    def from_c(cls, c_verification_method: CData) -> "VerificationMethod":
+        method_type = VerificationMethodType(
+            c_verification_method.verification_method_type
+        )
+        if method_type == VerificationMethodType.EMAIL:
+            c_email = c_verification_method.email
+            email = c_string_to_str(c_email)
+            return cls(method_type, email=email)
+        else:
+            return cls(method_type)
+
 
 RevokeFunc = Callable[[], None]
 
@@ -425,6 +437,24 @@ class Tanker:
         )
 
         return await handle_tanker_future(c_future)
+
+    async def get_verification_methods(self) -> List[VerificationMethod]:
+        """Get the list of available verification methods"""
+        c_future = tankerlib.tanker_get_verification_methods(self.c_tanker)
+
+        def callback() -> List[VerificationMethod]:
+            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
+            c_list = ffi.cast("tanker_verification_method_list_t*", c_voidp)
+            count = c_list.count
+            c_methods = c_list.methods
+            res = list()
+            for i in range(count):
+                c_method = c_methods[i]
+                method = VerificationMethod.from_c(c_method)
+                res.append(method)
+            return res
+
+        return await handle_tanker_future(c_future, callback)
 
     async def create_group(self, user_ids: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""
