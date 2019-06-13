@@ -100,6 +100,58 @@ class AttachResult:
         self.verification_method: Optional[VerificationMethod] = None
 
 
+class CVerification:
+    """Wraps the tanker_verification_t C type"""
+
+    def __init__(
+        self,
+        passphrase: Optional[str] = None,
+        verification_key: Optional[str] = None,
+        email: Optional[str] = None,
+        verification_code: Optional[str] = None,
+    ):
+
+        options_set = [
+            x for x in (passphrase, verification_key, email) if x is not None
+        ]
+        if len(options_set) != 1:
+            raise ValueError("Chose one among passphrase, verification_key and email")
+
+        # Note: we store things in `self` so they don't get
+        # garbage collected later on
+        c_verification = ffi.new("tanker_verification_t *", {"version": 1})
+        if verification_key is not None:
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
+            )
+            self._verification_key = str_to_c_string(verification_key)
+            c_verification.verification_key = self._verification_key
+        elif passphrase is not None:
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_PASSPHRASE
+            )
+            self._passphrase = str_to_c_string(passphrase)
+            c_verification.passphrase = self._passphrase
+        elif email is not None:
+            if verification_code is None:
+                raise ValueError(
+                    "Connot create an 'email' verification without a 'verification_code'"
+                )
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_EMAIL
+            )
+            self._email_verification = {
+                "version": 1,
+                "email": str_to_c_string(email),
+                "verification_code": str_to_c_string(verification_code),
+            }
+            c_verification.email_verification = self._email_verification
+        self._c_verification = c_verification
+
+    def get(self) -> CData:
+        return self._c_verification  # type: ignore
+
+
 class Tanker:
     """
     tankersdk.Tanker(trustchain_id: str, *, writable_path: str)
@@ -294,46 +346,6 @@ class Tanker:
 
         await handle_tanker_future(c_future)
 
-    @classmethod
-    def create_c_verification(
-        cls,
-        passphrase: Optional[str] = None,
-        verification_key: Optional[str] = None,
-        email: Optional[str] = None,
-        verification_code: Optional[str] = None,
-    ) -> CData:
-        # Note: we store some objects in `cls` so that they don't
-        # get garbage collected
-        c_verification = ffi.new("tanker_verification_t *", {"version": 1})
-        if verification_key is not None:
-            c_verification.verification_method_type = (
-                tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
-            )
-            cls._verification_key = str_to_c_string(verification_key)  # type: ignore
-            c_verification.verification_key = cls._verification_key  # type: ignore
-        if passphrase is not None:
-            c_verification.verification_method_type = (
-                tankerlib.TANKER_VERIFICATION_METHOD_PASSPHRASE
-            )
-            cls._passphrase = str_to_c_string(passphrase)  # type: ignore
-            c_verification.passphrase = cls._passphrase  # type: ignore
-        if email is not None:
-            if verification_code is None:
-                raise ValueError(
-                    "Connot create an 'email' verification without a 'verification_code'"
-                )
-            c_verification.verification_method_type = (
-                tankerlib.TANKER_VERIFICATION_METHOD_EMAIL
-            )
-            cls._email_verification = {  # type: ignore
-                "version": 1,
-                "email": str_to_c_string(email),
-                "verification_code": str_to_c_string(verification_code),
-            }
-            c_verification.email_verification = cls._email_verification  # type: ignore
-        cls._c_verification = c_verification  # type: ignore
-        return c_verification  # type: ignore
-
     async def register_identity(
         self,
         *,
@@ -346,14 +358,16 @@ class Tanker:
 
         Note that if `email` is used, `verification_code` must be set too
         """
-        c_verification = self.create_c_verification(
+        c_verification = CVerification(
             verification_key=verification_key,
             passphrase=passphrase,
             email=email,
             verification_code=verification_code,
         )
 
-        c_future = tankerlib.tanker_register_identity(self.c_tanker, c_verification)
+        c_future = tankerlib.tanker_register_identity(
+            self.c_tanker, c_verification.get()
+        )
         await handle_tanker_future(c_future)
 
     async def verify_identity(
@@ -368,13 +382,13 @@ class Tanker:
 
         Note that if `email` is used, `verification_code` must be set too
         """
-        c_verification = self.create_c_verification(
+        c_verification = CVerification(
             verification_key=verification_key,
             passphrase=passphrase,
             email=email,
             verification_code=verification_code,
         )
-        c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification)
+        c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification.get())
         await handle_tanker_future(c_future)
 
     async def generate_verification_key(self) -> str:
@@ -400,14 +414,14 @@ class Tanker:
         verification_code: Optional[str] = None,
     ) -> None:
         """Set or update a verification method"""
-        c_verification = self.create_c_verification(
+        c_verification = CVerification(
             verification_key=verification_key,
             passphrase=passphrase,
             email=email,
             verification_code=verification_code,
         )
         c_future = tankerlib.tanker_set_verification_method(
-            self.c_tanker, c_verification
+            self.c_tanker, c_verification.get()
         )
 
         return await handle_tanker_future(c_future)
@@ -474,11 +488,9 @@ class Tanker:
         self, *, email: str, verification_code: str
     ) -> None:
         """Verify a provisional identity"""
-        verification_method = self.create_c_verification(
-            email=email, verification_code=verification_code
-        )
+        verification = CVerification(email=email, verification_code=verification_code)
         c_future = tankerlib.tanker_verify_provisional_identity(
-            self.c_tanker, verification_method
+            self.c_tanker, verification.get()
         )
 
         await handle_tanker_future(c_future)

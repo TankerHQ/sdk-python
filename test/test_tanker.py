@@ -11,6 +11,7 @@ from typing import cast, Dict, Iterator, Tuple
 import tankersdk
 from tankersdk import Admin, Tanker, Error as TankerError, ErrorCode
 from tankersdk import Status as TankerStatus
+from tankersdk.tanker import CVerification
 from tankersdk.admin import Trustchain
 import tankersdk_identity
 
@@ -55,6 +56,26 @@ def tmp_path(tmpdir: str) -> Path:
 @pytest.fixture(scope="session")
 def admin() -> Iterator[Admin]:
     yield Admin(url=TEST_CONFIG["url"], token=TEST_CONFIG["idToken"])
+
+
+class TestVerificationSanityChecks:
+    def assert_value_error(self, **kwargs: str) -> None:
+        with pytest.raises(ValueError):
+            CVerification(**kwargs)
+
+    def test_accepts_correct_arguments(self) -> None:
+        CVerification(passphrase="my-passphrase")
+        CVerification(verification_key="THE-KEY")
+        CVerification(email="john@domain.tld", verification_code="1234")
+
+    def test_rejects_all_none(self) -> None:
+        self.assert_value_error()
+
+    def test_rejects_two_methods(self) -> None:
+        self.assert_value_error(passphrase="my-passphrase", verification_key="THE-KEY")
+
+    def test_rejects_email_without_verification_code(self) -> None:
+        self.assert_value_error(email="john@domain.tld")
 
 
 @pytest.fixture(scope="session")
