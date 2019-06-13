@@ -249,7 +249,7 @@ class Tanker:
         return await handle_tanker_future(c_future, callback)
 
     async def stop(self) -> None:
-        """Stop the Tanker  session"""
+        """Stop the Tanker session"""
         c_future = tankerlib.tanker_stop(self.c_tanker)
         await handle_tanker_future(c_future)
 
