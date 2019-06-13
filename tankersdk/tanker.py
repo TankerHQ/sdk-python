@@ -366,10 +366,7 @@ class Tanker:
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
     ) -> None:
-        """Register an identity
-
-        Note that if `email` is used, `verification_code` must be set too
-        """
+        """Register users' identity"""
         c_verification = CVerification(
             verification_key=verification_key,
             passphrase=passphrase,
@@ -390,10 +387,7 @@ class Tanker:
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
     ) -> None:
-        """Verify an identity
-
-        Note that if `email` is used, `verification_code` must be set too
-        """
+        """Verify users' identity"""
         c_verification = CVerification(
             verification_key=verification_key,
             passphrase=passphrase,
