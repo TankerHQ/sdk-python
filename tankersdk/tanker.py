@@ -78,7 +78,9 @@ class VerificationMethod:
     ):
         self.method_type = method_type
         if method_type == VerificationMethodType.EMAIL and not email:
-            raise ValueError("need an email value if method_type is Method.Email")
+            raise ValueError(
+                "need an email value if method_type is VerificationMethodType.EMAIL"
+            )
         self.email = email
 
     @classmethod
@@ -147,7 +149,7 @@ class CVerification:
         elif email is not None:
             if verification_code is None:
                 raise ValueError(
-                    "Connot create an 'email' verification without a 'verification_code'"
+                    "Connot create an email verification without a verification code"
                 )
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_EMAIL
