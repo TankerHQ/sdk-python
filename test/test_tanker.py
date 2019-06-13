@@ -152,12 +152,37 @@ async def test_start_new_account(tmp_path: Path, trustchain: Trustchain) -> None
 
 
 @pytest.mark.asyncio
-async def test_start_invalid_identity(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_start_identity_incorrect_format(
+    tmp_path: Path, trustchain: Trustchain
+) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     with pytest.raises(TankerError) as error:
         await tanker.start("bad identity")
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
     await tanker.stop()
+
+
+@pytest.mark.asyncio
+async def test_start_identity_invalid_signature(
+    tmp_path: Path, trustchain: Trustchain
+) -> None:
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
+    fake = Faker()
+    user_id = fake.email()
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, user_id
+    )
+    identity_json = base64.b64decode(identity).decode()
+    identity = json.loads(identity_json)
+    # no way this hard-coded signature matches
+    identity[
+        "delegation_signature"
+    ] = "l1zDBMibJM3gMCXSZFKBh9+Yk6bK16OgLRO43hrh7eeox2YqTd/6DZ6gyaza/YhyMbpypvFJYLjf7uLrEXglCA=="
+    identity_json = json.dumps(identity)
+    corrupted_identity = base64.b64encode(identity_json.encode()).decode()
+    await tanker.start(corrupted_identity)
+    with pytest.raises(TankerError):
+        await tanker.register_identity(passphrase="my-passphrase")
 
 
 @pytest.mark.asyncio
@@ -395,6 +420,7 @@ async def test_invalid_verification_key(tmp_path: Path, trustchain: Trustchain) 
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
     await phone_tanker.start(alice_identity)
+
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(verification_key="plop")
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
@@ -403,7 +429,16 @@ async def test_invalid_verification_key(tmp_path: Path, trustchain: Trustchain) 
         await phone_tanker.verify_identity(verification_key="")
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
-    await laptop_tanker.stop()
+    key_json = base64.b64decode(verification_key.encode()).decode()
+    key = json.loads(key_json)
+    key[
+        "privateSignatureKey"
+    ] = "O85hg7XxxGWq3cQf4xQ/VXaTiAPcqWoUIGDvaLpZ+trNQkp+rNzZrLvIfhERwb33iUjV0sFiL5XqweVgqTdg6Q=="
+    key_json = json.dumps(key)
+    key = base64.b64encode(key_json.encode()).decode()
+
+    with pytest.raises(TankerError):
+        await phone_tanker.verify_identity(verification_key=key)
 
 
 @pytest.mark.asyncio
