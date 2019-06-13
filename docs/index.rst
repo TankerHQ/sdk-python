@@ -41,6 +41,10 @@ Here's a typical usage:
 
 Detailed documentation follows:
 
+Instantiation
++++++++++++++
+
+.. autoclass:: Tanker
 
 Session management
 ++++++++++++++++++
@@ -50,16 +54,23 @@ Session management
    :undoc-members:
    :member-order: bysource
 
-Instanciation
-+++++++++++++
+.. autoclass:: VerificationMethodType
+   :members:
+   :undoc-members:
 
-.. autoclass:: Tanker
+.. autoclass:: VerificationMethod
 
-   .. automethod:: open
-   .. automethod:: close
+
+.. class:: Tanker
+
+   .. automethod:: start
+   .. automethod:: stop
    .. autoattribute:: status
-   .. automethod:: register_unlock
-   .. automethod:: unlock
+   .. automethod:: register_identity
+   .. automethod:: verify_identity
+   .. automethod:: set_verification_method
+   .. automethod:: get_verification_methods
+   .. automethod:: revoke_device
 
 
 Encryption and sharing
@@ -80,7 +91,7 @@ Encryption and sharing
          resource_id = tanker.get_resource_id(encrypted_data)
          await tanker.share(
             encrypted,
-            users=["alice_id", "bob_id"]
+            users=["alice_identity", "bob_identity"]
          )
 
    .. automethod:: get_resource_id
@@ -109,3 +120,14 @@ Group management
              clear_data,
              share_with_groups=[my_group]
          )
+
+Pre-registration
+++++++++++++++++
+
+.. autoclass:: AttachResult
+
+
+.. class:: Tanker
+
+   .. automethod:: attach_provisional_identity
+   .. automethod:: verify_provisional_identity

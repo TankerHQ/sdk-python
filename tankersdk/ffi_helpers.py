@@ -1,13 +1,10 @@
-from typing import cast, Callable, List, Type, Optional, TypeVar
+from typing import cast, Callable, List, Optional, TypeVar, Type
 from asyncio import Future
 import asyncio
 from _tanker import ffi
 from _tanker import lib as tankerlib
-
 from .error import Error, ErrorCode
 
-
-# TODO: cffi stubs
 CData = Type[ffi.CData]
 
 
@@ -21,7 +18,7 @@ def str_to_c_string(text: Optional[str]) -> CData:
 # despite its name, so let's wrap this
 # in a better name
 def c_string_to_bytes(c_data: CData) -> bytes:
-    return ffi.string(c_data)  # type: ignore
+    return cast(bytes, ffi.string(c_data))
 
 
 def c_buffer_to_bytes(c_data: CData) -> bytes:
@@ -115,11 +112,13 @@ async def handle_tanker_future(
 
         async def set_result() -> None:
             if exception:
-
                 fut.set_exception(exception)
             else:
                 if handle_result:
-                    res = handle_result()  # type: Optional[T]
+                    try:
+                        res = handle_result()  # type: Optional[T]
+                    except BaseException as e:  # noqa
+                        fut.set_exception(e)
                 else:
                     res = None
                 fut.set_result(res)
