@@ -241,12 +241,8 @@ class Tanker:
         """
         c_identity = str_to_c_string(identity)
         c_future = tankerlib.tanker_start(self.c_tanker, c_identity)
-
-        def callback() -> Status:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
-            return Status(int(ffi.cast("int", c_voidp)))
-
-        return await handle_tanker_future(c_future, callback)
+        c_voidp = await handle_tanker_future(c_future)
+        return Status(int(ffi.cast("int", c_voidp)))
 
     async def stop(self) -> None:
         """Stop the Tanker session"""
@@ -290,10 +286,8 @@ class Tanker:
             c_encrypt_options,
         )
 
-        def callback() -> bytes:
-            return c_buffer_to_bytes(c_encrypted_buffer)
-
-        return await handle_tanker_future(c_future, callback)
+        await handle_tanker_future(c_future)
+        return c_buffer_to_bytes(c_encrypted_buffer)
 
     async def decrypt(self, encrypted_data: bytes) -> bytes:
         """Decrypt `encrypted_data`"""
@@ -307,22 +301,15 @@ class Tanker:
         c_future = tankerlib.tanker_decrypt(
             self.c_tanker, c_clear_buffer, c_encrypted_buffer, len(c_encrypted_buffer)
         )
-
-        def callback() -> bytes:
-            return c_buffer_to_bytes(c_clear_buffer)
-
-        return await handle_tanker_future(c_future, callback)
+        await handle_tanker_future(c_future)
+        return c_buffer_to_bytes(c_clear_buffer)
 
     async def device_id(self) -> str:
         """:return: the current device id"""
         c_future = tankerlib.tanker_device_id(self.c_tanker)
-
-        def callback() -> str:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
-            c_str = ffi.cast("char*", c_voidp)
-            return c_string_to_str(c_str)
-
-        return await handle_tanker_future(c_future, callback)
+        c_voidp = await handle_tanker_future(c_future)
+        c_str = ffi.cast("char*", c_voidp)
+        return c_string_to_str(c_str)
 
     async def revoke_device(self, device_id: str) -> None:
         """Revoke the given device"""
@@ -405,13 +392,9 @@ class Tanker:
         This can be used to verify an indentity later on
         """
         c_future = tankerlib.tanker_generate_verification_key(self.c_tanker)
-
-        def callback() -> str:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
-            c_str = ffi.cast("char*", c_voidp)
-            return c_string_to_str(c_str)
-
-        return await handle_tanker_future(c_future, callback)
+        c_voidp = await handle_tanker_future(c_future)
+        c_str = ffi.cast("char*", c_voidp)
+        return c_string_to_str(c_str)
 
     async def set_verification_method(
         self,
@@ -432,25 +415,22 @@ class Tanker:
             self.c_tanker, c_verification.get()
         )
 
-        return await handle_tanker_future(c_future)
+        await handle_tanker_future(c_future)
 
     async def get_verification_methods(self) -> List[VerificationMethod]:
         """Get the list of available verification methods"""
         c_future = tankerlib.tanker_get_verification_methods(self.c_tanker)
+        c_voidp = await handle_tanker_future(c_future)
 
-        def callback() -> List[VerificationMethod]:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
-            c_list = ffi.cast("tanker_verification_method_list_t*", c_voidp)
-            count = c_list.count
-            c_methods = c_list.methods
-            res = list()
-            for i in range(count):
-                c_method = c_methods[i]
-                method = VerificationMethod.from_c(c_method)
-                res.append(method)
-            return res
-
-        return await handle_tanker_future(c_future, callback)
+        c_list = ffi.cast("tanker_verification_method_list_t*", c_voidp)
+        count = c_list.count
+        c_methods = c_list.methods
+        res = list()
+        for i in range(count):
+            c_method = c_methods[i]
+            method = VerificationMethod.from_c(c_method)
+            res.append(method)
+        return res
 
     async def create_group(self, user_ids: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""
@@ -459,12 +439,9 @@ class Tanker:
             self.c_tanker, user_list.data, user_list.size
         )
 
-        def callback() -> str:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
-            c_str = ffi.cast("char*", c_voidp)
-            return c_string_to_str(c_str)
-
-        return await handle_tanker_future(c_future, callback)
+        c_voidp = await handle_tanker_future(c_future)
+        c_str = ffi.cast("char*", c_voidp)
+        return c_string_to_str(c_str)
 
     async def update_group_members(
         self, group_id: str, *, add: OptionalStrList = None
@@ -488,27 +465,22 @@ class Tanker:
         c_future = tankerlib.tanker_attach_provisional_identity(
             self.c_tanker, str_to_c_string(provisional_identity)
         )
-
-        def callback() -> AttachResult:
-            c_voidp = tankerlib.tanker_future_get_voidptr(c_future)
-            c_attach_result = ffi.cast("tanker_attach_result_t*", c_voidp)
-            status = Status(c_attach_result.status)
-            result = AttachResult(status)
-            if status == Status.IDENTITY_VERIFICATION_NEEDED:
-                c_method = c_attach_result.method
-                c_method_type = c_method.verification_method_type
-                method_type = VerificationMethodType(c_method_type)
-                if method_type == VerificationMethodType.EMAIL:
-                    verification_method = VerificationMethod(
-                        VerificationMethodType.EMAIL,
-                        email=c_string_to_str(c_method.email),
-                    )
-                else:
-                    verification_method = VerificationMethod(method_type)
-                result.verification_method = verification_method
-            return result
-
-        return await handle_tanker_future(c_future, callback)
+        c_voidp = await handle_tanker_future(c_future)
+        c_attach_result = ffi.cast("tanker_attach_result_t*", c_voidp)
+        status = Status(c_attach_result.status)
+        result = AttachResult(status)
+        if status == Status.IDENTITY_VERIFICATION_NEEDED:
+            c_method = c_attach_result.method
+            c_method_type = c_method.verification_method_type
+            method_type = VerificationMethodType(c_method_type)
+            if method_type == VerificationMethodType.EMAIL:
+                verification_method = VerificationMethod(
+                    VerificationMethodType.EMAIL, email=c_string_to_str(c_method.email)
+                )
+            else:
+                verification_method = VerificationMethod(method_type)
+            result.verification_method = verification_method
+        return result
 
     async def verify_provisional_identity(
         self, *, email: str, verification_code: str

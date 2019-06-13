@@ -1,4 +1,4 @@
-from typing import cast, Callable, List, Optional, TypeVar, Type
+from typing import cast, List, Optional, Type
 from asyncio import Future
 import asyncio
 from _tanker import ffi
@@ -72,7 +72,6 @@ def c_fut_to_exception(c_fut: CData) -> Optional[Error]:
         # UTF-8 sequences, so use 'latin-1' as a "lossless"
         # encoding:
         message = c_string_to_str(c_error.message, encoding="latin-1")
-        print("error", message)
         return Error(message, ErrorCode(c_error.code))
     else:
         return None
@@ -96,36 +95,25 @@ def unwrap_expected(c_expected: CData, c_type: str) -> CData:
     return ffi.cast(c_type, c_voidp)  # type: ignore
 
 
-T = TypeVar("T")
-HandleFunc = Callable[[], T]
-
-
-async def handle_tanker_future(
-    c_fut: CData, handle_result: Optional[HandleFunc[T]] = None
-) -> T:
-    fut = Future()  # type: Future[Optional[T]]
+async def handle_tanker_future(c_fut: CData) -> CData:
+    fut = Future()  # type: Future[CData]
     loop = asyncio.get_event_loop()
 
     @ffi.callback("void*(tanker_future_t*, void*)")  # type: ignore
     def then_callback(c_fut: CData, p: CData) -> CData:
         exception = c_fut_to_exception(c_fut)
 
-        async def set_result() -> None:
-            if exception:
-                fut.set_exception(exception)
-            else:
-                if handle_result:
-                    try:
-                        res = handle_result()  # type: Optional[T]
-                    except BaseException as e:  # noqa
-                        fut.set_exception(e)
-                else:
-                    res = None
-                fut.set_result(res)
+        # we use a future continuation lambda because `fut`
+        # must not be accessed from outside the Python event loop
+        if exception:
+            cont = lambda: fut.set_exception(exception)
+        else:
+            cont = lambda: fut.set_result(tankerlib.tanker_future_get_voidptr(c_fut))
 
-        asyncio.run_coroutine_threadsafe(set_result(), loop)
-
+        loop.run_in_executor(None, cont)
         return ffi.NULL  # type: ignore
 
-    tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
-    return await fut  # type: ignore
+    fut2 = tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
+    tankerlib.tanker_future_destroy(fut2)
+    tankerlib.tanker_future_destroy(c_fut)
+    return await fut
