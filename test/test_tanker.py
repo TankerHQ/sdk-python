@@ -332,6 +332,23 @@ async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_device_list(tmp_path: Path, trustchain: Trustchain) -> None:
+    _, laptop, phone = await create_two_devices(tmp_path, trustchain)
+    laptop_id = await laptop.device_id()
+    phone_id = await phone.device_id()
+
+    await phone.revoke_device(laptop_id)
+
+    actual_list = await phone.get_device_list()
+    actual_ids = [x.device_id for x in actual_list]
+    assert set(actual_ids) == set([laptop_id, phone_id])
+    revoked = [x for x in actual_list if x.is_revoked]
+    assert len(revoked) == 1
+    actual_revoked_id = revoked[0].device_id
+    assert actual_revoked_id == laptop_id
+
+
+@pytest.mark.asyncio
 async def test_must_verify_identity_on_second_device(
     tmp_path: Path, trustchain: Trustchain
 ) -> None:
