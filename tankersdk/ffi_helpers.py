@@ -108,7 +108,8 @@ async def handle_tanker_future(c_fut: CData) -> CData:
         if exception:
             cont = lambda: fut.set_exception(exception)
         else:
-            cont = lambda: fut.set_result(tankerlib.tanker_future_get_voidptr(c_fut))
+            res = tankerlib.tanker_future_get_voidptr(c_fut)
+            cont = lambda: fut.set_result(res)
 
         loop.run_in_executor(None, cont)
         return ffi.NULL  # type: ignore
