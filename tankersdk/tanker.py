@@ -430,6 +430,7 @@ class Tanker:
             c_method = c_methods[i]
             method = VerificationMethod.from_c(c_method)
             res.append(method)
+        tankerlib.tanker_free_verification_method_list(c_list)
         return res
 
     async def create_group(self, user_ids: List[str]) -> str:
@@ -480,6 +481,7 @@ class Tanker:
             else:
                 verification_method = VerificationMethod(method_type)
             result.verification_method = verification_method
+        tankerlib.tanker_free_attach_result(c_attach_result)
         return result
 
     async def verify_provisional_identity(
