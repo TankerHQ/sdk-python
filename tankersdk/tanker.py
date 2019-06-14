@@ -309,7 +309,10 @@ class Tanker:
         c_future = tankerlib.tanker_device_id(self.c_tanker)
         c_voidp = await handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
-        return c_string_to_str(c_str)
+        res = c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
+
 
     async def revoke_device(self, device_id: str) -> None:
         """Revoke the given device"""
@@ -394,7 +397,9 @@ class Tanker:
         c_future = tankerlib.tanker_generate_verification_key(self.c_tanker)
         c_voidp = await handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
-        return c_string_to_str(c_str)
+        res = c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
 
     async def set_verification_method(
         self,

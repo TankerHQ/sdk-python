@@ -61,3 +61,6 @@ class Admin:
         c_str = ffi.cast("char*", c_voidp)
         tankerlib.tanker_future_destroy(get_verif_fut)
         return c_string_to_str(c_str)
+
+    def __del__(self) -> None:
+        tankerlib.tanker_admin_destroy(self._c_admin)
