@@ -163,29 +163,6 @@ async def test_start_identity_incorrect_format(
 
 
 @pytest.mark.asyncio
-async def test_start_identity_invalid_signature(
-    tmp_path: Path, trustchain: Trustchain
-) -> None:
-    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
-    fake = Faker()
-    user_id = fake.email()
-    identity = tankersdk_identity.create_identity(
-        trustchain.id, trustchain.private_key, user_id
-    )
-    identity_json = base64.b64decode(identity).decode()
-    identity = json.loads(identity_json)
-    # no way this hard-coded signature matches
-    identity[
-        "delegation_signature"
-    ] = "l1zDBMibJM3gMCXSZFKBh9+Yk6bK16OgLRO43hrh7eeox2YqTd/6DZ6gyaza/YhyMbpypvFJYLjf7uLrEXglCA=="
-    identity_json = json.dumps(identity)
-    corrupted_identity = base64.b64encode(identity_json.encode()).decode()
-    await tanker.start(corrupted_identity)
-    with pytest.raises(TankerError):
-        await tanker.register_identity(passphrase="my-passphrase")
-
-
-@pytest.mark.asyncio
 async def test_create_account_then_sign_in(
     tmp_path: Path, trustchain: Trustchain
 ) -> None:
