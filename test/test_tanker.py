@@ -400,11 +400,11 @@ async def test_invalid_verification_key(tmp_path: Path, trustchain: Trustchain) 
 
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(verification_key="plop")
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(verification_key="")
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     key_json = base64.b64decode(verification_key.encode()).decode()
     key = json.loads(key_json)
@@ -473,13 +473,13 @@ async def test_bad_verification_code(
     await phone_tanker.start(alice_identity)
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(email=email, verification_code="12345678")
-    assert error.value.code == ErrorCode.INVALID_CREDENTIALS
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(email=email, verification_code="azerty")
-    assert error.value.code == ErrorCode.INVALID_CREDENTIALS
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(email=email, verification_code="")
-    assert error.value.code == ErrorCode.INVALID_CREDENTIALS
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     await laptop_tanker.stop()
 
@@ -534,7 +534,7 @@ async def test_cannot_decrypt_if_provisional_identity_not_attached(
     )
     with pytest.raises(TankerError) as error:
         await bob.session.decrypt(encrypted)
-    assert error.value.code == ErrorCode.NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 async def share_and_attach_provisional_identity(
@@ -637,7 +637,7 @@ async def test_update_verification_passphrase(
     # Old passphrase should not work
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(passphrase=old_passphrase)
-    assert error.value.code == ErrorCode.INVALID_CREDENTIALS
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     # But new passphrase should
     await phone_tanker.verify_identity(passphrase=new_passphrase)
@@ -687,7 +687,7 @@ async def test_user_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.create_group([identity])
-    assert error.value.code == ErrorCode.NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -704,7 +704,7 @@ async def test_recipient_not_found(tmp_path: Path, trustchain: Trustchain) -> No
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.encrypt(b"zz", share_with_groups=[group_id])
-    assert error.value.code == ErrorCode.NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -713,7 +713,7 @@ async def test_group_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.update_group_members(group_id, add=[alice.public_identity])
-    assert error.value.code == ErrorCode.NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -722,7 +722,7 @@ async def test_device_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.revoke_device(device_id)
-    assert error.value.code == ErrorCode.NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
