@@ -166,6 +166,25 @@ class CVerification:
         return self._c_verification  # type: ignore
 
 
+class DeviceDescription:
+    """An element of the list returned by `tanker.get_device_list()`
+
+    :ivar device_id: The id of the device
+    :ivar is_revoked: Whether the device is revoked
+
+    """
+
+    def __init__(self, device_id: str, is_revoked: bool):
+        self.device_id = device_id
+        self.is_revoked = is_revoked
+
+    @classmethod
+    def from_c(cls, c_device_list_elem: CData) -> "DeviceDescription":
+        device_id = c_string_to_str(c_device_list_elem.device_id)
+        is_revoked = c_device_list_elem.is_revoked
+        return cls(device_id, is_revoked)
+
+
 class Tanker:
     """
     tankersdk.Tanker(trustchain_id: str, *, writable_path: str)
@@ -309,7 +328,27 @@ class Tanker:
         c_future = tankerlib.tanker_device_id(self.c_tanker)
         c_voidp = await handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
-        return c_string_to_str(c_str)
+        res = c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
+
+    async def get_device_list(self) -> List[DeviceDescription]:
+        """Get the list of devices owned by the current user
+
+        :returns: a list of :py:class`DeviceDescription` instances
+        """
+        c_future = tankerlib.tanker_get_device_list(self.c_tanker)
+        c_voidp = await handle_tanker_future(c_future)
+        c_list = ffi.cast("tanker_device_list_t*", c_voidp)
+        count = c_list.count
+        c_devices = c_list.devices
+        res = list()
+        for i in range(count):
+            c_device_list_elem = c_devices[i]
+            device_description = DeviceDescription.from_c(c_device_list_elem)
+            res.append(device_description)
+        tankerlib.tanker_free_device_list(c_list)
+        return res
 
     async def revoke_device(self, device_id: str) -> None:
         """Revoke the given device"""
@@ -394,7 +433,9 @@ class Tanker:
         c_future = tankerlib.tanker_generate_verification_key(self.c_tanker)
         c_voidp = await handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
-        return c_string_to_str(c_str)
+        res = c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
 
     async def set_verification_method(
         self,
