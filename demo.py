@@ -42,7 +42,7 @@ async def open_tanker_session(
             sys.exit(f"Could not signup: {res.text}")
 
         identity = res.json()["identity"]
-        await tanker.sign_up(identity)
+        await tanker.start(identity)
     else:
         res = do_request(
             requests_session,
@@ -54,7 +54,7 @@ async def open_tanker_session(
             sys.exit(f"Could not login: {res.text}")
 
         identity = res.json()["identity"]
-        await tanker.sign_in(identity)
+        await tanker.start(identity)
 
     return tanker
 
@@ -126,7 +126,7 @@ async def main() -> None:
         output_path.write_bytes(clear)
         print("Decrypted data written to", output_path)
 
-    await tanker.sign_out()
+    await tanker.stop()
 
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@ from typing import cast, Dict, Iterator, Tuple
 
 import tankersdk
 from tankersdk import Admin, Tanker, Error as TankerError, ErrorCode
+from tankersdk import Status as TankerStatus
+from tankersdk.tanker import CVerification, VerificationMethodType
 from tankersdk.admin import Trustchain
 import tankersdk_identity
 
@@ -56,6 +58,26 @@ def admin() -> Iterator[Admin]:
     yield Admin(url=TEST_CONFIG["url"], token=TEST_CONFIG["idToken"])
 
 
+class TestVerificationSanityChecks:
+    def assert_value_error(self, **kwargs: str) -> None:
+        with pytest.raises(ValueError):
+            CVerification(**kwargs)
+
+    def test_accepts_correct_arguments(self) -> None:
+        CVerification(passphrase="my-passphrase")
+        CVerification(verification_key="THE-KEY")
+        CVerification(email="john@domain.tld", verification_code="1234")
+
+    def test_rejects_all_none(self) -> None:
+        self.assert_value_error()
+
+    def test_rejects_two_methods(self) -> None:
+        self.assert_value_error(passphrase="my-passphrase", verification_key="THE-KEY")
+
+    def test_rejects_email_without_verification_code(self) -> None:
+        self.assert_value_error(email="john@domain.tld")
+
+
 @pytest.fixture(scope="session")
 def trustchain(admin: Admin) -> Iterator[Trustchain]:
     name = "python_bindings"
@@ -89,7 +111,7 @@ def test_init_tanker_invalid_id(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_init_tanker_invalid_path(trustchain: Trustchain) -> None:
+async def test_tanker_start_invalid_path(trustchain: Trustchain) -> None:
     tanker = create_tanker(
         trustchain_id=trustchain.id, writable_path="/path/to/no-such"
     )
@@ -99,7 +121,7 @@ async def test_init_tanker_invalid_path(trustchain: Trustchain) -> None:
         trustchain.id, trustchain.private_key, user_id
     )
     with pytest.raises(TankerError) as error:
-        await tanker.sign_up(identity)
+        await tanker.start(identity)
     assert error.value.code == ErrorCode.INTERNAL_ERROR
 
 
@@ -111,81 +133,71 @@ async def test_tanker_sdk_version(tmp_path: Path, trustchain: Trustchain) -> Non
 
 
 @pytest.mark.asyncio
-async def test_sign_up_new_account(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_start_new_account(tmp_path: Path, trustchain: Trustchain) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     fake = Faker()
     user_id = fake.email()
     identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, user_id
     )
-    await tanker.sign_up(identity)
-    assert tanker.is_open
+    status = await tanker.start(identity)
+    assert status == TankerStatus.IDENTITY_REGISTRATION_NEEDED
+    key = await tanker.generate_verification_key()
+    await tanker.register_identity(verification_key=key)
+    assert tanker.status == TankerStatus.READY
     device_id = await tanker.device_id()
     assert device_id
-    await tanker.sign_out()
+    await tanker.stop()
+    assert tanker.status == TankerStatus.STOPPED
 
 
 @pytest.mark.asyncio
-async def test_sign_up_bad_identity(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_start_identity_incorrect_format(
+    tmp_path: Path, trustchain: Trustchain
+) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     with pytest.raises(TankerError) as error:
-        await tanker.sign_up("bad identity")
+        await tanker.start("bad identity")
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
-    await tanker.sign_out()
+    await tanker.stop()
 
 
 @pytest.mark.asyncio
-async def test_sign_in_bad_identity(tmp_path: Path, trustchain: Trustchain) -> None:
-    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
-    with pytest.raises(TankerError) as error:
-        await tanker.sign_in("bad identity")
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
-    await tanker.sign_out()
-
-
-@pytest.mark.asyncio
-async def test_sign_back_in(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_create_account_then_sign_in(
+    tmp_path: Path, trustchain: Trustchain
+) -> None:
     fake = Faker()
     user_id = fake.email()
-    user_path = tmp_path.joinpath("user")
-    user_path.mkdir_p()
-    tanker = create_tanker(trustchain.id, writable_path=user_path)
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, user_id
     )
-    await tanker.sign_up(identity)
-    assert tanker.is_open
-    await tanker.sign_out()
-    assert not tanker.is_open
-    assert await tanker.sign_in(identity) == tankersdk.SignInResult.OK
-    assert tanker.is_open
-    await tanker.sign_out()
-    assert not tanker.is_open
+    await tanker.start(identity)
+    key = await tanker.generate_verification_key()
+    await tanker.register_identity(verification_key=key)
+    await tanker.stop()
+
+    await tanker.start(identity)
+    assert tanker.status == TankerStatus.READY
+    await tanker.stop()
 
 
-User = namedtuple(
-    "User",
-    [
-        "session",
-        "public_identity",
-        "private_identity",
-    ],
-)
+User = namedtuple("User", ["session", "public_identity", "private_identity"])
 
 
-async def create_user_session(
-    tmp_path: Path, trustchain: Trustchain
-) -> User:
+async def create_user_session(tmp_path: Path, trustchain: Trustchain) -> User:
     fake = Faker()
     user_id = fake.email()
-    user_path = tmp_path.joinpath("user")
+    user_path = tmp_path.joinpath(user_id)
     user_path.mkdir_p()
     tanker = create_tanker(trustchain.id, writable_path=user_path)
     private_identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, user_id
     )
     public_identity = tankersdk_identity.get_public_identity(private_identity)
-    await tanker.sign_up(private_identity)
+    await tanker.start(private_identity)
+    key = await tanker.generate_verification_key()
+    await tanker.register_identity(verification_key=key)
     return User(
         session=tanker,
         private_identity=private_identity,
@@ -200,7 +212,7 @@ async def test_encrypt_decrypt(tmp_path: Path, trustchain: Trustchain) -> None:
     encrypted_data = await alice.session.encrypt(message)
     clear_data = await alice.session.decrypt(encrypted_data)
     assert clear_data == message
-    await alice.session.sign_out()
+    await alice.session.stop()
 
 
 @pytest.mark.asyncio
@@ -208,11 +220,13 @@ async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> N
     alice = await create_user_session(tmp_path, trustchain)
     bob = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
-    encrypted = await alice.session.encrypt(message, share_with_users=[bob.public_identity])
+    encrypted = await alice.session.encrypt(
+        message, share_with_users=[bob.public_identity]
+    )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
-    await alice.session.sign_out()
-    await bob.session.sign_out()
+    await alice.session.stop()
+    await bob.session.stop()
 
 
 @pytest.mark.asyncio
@@ -226,12 +240,13 @@ async def test_postponed_share(tmp_path: Path, trustchain: Trustchain) -> None:
 
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
-    await alice.session.sign_out()
-    await bob.session.sign_out()
+    await alice.session.stop()
+    await bob.session.stop()
 
 
 async def check_share_with_group_works(
-        alice: User, group_id: str, bob: User, charlie: User) -> None:
+    alice: User, group_id: str, bob: User, charlie: User
+) -> None:
     message = b"Hi, guys"
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
     decrypted = await charlie.session.decrypt(encrypted)
@@ -246,7 +261,9 @@ async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
     bob = await create_user_session(tmp_path, trustchain)
     charlie = await create_user_session(tmp_path, trustchain)
 
-    group_id = await alice.session.create_group([bob.public_identity, charlie.public_identity])
+    group_id = await alice.session.create_group(
+        [bob.public_identity, charlie.public_identity]
+    )
     await check_share_with_group_works(alice, group_id, bob, charlie)
 
 
@@ -256,43 +273,47 @@ async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
     bob = await create_user_session(tmp_path, trustchain)
     charlie = await create_user_session(tmp_path, trustchain)
 
-    group_id = await alice.session.create_group([alice.public_identity, bob.public_identity])
+    group_id = await alice.session.create_group(
+        [alice.public_identity, bob.public_identity]
+    )
     await alice.session.update_group_members(group_id, add=[charlie.public_identity])
     await check_share_with_group_works(alice, group_id, bob, charlie)
 
 
 async def create_two_devices(
     tmp_path: Path, trustchain: Trustchain
-) -> Tuple[Tanker, Tanker]:
+) -> Tuple[str, Tanker, Tanker]:
     fake = Faker()
-    password = "plop"
+    passphrase = "this is my secure passphrase"
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
     laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
-    alice_identity = tankersdk_identity.create_identity(
+    identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, fake.email()
     )
-    await laptop_tanker.sign_up(alice_identity, password=password)
+    await laptop_tanker.start(identity)
+    await laptop_tanker.register_identity(passphrase=passphrase)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
 
-    await phone_tanker.sign_in(alice_identity, password=password)
-    return laptop_tanker, phone_tanker
+    await phone_tanker.start(identity)
+    await phone_tanker.verify_identity(passphrase=passphrase)
+    return identity, laptop_tanker, phone_tanker
 
 
 @pytest.mark.asyncio
 async def test_add_device(tmp_path: Path, trustchain: Trustchain) -> None:
-    laptop, phone = await create_two_devices(tmp_path, trustchain)
-    assert phone.is_open
-    await laptop.sign_out()
-    await phone.sign_out()
+    _, laptop, phone = await create_two_devices(tmp_path, trustchain)
+    assert phone.status == TankerStatus.READY
+    await laptop.stop()
+    await phone.stop()
 
 
 @pytest.mark.asyncio
 async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
-    laptop, phone = await create_two_devices(tmp_path, trustchain)
+    identity, laptop, phone = await create_two_devices(tmp_path, trustchain)
     laptop_id = await laptop.device_id()
     laptop_revoked = asyncio.Event()
     loop = asyncio.get_event_loop()
@@ -305,12 +326,32 @@ async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
 
     laptop.on_revoked = on_revoked
     await phone.revoke_device(laptop_id)
+    # Check callback is called
     await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
-    assert not laptop.is_open
+    assert laptop.status == TankerStatus.STOPPED
 
 
 @pytest.mark.asyncio
-async def test_no_password(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_get_device_list(tmp_path: Path, trustchain: Trustchain) -> None:
+    _, laptop, phone = await create_two_devices(tmp_path, trustchain)
+    laptop_id = await laptop.device_id()
+    phone_id = await phone.device_id()
+
+    await phone.revoke_device(laptop_id)
+
+    actual_list = await phone.get_device_list()
+    actual_ids = [x.device_id for x in actual_list]
+    assert set(actual_ids) == set([laptop_id, phone_id])
+    revoked = [x for x in actual_list if x.is_revoked]
+    assert len(revoked) == 1
+    actual_revoked_id = revoked[0].device_id
+    assert actual_revoked_id == laptop_id
+
+
+@pytest.mark.asyncio
+async def test_must_verify_identity_on_second_device(
+    tmp_path: Path, trustchain: Trustchain
+) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -318,20 +359,23 @@ async def test_no_password(tmp_path: Path, trustchain: Trustchain) -> None:
     alice_identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, fake.email()
     )
-    await laptop_tanker.sign_up(alice_identity, password="plop")
+    passphrase = "my secure passphrase"
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(passphrase=passphrase)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
 
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
 
-    res = await phone_tanker.sign_in(alice_identity)
-    assert res == tankersdk.SignInResult.IDENTITY_VERIFICATION_NEEDED
-    assert not phone_tanker.is_open
+    status = await phone_tanker.start(alice_identity)
+    assert status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
 
 
 @pytest.mark.asyncio
-async def test_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_using_verification_key_on_second_device(
+    tmp_path: Path, trustchain: Trustchain
+) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -339,21 +383,22 @@ async def test_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
     alice_identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, fake.email()
     )
-    await laptop_tanker.sign_up(alice_identity)
-    unlock_key = await laptop_tanker.generate_and_register_unlock_key()
-    assert unlock_key
+    await laptop_tanker.start(alice_identity)
+    verification_key = await laptop_tanker.generate_verification_key()
+    await laptop_tanker.register_identity(verification_key=verification_key)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
-    await phone_tanker.sign_in(alice_identity, unlock_key=unlock_key)
-    assert phone_tanker.is_open
-    await laptop_tanker.sign_out()
-    await phone_tanker.sign_out()
+    await phone_tanker.start(alice_identity)
+    await phone_tanker.verify_identity(verification_key=verification_key)
+    assert phone_tanker.status == TankerStatus.READY
+    await laptop_tanker.stop()
+    await phone_tanker.stop()
 
 
 @pytest.mark.asyncio
-async def test_invalid_unlock_key(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_invalid_verification_key(tmp_path: Path, trustchain: Trustchain) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -361,26 +406,39 @@ async def test_invalid_unlock_key(tmp_path: Path, trustchain: Trustchain) -> Non
     alice_identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, fake.email()
     )
-    await laptop_tanker.sign_up(alice_identity)
-    unlock_key = await laptop_tanker.generate_and_register_unlock_key()
-    assert unlock_key
+    await laptop_tanker.start(alice_identity)
+    verification_key = await laptop_tanker.generate_verification_key()
+    await laptop_tanker.register_identity(verification_key=verification_key)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+    await phone_tanker.start(alice_identity)
+
     with pytest.raises(TankerError) as error:
-        await phone_tanker.sign_in(alice_identity, unlock_key="plop")
-    assert error.value.code == ErrorCode.INVALID_UNLOCK_KEY
-    assert not phone_tanker.is_open
+        await phone_tanker.verify_identity(verification_key="plop")
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
+
     with pytest.raises(TankerError) as error:
-        await phone_tanker.sign_in(alice_identity, unlock_key="")
-    assert error.value.code == ErrorCode.INVALID_UNLOCK_KEY
-    assert not phone_tanker.is_open
-    await laptop_tanker.sign_out()
+        await phone_tanker.verify_identity(verification_key="")
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
+
+    key_json = base64.b64decode(verification_key.encode()).decode()
+    key = json.loads(key_json)
+    key[
+        "privateSignatureKey"
+    ] = "O85hg7XxxGWq3cQf4xQ/VXaTiAPcqWoUIGDvaLpZ+trNQkp+rNzZrLvIfhERwb33iUjV0sFiL5XqweVgqTdg6Q=="
+    key_json = json.dumps(key)
+    key = base64.b64encode(key_json.encode()).decode()
+
+    with pytest.raises(TankerError):
+        await phone_tanker.verify_identity(verification_key=key)
 
 
 @pytest.mark.asyncio
-async def test_unlock_email(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+async def test_email_verification(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -389,22 +447,30 @@ async def test_unlock_email(tmp_path: Path, trustchain: Trustchain, admin: Admin
     alice_identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, email
     )
-    await laptop_tanker.sign_up(alice_identity, email=email)
-    verif_code = admin.get_verification_code(trustchain.id, email)
-    assert len(verif_code) == 8
+    await laptop_tanker.start(alice_identity)
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await laptop_tanker.register_identity(
+        email=email, verification_code=verification_code
+    )
+    assert len(verification_code) == 8
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
 
-    await phone_tanker.sign_in(alice_identity, verification_code=verif_code)
-    assert phone_tanker.is_open
-    await laptop_tanker.sign_out()
-    await phone_tanker.sign_out()
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await phone_tanker.verify_identity(email=email, verification_code=verification_code)
+    assert phone_tanker.status == TankerStatus.READY
+    await laptop_tanker.stop()
+    await phone_tanker.stop()
 
 
 @pytest.mark.asyncio
-async def test_bad_verif_code(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_bad_verification_code(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -416,20 +482,23 @@ async def test_bad_verif_code(tmp_path: Path, trustchain: Trustchain) -> None:
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
-    await laptop_tanker.sign_up(alice_identity, email=email)
+    await laptop_tanker.start(alice_identity)
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await laptop_tanker.register_identity(
+        email=email, verification_code=verification_code
+    )
+    await phone_tanker.start(alice_identity)
     with pytest.raises(TankerError) as error:
-        await phone_tanker.sign_in(alice_identity, verification_code="12345678")
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION_CODE
-    assert not phone_tanker.is_open
+        await phone_tanker.verify_identity(email=email, verification_code="12345678")
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
     with pytest.raises(TankerError) as error:
-        await phone_tanker.sign_in(alice_identity, verification_code="azerty")
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION_CODE
-    assert not phone_tanker.is_open
+        await phone_tanker.verify_identity(email=email, verification_code="azerty")
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
     with pytest.raises(TankerError) as error:
-        await phone_tanker.sign_in(alice_identity, verification_code="")
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION_CODE
-    assert not phone_tanker.is_open
-    await laptop_tanker.sign_out()
+        await phone_tanker.verify_identity(email=email, verification_code="")
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    await laptop_tanker.stop()
 
 
 PreUser = namedtuple(
@@ -441,19 +510,22 @@ PreUser = namedtuple(
         "public_provisional_identity",
         "private_provisional_identity",
         "email",
-        "verif_code",
+        "verification_code",
     ],
 )
 
 
 async def set_up_preshare(
-        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> Tuple[User, PreUser]:
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> Tuple[User, PreUser]:
     fake = Faker()
     bob_email = fake.email()
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
-        trustchain.id, bob_email)
+        trustchain.id, bob_email
+    )
     bob_public_provisional_identity = tankersdk_identity.get_public_identity(
-        bob_provisional_identity)
+        bob_provisional_identity
+    )
     alice = await create_user_session(tmp_path, trustchain)
     bob = await create_user_session(tmp_path, trustchain)
     pre_bob = PreUser(
@@ -463,139 +535,163 @@ async def set_up_preshare(
         public_provisional_identity=bob_public_provisional_identity,
         private_provisional_identity=bob_provisional_identity,
         email=bob_email,
-        verif_code=admin.get_verification_code(trustchain.id, bob_email),
+        verification_code=admin.get_verification_code(trustchain.id, bob_email),
     )
     return alice, pre_bob
 
 
 @pytest.mark.asyncio
-async def test_decrypt_unclaimed_resource(
-        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+async def test_cannot_decrypt_if_provisional_identity_not_attached(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
-        message, share_with_users=[bob.public_provisional_identity])
+        message, share_with_users=[bob.public_provisional_identity]
+    )
     with pytest.raises(TankerError) as error:
         await bob.session.decrypt(encrypted)
-    assert error.value.code == ErrorCode.RESOURCE_KEY_NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
-async def share_and_claim(
+async def share_and_attach_provisional_identity(
     tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> Tuple[PreUser, bytes, bytes]:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
-        message, share_with_users=[bob.public_provisional_identity])
-    await bob.session.claim_provisional_identity(bob.private_provisional_identity, bob.verif_code)
+        message, share_with_users=[bob.public_provisional_identity]
+    )
+    attach_result = await bob.session.attach_provisional_identity(
+        bob.private_provisional_identity
+    )
+    assert attach_result.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    actual_method = attach_result.verification_method
+    assert actual_method.email == bob.email
+    assert actual_method.method_type == tankersdk.VerificationMethodType.EMAIL
+
+    verification_code = admin.get_verification_code(trustchain.id, bob.email)
+    await bob.session.verify_provisional_identity(
+        email=bob.email, verification_code=verification_code
+    )
     return bob, encrypted, message
 
 
 @pytest.mark.asyncio
-async def test_claim_identity(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
-    bob, encrypted, message = await share_and_claim(tmp_path, trustchain, admin)
+async def test_attach_provisional_identity_simple(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
+    bob, encrypted, message = await share_and_attach_provisional_identity(
+        tmp_path, trustchain, admin
+    )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
 
 @pytest.mark.asyncio
-async def test_claim_identity_after_sign_out_sign_in(
-        tmp_path: Path, trustchain: Trustchain, admin: Admin
+async def test_attach_provisional_identity_after_sign_out(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
-    bob, encrypted, message = await share_and_claim(tmp_path, trustchain, admin)
-    await bob.session.sign_out()
-    await bob.session.sign_in(bob.private_identity)
+    bob, encrypted, message = await share_and_attach_provisional_identity(
+        tmp_path, trustchain, admin
+    )
+    await bob.session.stop()
+    await bob.session.start(bob.private_identity)
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
 
 @pytest.mark.asyncio
-async def test_already_claimed_identity(
-        tmp_path: Path, trustchain: Trustchain, admin: Admin
+async def test_already_attached_identity(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
 ) -> None:
-    bob, _, _ = await share_and_claim(tmp_path, trustchain, admin)
-    verif_code = admin.get_verification_code(trustchain.id, bob.email)
-    with pytest.raises(TankerError) as error:
-        await bob.session.claim_provisional_identity(bob.private_provisional_identity, verif_code)
-    assert error.value.code == ErrorCode.SERVER_ERROR
+    bob, _, _ = await share_and_attach_provisional_identity(tmp_path, trustchain, admin)
+    attach_result = await bob.session.attach_provisional_identity(
+        bob.private_provisional_identity
+    )
+    assert attach_result.status == TankerStatus.READY
+    await bob.session.stop()
 
 
 @pytest.mark.asyncio
-async def test_claim_with_incorrect_code(
-        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+async def test_attach_provisional_identity_with_incorrect_code(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
-    await alice.session.encrypt(message, share_with_users=[bob.public_provisional_identity])
+    await alice.session.encrypt(
+        message, share_with_users=[bob.public_provisional_identity]
+    )
+    await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     with pytest.raises(TankerError) as error:
-        await bob.session.claim_provisional_identity(bob.private_provisional_identity, "badCode")
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION_CODE
+        await bob.session.verify_identity(email=bob.email, verification_code="badCode")
+    assert error.value.code == ErrorCode.PRECONDITION_FAILED
 
 
 @pytest.mark.asyncio
-async def test_nothing_to_claim(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
-    _, bob = await set_up_preshare(tmp_path, trustchain, admin)
-    with pytest.raises(TankerError) as error:
-        await bob.session.claim_provisional_identity(
-            bob.private_provisional_identity, bob.verif_code)
-    assert error.value.code == ErrorCode.NOTHING_TO_CLAIM
-
-
-@pytest.mark.asyncio
-async def test_register_unlock_password(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_update_verification_passphrase(
+    tmp_path: Path, trustchain: Trustchain
+) -> None:
     fake = Faker()
-    password = "plop"
-    new_password = "zzzz"
+    old_passphrase = "plop"
+    new_passphrase = "zzzz"
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
     laptop_tanker = create_tanker(trustchain.id, writable_path=laptop_path)
     alice_identity = tankersdk_identity.create_identity(
         trustchain.id, trustchain.private_key, fake.email()
     )
-    await laptop_tanker.sign_up(alice_identity, password=password)
-    await laptop_tanker.register_unlock(password=new_password)
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(passphrase=old_passphrase)
+
+    await laptop_tanker.set_verification_method(passphrase=new_passphrase)
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(trustchain.id, writable_path=phone_path)
+    await phone_tanker.start(alice_identity)
 
-    # Old password should not work
+    # Old passphrase should not work
     with pytest.raises(TankerError) as error:
-        await phone_tanker.sign_in(alice_identity, password=password)
-    assert error.value.code == ErrorCode.INVALID_UNLOCK_PASSWORD
-    assert not phone_tanker.is_open
+        await phone_tanker.verify_identity(passphrase=old_passphrase)
+    assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
-    await phone_tanker.sign_in(alice_identity, password=new_password)
-    assert phone_tanker.is_open
-
-
-@pytest.mark.asyncio
-async def test_register_unlock_empty(tmp_path: Path, trustchain: Trustchain) -> None:
-    alice = await create_user_session(tmp_path, trustchain)
-    with pytest.raises(TankerError) as error:
-        await alice.session.register_unlock()
-    assert error.value.code == ErrorCode.SERVER_ERROR
+    # But new passphrase should
+    await phone_tanker.verify_identity(passphrase=new_passphrase)
+    assert phone_tanker.status == TankerStatus.READY
 
 
 @pytest.mark.asyncio
 async def test_create_group_with_prov_id(
-        tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you all, my group"
     group_id = await alice.session.create_group([bob.public_provisional_identity])
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
-    await bob.session.claim_provisional_identity(bob.private_provisional_identity, bob.verif_code)
+    await bob.session.attach_provisional_identity(bob.private_provisional_identity)
+    await bob.session.verify_provisional_identity(
+        email=bob.email, verification_code=bob.verification_code
+    )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
 
 @pytest.mark.asyncio
-async def test_add_group_with_prov_id(tmp_path: Path, trustchain: Trustchain, admin: Admin) -> None:
+async def test_add_to_group_with_prov_id(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"Hi, this is for a group"
     group_id = await alice.session.create_group([alice.public_identity])
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
-    await alice.session.update_group_members(group_id, add=[bob.public_provisional_identity])
-    await bob.session.claim_provisional_identity(bob.private_provisional_identity, bob.verif_code)
+    await alice.session.update_group_members(
+        group_id, add=[bob.public_provisional_identity]
+    )
+    await bob.session.attach_provisional_identity(bob.private_provisional_identity)
+    await bob.session.verify_provisional_identity(
+        email=bob.email, verification_code=bob.verification_code
+    )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
@@ -603,24 +699,20 @@ async def test_add_group_with_prov_id(tmp_path: Path, trustchain: Trustchain, ad
 @pytest.mark.asyncio
 async def test_user_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     user_id = encode("*" * 32)
-    identity_obj = {
-        "trustchain_id": trustchain.id,
-        "target": "user",
-        "value": user_id,
-    }
+    identity_obj = {"trustchain_id": trustchain.id, "target": "user", "value": user_id}
     identity = encode(json.dumps(identity_obj))
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.create_group([identity])
-    assert error.value.code == ErrorCode.USER_NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
-async def test_decrypt_failed(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_decrypt_invalid_argument(tmp_path: Path, trustchain: Trustchain) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.decrypt(b"zz")
-    assert error.value.code == ErrorCode.DECRYPT_FAILED
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -629,7 +721,7 @@ async def test_recipient_not_found(tmp_path: Path, trustchain: Trustchain) -> No
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.encrypt(b"zz", share_with_groups=[group_id])
-    assert error.value.code == ErrorCode.RECIPIENT_NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -638,7 +730,7 @@ async def test_group_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.update_group_members(group_id, add=[alice.public_identity])
-    assert error.value.code == ErrorCode.GROUP_NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -647,4 +739,40 @@ async def test_device_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.revoke_device(device_id)
-    assert error.value.code == ErrorCode.DEVICE_NOT_FOUND
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
+
+
+@pytest.mark.asyncio
+async def test_get_verification_methods(
+    tmp_path: Path, trustchain: Trustchain, admin: Admin
+) -> None:
+    tanker = create_tanker(trustchain.id, writable_path=tmp_path)
+    faker = Faker()
+    email = faker.email()
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, email
+    )
+    await tanker.start(identity)
+    passphrase = "my passphrase"
+    await tanker.register_identity(passphrase=passphrase)
+    await tanker.stop()
+
+    await tanker.start(identity)
+    methods = await tanker.get_verification_methods()
+    assert len(methods) == 1
+    (actual_method,) = methods
+    assert actual_method.method_type == VerificationMethodType.PASSPHRASE
+
+    verification_code = admin.get_verification_code(trustchain.id, email)
+    await tanker.set_verification_method(
+        email=email, verification_code=verification_code
+    )
+
+    methods = await tanker.get_verification_methods()
+    assert len(methods) == 2
+    email_methods = [
+        x for x in methods if x.method_type == VerificationMethodType.EMAIL
+    ]
+    assert len(email_methods) == 1
+    (email_method,) = email_methods
+    assert email_method.email == email
