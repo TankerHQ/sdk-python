@@ -93,6 +93,8 @@ setup(
             "sphinx",
             "ghp-import",
             "sphinxcontrib-trio",
+            # Build
+            "wheel",
         ]
     },
     classifiers=[

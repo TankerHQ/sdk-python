@@ -46,50 +46,61 @@ class Builder:
             env=env,
             cwd=self.src_path,
         )
+        coverage_dir = self.src_path / "htmlcov"
+        dest_dir = self.src_path / "coverage"
+        dest_dir.rmtree_p()
+        coverage_dir.copytree(dest_dir)
+
+    def deploy(self) -> None:
+        tag = os.environ.get("CI_COMMIT_TAG")
+        if tag is None:
+            raise Exception("No tag found, cannot deploy")
+        with self.src_path:
+            version = ci.bump.version_from_git_tag(tag)
+            ci.bump.bump_files(version)
+        dist_path = self.src_path / "dist"
+        dist_path.rmtree_p()
+
+        ci.dmenv.run("python", "setup.py", "bdist_wheel", cwd=self.src_path)
+        wheels = dist_path.files("tankersdk-*.whl")
+        if len(wheels) != 1:
+            raise Exception("multiple wheels found: {}".format(wheels))
+        wheel_path = wheels[0]
+        if sys.platform == "win32":
+            wheel_path = wheel_path.lower()
+            wheel_path = wheel_path.replace(os.path.sep, "/")
+            wheel_path = wheel_path.replace("c:/", "/c/")
+        ci.run("scp", wheel_path, "pypi@tanker.local:packages")
 
 
-def build_and_check(args):
+def build(use_tanker: str, profile: str):
     src_path = Path.getcwd()
     tanker_conan_ref = LOCAL_TANKER
 
-    if args.use_tanker == "deployed":
+    if use_tanker == "deployed":
         tanker_conan_ref = DEPLOYED_TANKER
-    elif args.use_tanker == "local":
+    elif use_tanker == "local":
         ci.conan.export(src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev")
-    elif args.use_tanker == "same-as-branch":
+    elif use_tanker == "same-as-branch":
         workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
         src_path = workspace / "sdk-python"
         ci.conan.export(src_path=workspace / "sdk-native", ref_or_channel="tanker/dev")
     else:
         sys.exit()
 
-    builder = Builder(src_path, tanker_conan_ref, args.profile)
+    builder = Builder(src_path, tanker_conan_ref, profile)
     builder.build()
+    return builder
+
+
+def build_and_check(args):
+    builder = build(args.use_tanker, args.profile)
     builder.test()
-    coverage_dir = src_path / "htmlcov"
-    coverage_dir.copytree(Path.getcwd() / "coverage")
 
 
-def deploy(*, src_path: Path = Path.getcwd()) -> None:
-    tag = os.environ.get("CI_COMMIT_TAG")
-    if tag is None:
-        raise Exception("No tag found, cannot deploy")
-    with src_path:
-        version = ci.bump.version_from_git_tag(tag)
-        ci.bump.bump_files(version)
-    dist_path = src_path / "dist"
-    dist_path.rmtree_p()
-
-    ci.dmenv.run("python", "setup.py", "bdist_wheel", cwd=src_path)
-    wheels = dist_path.files("tankersdk-*.whl")
-    if len(wheels) != 1:
-        raise Exception("multiple wheels found: {}".format(wheels))
-    wheel_path = wheels[0]
-    if sys.platform == "win32":
-        wheel_path = wheel_path.lower()
-        wheel_path = wheel_path.replace(os.path.sep, "/")
-        wheel_path = wheel_path.replace("c:/", "/c/")
-    ci.run("scp", wheel_path, "pypi@tanker.local:packages")
+def deploy(profile: str) -> None:
+    builder = build("deployed", profile)
+    builder.deploy()
 
 
 def main() -> None:
@@ -109,9 +120,10 @@ def main() -> None:
                                         default='local')
     build_and_check_parser.add_argument("--profile", required=True)
 
-    subparsers.add_parser("mirror")
+    deploy_parser = subparsers.add_parser("deploy")
+    deploy_parser.add_argument("--profile", required=True)
 
-    subparsers.add_parser("deploy")
+    subparsers.add_parser("mirror")
 
     args = parser.parse_args()
     if args.home_isolation:
@@ -130,7 +142,7 @@ def main() -> None:
     if command == "build-and-check":
         build_and_check(args)
     elif command == "deploy":
-        deploy()
+        deploy(args.profile)
 
 
 if __name__ == "__main__":
