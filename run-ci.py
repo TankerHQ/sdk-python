@@ -47,7 +47,7 @@ class Builder:
             cwd=self.src_path,
         )
         coverage_dir = self.src_path / "htmlcov"
-        dest_dir = self.src_path / "coverage"
+        dest_dir = Path.getcwd() / "coverage"
         dest_dir.rmtree_p()
         coverage_dir.copytree(dest_dir)
 
