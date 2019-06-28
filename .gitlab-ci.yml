@@ -64,19 +64,19 @@ deploy/linux:
   extends: .deploy
   tags: [linux]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
 
 deploy/macos:
   extends: .deploy
   tags: [macos]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile macos-release
 
 deploy/windows:
   extends: .deploy
   tags: [windows]
   script:
-    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy
+    - dmenv run -- python run-ci.py --isolate-conan-user-home deploy --profile vs2017-release
 
 mirror:
   tags:
