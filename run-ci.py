@@ -25,8 +25,13 @@ class Builder:
         ci.dmenv.run("python", "setup.py", *args, cwd=self.src_path)
 
     def build(self) -> None:
-        self._run_setup_py("native", "--tanker-conan-ref",
-                           self.tanker_conan_ref, "--profile", self.profile)
+        # fmt: off
+        self._run_setup_py(
+            "native",
+            "--tanker-conan-ref", self.tanker_conan_ref,
+            "--profile", self.profile,
+        )
+        # fmt: on
         self._run_setup_py("clean", "build", "develop")
 
     def test(self) -> None:
@@ -80,7 +85,9 @@ def build(use_tanker: str, profile: str):
     if use_tanker == "deployed":
         tanker_conan_ref = DEPLOYED_TANKER
     elif use_tanker == "local":
-        ci.conan.export(src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev")
+        ci.conan.export(
+            src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev"
+        )
     elif use_tanker == "same-as-branch":
         workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
         src_path = workspace / "sdk-python"
@@ -115,9 +122,9 @@ def main() -> None:
     subparsers = parser.add_subparsers(title="subcommands", dest="command")
 
     build_and_check_parser = subparsers.add_parser("build-and-check")
-    build_and_check_parser.add_argument("--use-tanker",
-                                        choices=['deployed', 'local', 'same-as-branch'],
-                                        default='local')
+    build_and_check_parser.add_argument(
+        "--use-tanker", choices=["deployed", "local", "same-as-branch"], default="local"
+    )
     build_and_check_parser.add_argument("--profile", required=True)
 
     deploy_parser = subparsers.add_parser("deploy")
