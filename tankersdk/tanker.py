@@ -1,12 +1,16 @@
+import typing_extensions
+from typing import cast, Any, Callable, List, Optional
+
 from asyncio import Future  # noqa
+import asyncio
 from enum import Enum
 import os
 
-from typing import cast, Callable, List, Optional
 
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
+from .error import Error as TankerError
 from .version import __version__
 from .ffi_helpers import (
     CCharList,
@@ -114,6 +118,32 @@ class AttachResult:
         self.verification_method: Optional[VerificationMethod] = None
 
 
+class CEncryptionOptions:
+    """Wraps the tanker_encrypt_options_t C type"""
+
+    def __init__(
+        self,
+        share_with_users: OptionalStrList = None,
+        share_with_groups: OptionalStrList = None,
+    ) -> None:
+        self.user_list = CCharList(share_with_users)
+        self.group_list = CCharList(share_with_groups)
+
+        self._c_data = ffi.new(
+            "tanker_encrypt_options_t *",
+            {
+                "version": 2,
+                "recipient_public_identities": self.user_list.data,
+                "nb_recipient_public_identities": self.user_list.size,
+                "recipient_gids": self.group_list.data,
+                "nb_recipient_gids": self.group_list.size,
+            },
+        )
+
+    def get(self) -> CData:
+        return cast(CData, self._c_data)
+
+
 class CVerification:
     """Wraps the tanker_verification_t C type"""
 
@@ -183,6 +213,90 @@ class DeviceDescription:
         device_id = c_string_to_str(c_device_list_elem.device_id)
         is_revoked = c_device_list_elem.is_revoked
         return cls(device_id, is_revoked)
+
+
+class InputStreamProtocol(typing_extensions.Protocol):
+    async def read(self, size: int) -> bytes:
+        ...
+
+
+class StreamWrapper:
+    """Wrapper object returned by `tanker.decrypt_stream()`"""
+
+    def __init__(self, stream: InputStreamProtocol) -> None:
+        """Create a new `StreamWrapper` from the underlying `stream`"""
+        self._stream = stream
+        self.c_stream: Optional[CData] = None
+        self.c_handle: Optional[CData] = None
+        self.error: Optional[Exception] = None
+
+    async def __aexit__(self, *unused: Any) -> None:
+        tankerlib.tanker_future_destroy(tankerlib.tanker_stream_close(self.c_stream))
+
+    async def __aenter__(self) -> "StreamWrapper":
+        return self
+
+    async def read(self, size: Optional[int] = None) -> bytes:
+        """Read some bytes from the undelying stream
+
+        If `size` is not None, at most `size` bytes will be returned,  otherwise
+        all the data will be returned at once
+        """
+        if size is not None:
+            return await self._read_with_size(size)
+        else:
+            chunk_size = 1024 ** 2
+            res = bytearray()
+            while True:
+                chunk = await self._read_with_size(chunk_size)
+                if not chunk:
+                    break
+                res += chunk
+            return res
+
+    async def _read_with_size(self, size: int) -> bytes:
+        buf = bytearray(size)
+        c_buf = ffi.from_buffer("uint8_t[]", buf)
+        read_fut = tankerlib.tanker_stream_read(self.c_stream, c_buf, size)
+        try:
+            c_voidptr = await handle_tanker_future(read_fut)
+        except TankerError:
+            if self.error:
+                raise self.error
+            else:
+                raise
+        nb_read = int(ffi.cast("intptr_t", c_voidptr))
+        return buf[0:nb_read]
+
+
+async def read_coroutine(
+    c_output_buffer: CData,
+    c_buffer_size: int,
+    c_op: CData,
+    stream_wrapper: StreamWrapper,
+) -> None:
+    try:
+        buffer: bytes = await stream_wrapper._stream.read(c_buffer_size)
+        size = len(buffer)
+        ffi.memmove(c_output_buffer, buffer, size)
+        tankerlib.tanker_stream_read_operation_finish(c_op, size)
+    except Exception as e:
+        stream_wrapper.error = e
+        tankerlib.tanker_stream_read_operation_finish(c_op, -1)
+
+
+@ffi.def_extern()  # type: ignore
+def stream_input_source_callback(
+    c_output_buffer: CData, c_buffer_size: int, c_op: CData, c_additional_data: CData
+) -> None:
+    try:
+        stream_instance, loop = ffi.from_handle(c_additional_data)
+        asyncio.run_coroutine_threadsafe(
+            read_coroutine(c_output_buffer, c_buffer_size, c_op, stream_instance), loop
+        )
+    except Exception as e:
+        stream_instance._error = e
+        tankerlib.tanker_stream_read_operation_finish(c_op, -1)
 
 
 class Tanker:
@@ -280,18 +394,8 @@ class Tanker:
         :param share_with_users: An (optional) list of identities to share with
         :param share_with_groups: A list of groups to share with
         """
-        user_list = CCharList(share_with_users)
-        group_list = CCharList(share_with_groups)
-
-        c_encrypt_options = ffi.new(
-            "tanker_encrypt_options_t *",
-            {
-                "version": 2,
-                "recipient_public_identities": user_list.data,
-                "nb_recipient_public_identities": user_list.size,
-                "recipient_gids": group_list.data,
-                "nb_recipient_gids": group_list.size,
-            },
+        c_encrypt_options = CEncryptionOptions(
+            share_with_users=share_with_users, share_with_groups=share_with_groups
         )
         c_clear_buffer = bytes_to_c_buffer(clear_data)  # type: CData
         clear_size = len(c_clear_buffer)  # type: ignore
@@ -302,7 +406,7 @@ class Tanker:
             c_encrypted_buffer,
             c_clear_buffer,
             clear_size,
-            c_encrypt_options,
+            c_encrypt_options.get(),
         )
 
         await handle_tanker_future(c_future)
@@ -322,6 +426,59 @@ class Tanker:
         )
         await handle_tanker_future(c_future)
         return c_buffer_to_bytes(c_clear_buffer)
+
+    async def encrypt_stream(
+        self,
+        clear_stream: InputStreamProtocol,
+        *,
+        share_with_users: OptionalStrList = None,
+        share_with_groups: OptionalStrList = None,
+    ) -> StreamWrapper:
+        """Encrypt `clear_stream`
+
+        :param share_with_users: An (optional) list of identities to share with
+        :param share_with_groups: A list of groups to share with
+        :param clear_stream: Any object with an async `read` method taking a `size` parameter
+        :return: A :py:class:`StreamWrapper` object
+        """
+        c_encrypt_options = CEncryptionOptions(
+            share_with_users=share_with_users, share_with_groups=share_with_groups
+        )
+
+        result = StreamWrapper(clear_stream)
+        handle = ffi.new_handle([result, asyncio.get_event_loop()])
+        result.c_handle = handle
+
+        encryption_fut = tankerlib.tanker_stream_encrypt(
+            self.c_tanker,
+            tankerlib.stream_input_source_callback,
+            handle,
+            c_encrypt_options.get(),
+        )
+        result.c_stream = await handle_tanker_future(encryption_fut)
+        return result
+
+    async def decrypt_stream(self, encrypted_stream: StreamWrapper) -> StreamWrapper:
+        """Decrypt `encrypted_stream`
+
+        :param encrypted_stream: A :py:class:`StreamWrapper` object,
+                                 returned by :py:meth:`encrypt_stream`
+        :return: A :py:class:`StreamWrapper` object
+        """
+        result = StreamWrapper(encrypted_stream)
+        handle = ffi.new_handle([result, asyncio.get_event_loop()])
+        result.c_handle = handle
+        decryption_fut = tankerlib.tanker_stream_decrypt(
+            self.c_tanker, tankerlib.stream_input_source_callback, handle
+        )
+        try:
+            result.c_stream = await handle_tanker_future(decryption_fut)
+        except TankerError:
+            if result.error:
+                raise result.error
+            else:
+                raise
+        return result
 
     async def device_id(self) -> str:
         """:return: the current device id"""

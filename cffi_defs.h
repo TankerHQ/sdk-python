@@ -6,7 +6,6 @@ typedef struct tanker_promise tanker_promise_t;
 typedef struct tanker_error tanker_error_t;
 
 typedef void* (*tanker_future_then_t)(tanker_future_t* fut, void* arg);
-
 /*!
  * Create a new empty promise.
  * \remark must call tanker_promise_destroy() to get rid of it.
@@ -687,6 +686,35 @@ tanker_future_t* tanker_update_group_members(
     char const* const* public_identities_to_add,
     uint64_t nb_public_identities_to_add);
 
+// ctanker/stream.h
+
+typedef struct tanker_stream tanker_stream_t;
+typedef struct tanker_stream_read_operation tanker_stream_read_operation_t;
+
+typedef void (*tanker_stream_input_source_t)(
+    uint8_t* buffer,
+    int64_t buffer_size,
+    tanker_stream_read_operation_t* operation,
+    void* additional_data);
+
+tanker_future_t* tanker_stream_encrypt(
+    tanker_t* tanker,
+    tanker_stream_input_source_t cb,
+    void* additional_data,
+    tanker_encrypt_options_t const* options);
+
+tanker_future_t* tanker_stream_decrypt(
+    tanker_t* tanker, tanker_stream_input_source_t cb, void* additional_data);
+
+void tanker_stream_read_operation_finish(
+    tanker_stream_read_operation_t* op, int64_t nb_read);
+
+tanker_future_t *tanker_stream_read(tanker_stream_t *stream, uint8_t *buffer,
+                                    int64_t buffer_size);
+
+tanker_expected_t* tanker_stream_get_resource_id(tanker_stream_t* stream);
+tanker_future_t* tanker_stream_close(tanker_stream_t* stream);
+
 // ctanker/admin.h
 
 typedef struct tanker_trustchain_descriptor
@@ -748,3 +776,7 @@ tanker_future_t* tanker_admin_get_verification_code(
 // cffi specific
 extern "Python" void log_handler(tanker_log_record_t*);
 extern "Python" void revoke_callback(void* arg, void* data);
+extern "Python" void
+stream_input_source_callback(uint8_t *buffer, int64_t buffer_size,
+                             tanker_stream_read_operation_t *operation,
+                             void *additional_data);

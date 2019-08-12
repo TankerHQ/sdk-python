@@ -13,6 +13,7 @@ from .tanker import (  # noqa
     VerificationMethod,
     VerificationMethodType,
     AttachResult,
+    StreamWrapper,
 )
 from .admin import Admin  # noqa
 from .version import __version__  # noqa
