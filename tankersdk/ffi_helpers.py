@@ -1,4 +1,4 @@
-from typing import cast, List, Optional, Type
+from typing import cast, Any, List, Optional, Type, Callable
 from asyncio import Future
 import asyncio
 from _tanker import ffi
@@ -95,6 +95,9 @@ def unwrap_expected(c_expected: CData, c_type: str) -> CData:
     return ffi.cast(c_type, c_voidp)  # type: ignore
 
 
+_TANKER_CALLBACKS: List[Callable[..., Any]] = []
+
+
 async def handle_tanker_future(c_fut: CData) -> CData:
     fut = Future()  # type: Future[CData]
     loop = asyncio.get_event_loop()
@@ -112,8 +115,10 @@ async def handle_tanker_future(c_fut: CData) -> CData:
             cont = lambda: fut.set_result(res)
 
         loop.run_in_executor(None, cont)
+        _TANKER_CALLBACKS.remove(then_callback)
         return ffi.NULL  # type: ignore
 
+    _TANKER_CALLBACKS.append(then_callback)
     fut2 = tankerlib.tanker_future_then(c_fut, then_callback, ffi.NULL)
     tankerlib.tanker_future_destroy(fut2)
     tankerlib.tanker_future_destroy(c_fut)
