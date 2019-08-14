@@ -83,6 +83,7 @@ setup(
             "flake8",
             "flake8-docstrings",
             "mypy",
+            "typing-extensions",
             # Tests
             "pytest",
             "pytest-cov",

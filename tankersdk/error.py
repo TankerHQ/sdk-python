@@ -17,6 +17,8 @@ class ErrorCode(Enum):
     TOO_MANY_ATTEMPTS = 9
     EXPIRED_VERIFICATION = 10
 
+    IO_ERROR = 11
+
 
 class Error(Exception):
     def __init__(self, message: str, code: ErrorCode):

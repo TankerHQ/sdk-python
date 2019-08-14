@@ -2,6 +2,7 @@ import asyncio
 import base64
 from collections import namedtuple
 import os
+import io
 import json
 
 from path import Path
@@ -203,6 +204,84 @@ async def create_user_session(tmp_path: Path, trustchain: Trustchain) -> User:
         private_identity=private_identity,
         public_identity=public_identity,
     )
+
+
+class InMemoryAsyncStream:
+    def __init__(self, contents: bytes) -> None:
+        self._buffer = io.BytesIO(contents)
+
+    async def read(self, size: int) -> bytes:
+        return self._buffer.read(size)
+
+
+class FailingStream:
+    def __init__(self, contents: bytes) -> None:
+        self._buffer = io.BytesIO(contents)
+
+    async def read(self, size: int) -> bytes:
+        raise Exception("Kaboom")
+
+
+class TestStreams:
+    @pytest.mark.asyncio
+    async def test_async_read_write_by_chunks(
+        self, tmp_path: Path, trustchain: Trustchain
+    ) -> None:
+        alice = await create_user_session(tmp_path, trustchain)
+        chunk_size = 1024 ** 2
+        message = bytearray(
+            3 * chunk_size + 2
+        )  # three big chunks plus a little something
+        input_stream = InMemoryAsyncStream(message)
+        decrypted_message = bytearray()
+        encrypted_stream = await alice.session.encrypt_stream(input_stream)
+        async with await alice.session.decrypt_stream(encrypted_stream) as f:
+            while True:
+                clear_chunk = await f.read(chunk_size)
+                if clear_chunk:
+                    decrypted_message += clear_chunk
+                else:
+                    break
+        assert decrypted_message == message
+        await alice.session.stop()
+
+    @pytest.mark.asyncio
+    async def test_async_read_in_one_go(
+        self, tmp_path: Path, trustchain: Trustchain
+    ) -> None:
+        alice = await create_user_session(tmp_path, trustchain)
+        chunk_size = 1024 ** 2
+        message = bytearray(
+            3 * chunk_size + 2
+        )  # three big chunks plus a little something
+        input_stream = InMemoryAsyncStream(message)
+        encrypted_stream = await alice.session.encrypt_stream(input_stream)
+        async with await alice.session.decrypt_stream(encrypted_stream) as f:
+            decrypted_message = await f.read()
+        assert decrypted_message == message
+        await alice.session.stop()
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self, tmp_path: Path, trustchain: Trustchain) -> None:
+        alice = await create_user_session(tmp_path, trustchain)
+        message = bytearray(1024 * 1024 * 3 + 2)
+        input_stream = FailingStream(message)
+        encrypted_stream = await alice.session.encrypt_stream(input_stream)
+        with pytest.raises(Exception) as e:
+            await alice.session.decrypt_stream(encrypted_stream)
+        assert e.value.args == ("Kaboom",)
+        await alice.session.stop()
+
+    @pytest.mark.asyncio
+    async def test_empty_message(self, tmp_path: Path, trustchain: Trustchain) -> None:
+        alice = await create_user_session(tmp_path, trustchain)
+        empty_message = bytearray()
+        input_stream = InMemoryAsyncStream(empty_message)
+        encrypted_stream = await alice.session.encrypt_stream(input_stream)
+        async with await alice.session.decrypt_stream(encrypted_stream) as f:
+            result = await f.read(1024)
+            assert len(result) == 0
+        await alice.session.stop()
 
 
 @pytest.mark.asyncio
