@@ -72,7 +72,7 @@ setup(
     ],
     cffi_modules=["build_tanker.py:ffibuilder"],
     cmdclass={"native": NativeCommand},
-    install_requires=["attrs", "cffi>=1.12", "tankersdk_identity"],
+    install_requires=["attrs", "cffi>=1.12", "tankersdk_identity", "typing-extensions"],
     extras_require={
         "dev": [
             # For run-ci.py
@@ -83,7 +83,6 @@ setup(
             "flake8",
             "flake8-docstrings",
             "mypy",
-            "typing-extensions",
             # Tests
             "pytest",
             "pytest-cov",
