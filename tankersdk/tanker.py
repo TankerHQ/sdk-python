@@ -301,18 +301,18 @@ def stream_input_source_callback(
 
 class Tanker:
     """
-    tankersdk.Tanker(trustchain_id: str, *, writable_path: str)
+    tankersdk.Tanker(app_id: str, *, writable_path: str)
 
-    :param trustchain_id: The Trustchain ID
+    :param app_id: The Trustchain ID
     :param writeable_path: A writeable path to store user data
 
     """
 
     def __init__(
         self,
-        trustchain_id: str,
+        app_id: str,
         *,
-        trustchain_url: Optional[str] = None,
+        url: Optional[str] = None,
         # Note: the sdk-type is used for analytics. Set it to something else
         # if you are not a Tanker customer (for instance, when running tests)
         sdk_type: str = "client-python",
@@ -320,8 +320,8 @@ class Tanker:
     ):
         self.sdk_type = sdk_type
         self.sdk_version = __version__
-        self.trustchain_id = trustchain_id
-        self.trustchain_url = trustchain_url or "https://api.tanker.io"
+        self.app_id = app_id
+        self.url = url or "https://api.tanker.io"
         self.writable_path = writable_path
 
         self._create_tanker_obj()
@@ -329,8 +329,8 @@ class Tanker:
         self.on_revoked = None  # type: Optional[RevokeFunc]
 
     def _create_tanker_obj(self) -> None:
-        c_trustchain_url = str_to_c_string(self.trustchain_url)
-        c_trustchain_id = str_to_c_string(self.trustchain_id)
+        c_url = str_to_c_string(self.url)
+        c_app_id = str_to_c_string(self.app_id)
         c_writable_path = str_to_c_string(self.writable_path)
         c_sdk_type = str_to_c_string(self.sdk_type)
         c_sdk_version = str_to_c_string(__version__)
@@ -338,8 +338,8 @@ class Tanker:
             "tanker_options_t *",
             {
                 "version": 2,
-                "trustchain_id": c_trustchain_id,
-                "trustchain_url": c_trustchain_url,
+                "app_id": c_app_id,
+                "url": c_url,
                 "writable_path": c_writable_path,
                 "sdk_type": c_sdk_type,
                 "sdk_version": c_sdk_version,

@@ -7,7 +7,7 @@ from .ffi_helpers import str_to_c_string, c_string_to_str, wait_fut_or_raise
 
 
 @attr.s
-class Trustchain:
+class App:
     name = attr.ib()  # type: str
     id = attr.ib()  # type: str
     private_key = attr.ib()  # type: str
@@ -29,32 +29,32 @@ class Admin:
         self._c_admin = ffi.cast("tanker_admin_t*", c_voidp)
         tankerlib.tanker_future_destroy(admin_fut)
 
-    def create_trustchain(self, name: str) -> Trustchain:
+    def create_app(self, name: str) -> App:
         c_name = str_to_c_string(name)
-        trustchain_fut = tankerlib.tanker_admin_create_trustchain(self._c_admin, c_name)
-        wait_fut_or_raise(trustchain_fut)
-        c_voidp = tankerlib.tanker_future_get_voidptr(trustchain_fut)
-        c_trustchain = ffi.cast("tanker_trustchain_descriptor_t*", c_voidp)
-        trustchain = Trustchain(
+        app_fut = tankerlib.tanker_admin_create_app(self._c_admin, c_name)
+        wait_fut_or_raise(app_fut)
+        c_voidp = tankerlib.tanker_future_get_voidptr(app_fut)
+        c_app = ffi.cast("tanker_app_descriptor_t*", c_voidp)
+        app = App(
             name=name,
-            id=c_string_to_str(c_trustchain.id),
-            public_key=c_string_to_str(c_trustchain.public_key),
-            private_key=c_string_to_str(c_trustchain.private_key),
+            id=c_string_to_str(c_app.id),
+            public_key=c_string_to_str(c_app.public_key),
+            private_key=c_string_to_str(c_app.private_key),
         )
-        tankerlib.tanker_admin_trustchain_descriptor_free(c_trustchain)
-        tankerlib.tanker_future_destroy(trustchain_fut)
-        return trustchain
+        tankerlib.tanker_admin_app_descriptor_free(c_app)
+        tankerlib.tanker_future_destroy(app_fut)
+        return app
 
-    def delete_trustchain(self, trustchain_id: str) -> None:
-        delete_fut = tankerlib.tanker_admin_delete_trustchain(
-            self._c_admin, str_to_c_string(trustchain_id)
+    def delete_app(self, app_id: str) -> None:
+        delete_fut = tankerlib.tanker_admin_delete_app(
+            self._c_admin, str_to_c_string(app_id)
         )
         wait_fut_or_raise(delete_fut)
         tankerlib.tanker_future_destroy(delete_fut)
 
-    def get_verification_code(self, trustchain_id: str, email: str) -> str:
+    def get_verification_code(self, app_id: str, email: str) -> str:
         get_verif_fut = tankerlib.tanker_admin_get_verification_code(
-            self._c_admin, str_to_c_string(trustchain_id), str_to_c_string(email)
+            self._c_admin, str_to_c_string(app_id), str_to_c_string(email)
         )
         wait_fut_or_raise(get_verif_fut)
         c_voidp = tankerlib.tanker_future_get_voidptr(get_verif_fut)
