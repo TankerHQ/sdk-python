@@ -72,7 +72,7 @@ setup(
     ],
     cffi_modules=["build_tanker.py:ffibuilder"],
     cmdclass={"native": NativeCommand},
-    install_requires=["attrs", "cffi>=1.12", "tankersdk_identity", "typing-extensions"],
+    install_requires=["attrs", "cffi>=1.12", "typing-extensions"],
     extras_require={
         "dev": [
             # For run-ci.py
@@ -89,6 +89,7 @@ setup(
             "faker",
             "path.py",
             "pytest-asyncio",
+            "tankersdk_identity",
             # Documentation
             "sphinx",
             "ghp-import",
