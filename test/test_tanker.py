@@ -13,7 +13,7 @@ import tankersdk
 from tankersdk import Admin, Tanker, Error as TankerError, ErrorCode
 from tankersdk import Status as TankerStatus
 from tankersdk.tanker import CVerification, VerificationMethodType
-from tankersdk.admin import Trustchain
+from tankersdk.admin import App
 import tankersdk_identity
 
 import pytest
@@ -43,7 +43,7 @@ TEST_CONFIG = read_test_config()
 def create_tanker(trustchain_id: str, *, writable_path: str) -> Tanker:
     return Tanker(
         trustchain_id,
-        trustchain_url=TEST_CONFIG["url"],
+        url=TEST_CONFIG["url"],
         sdk_type="sdk-python-test",
         writable_path=writable_path,
     )
@@ -80,11 +80,11 @@ class TestVerificationSanityChecks:
 
 
 @pytest.fixture(scope="session")
-def trustchain(admin: Admin) -> Iterator[Trustchain]:
+def trustchain(admin: Admin) -> Iterator[App]:
     name = "python_bindings"
-    trustchain = admin.create_trustchain(name)
+    trustchain = admin.create_app(name)
     yield trustchain
-    admin.delete_trustchain(trustchain.id)
+    admin.delete_app(trustchain.id)
 
 
 def test_native_version() -> None:
@@ -95,14 +95,14 @@ def test_native_version() -> None:
 def test_create_trustchain() -> None:
     name = "python_bindings"
     admin = Admin(url=TEST_CONFIG["url"], token=TEST_CONFIG["idToken"])
-    trustchain = admin.create_trustchain(name)
+    trustchain = admin.create_app(name)
     assert trustchain.name == name
-    admin.delete_trustchain(trustchain.id)
+    admin.delete_app(trustchain.id)
 
 
-def test_init_tanker_ok(tmp_path: Path, trustchain: Trustchain) -> None:
+def test_init_tanker_ok(tmp_path: Path, trustchain: App) -> None:
     tanker = create_tanker(trustchain_id=trustchain.id, writable_path=tmp_path)
-    assert tanker.trustchain_url == TEST_CONFIG["url"]
+    assert tanker.url == TEST_CONFIG["url"]
 
 
 def test_init_tanker_invalid_id(tmp_path: Path) -> None:
@@ -112,7 +112,7 @@ def test_init_tanker_invalid_id(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_tanker_start_invalid_path(trustchain: Trustchain) -> None:
+async def test_tanker_start_invalid_path(trustchain: App) -> None:
     tanker = create_tanker(
         trustchain_id=trustchain.id, writable_path="/path/to/no-such"
     )
@@ -127,14 +127,14 @@ async def test_tanker_start_invalid_path(trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
-async def test_tanker_sdk_version(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_tanker_sdk_version(tmp_path: Path, trustchain: App) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     sdk_version = tanker.sdk_version
     assert sdk_version
 
 
 @pytest.mark.asyncio
-async def test_start_new_account(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_start_new_account(tmp_path: Path, trustchain: App) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     fake = Faker()
     user_id = fake.email()
@@ -154,7 +154,7 @@ async def test_start_new_account(tmp_path: Path, trustchain: Trustchain) -> None
 
 @pytest.mark.asyncio
 async def test_start_identity_incorrect_format(
-    tmp_path: Path, trustchain: Trustchain
+    tmp_path: Path, trustchain: App
 ) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     with pytest.raises(TankerError) as error:
@@ -165,7 +165,7 @@ async def test_start_identity_incorrect_format(
 
 @pytest.mark.asyncio
 async def test_create_account_then_sign_in(
-    tmp_path: Path, trustchain: Trustchain
+    tmp_path: Path, trustchain: App
 ) -> None:
     fake = Faker()
     user_id = fake.email()
@@ -186,7 +186,7 @@ async def test_create_account_then_sign_in(
 User = namedtuple("User", ["session", "public_identity", "private_identity"])
 
 
-async def create_user_session(tmp_path: Path, trustchain: Trustchain) -> User:
+async def create_user_session(tmp_path: Path, trustchain: App) -> User:
     fake = Faker()
     user_id = fake.email()
     user_path = tmp_path.joinpath(user_id)
@@ -225,7 +225,7 @@ class FailingStream:
 class TestStreams:
     @pytest.mark.asyncio
     async def test_async_read_write_by_chunks(
-        self, tmp_path: Path, trustchain: Trustchain
+        self, tmp_path: Path, trustchain: App
     ) -> None:
         alice = await create_user_session(tmp_path, trustchain)
         chunk_size = 1024 ** 2
@@ -247,7 +247,7 @@ class TestStreams:
 
     @pytest.mark.asyncio
     async def test_async_read_in_one_go(
-        self, tmp_path: Path, trustchain: Trustchain
+        self, tmp_path: Path, trustchain: App
     ) -> None:
         alice = await create_user_session(tmp_path, trustchain)
         chunk_size = 1024 ** 2
@@ -262,7 +262,7 @@ class TestStreams:
         await alice.session.stop()
 
     @pytest.mark.asyncio
-    async def test_error_handling(self, tmp_path: Path, trustchain: Trustchain) -> None:
+    async def test_error_handling(self, tmp_path: Path, trustchain: App) -> None:
         alice = await create_user_session(tmp_path, trustchain)
         message = bytearray(1024 * 1024 * 3 + 2)
         input_stream = FailingStream(message)
@@ -273,7 +273,7 @@ class TestStreams:
         await alice.session.stop()
 
     @pytest.mark.asyncio
-    async def test_empty_message(self, tmp_path: Path, trustchain: Trustchain) -> None:
+    async def test_empty_message(self, tmp_path: Path, trustchain: App) -> None:
         alice = await create_user_session(tmp_path, trustchain)
         empty_message = bytearray()
         input_stream = InMemoryAsyncStream(empty_message)
@@ -285,7 +285,7 @@ class TestStreams:
 
 
 @pytest.mark.asyncio
-async def test_encrypt_decrypt(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_encrypt_decrypt(tmp_path: Path, trustchain: App) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
     encrypted_data = await alice.session.encrypt(message)
@@ -295,7 +295,7 @@ async def test_encrypt_decrypt(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
-async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_share_during_encrypt(tmp_path: Path, trustchain: App) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     bob = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
@@ -309,7 +309,7 @@ async def test_share_during_encrypt(tmp_path: Path, trustchain: Trustchain) -> N
 
 
 @pytest.mark.asyncio
-async def test_postponed_share(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_postponed_share(tmp_path: Path, trustchain: App) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     bob = await create_user_session(tmp_path, trustchain)
     message = b"I love you"
@@ -335,7 +335,7 @@ async def check_share_with_group_works(
 
 
 @pytest.mark.asyncio
-async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_create_group(tmp_path: Path, trustchain: App) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     bob = await create_user_session(tmp_path, trustchain)
     charlie = await create_user_session(tmp_path, trustchain)
@@ -347,7 +347,7 @@ async def test_create_group(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_update_group(tmp_path: Path, trustchain: App) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     bob = await create_user_session(tmp_path, trustchain)
     charlie = await create_user_session(tmp_path, trustchain)
@@ -360,7 +360,7 @@ async def test_update_group(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 async def create_two_devices(
-    tmp_path: Path, trustchain: Trustchain
+    tmp_path: Path, trustchain: App
 ) -> Tuple[str, Tanker, Tanker]:
     fake = Faker()
     passphrase = "this is my secure passphrase"
@@ -383,7 +383,7 @@ async def create_two_devices(
 
 
 @pytest.mark.asyncio
-async def test_add_device(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_add_device(tmp_path: Path, trustchain: App) -> None:
     _, laptop, phone = await create_two_devices(tmp_path, trustchain)
     assert phone.status == TankerStatus.READY
     await laptop.stop()
@@ -391,7 +391,7 @@ async def test_add_device(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
-async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_revoke_device(tmp_path: Path, trustchain: App) -> None:
     identity, laptop, phone = await create_two_devices(tmp_path, trustchain)
     laptop_id = await laptop.device_id()
     laptop_revoked = asyncio.Event()
@@ -411,7 +411,7 @@ async def test_revoke_device(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_device_list(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_get_device_list(tmp_path: Path, trustchain: App) -> None:
     _, laptop, phone = await create_two_devices(tmp_path, trustchain)
     laptop_id = await laptop.device_id()
     phone_id = await phone.device_id()
@@ -429,7 +429,7 @@ async def test_get_device_list(tmp_path: Path, trustchain: Trustchain) -> None:
 
 @pytest.mark.asyncio
 async def test_must_verify_identity_on_second_device(
-    tmp_path: Path, trustchain: Trustchain
+    tmp_path: Path, trustchain: App
 ) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
@@ -453,7 +453,7 @@ async def test_must_verify_identity_on_second_device(
 
 @pytest.mark.asyncio
 async def test_using_verification_key_on_second_device(
-    tmp_path: Path, trustchain: Trustchain
+    tmp_path: Path, trustchain: App
 ) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
@@ -477,7 +477,7 @@ async def test_using_verification_key_on_second_device(
 
 
 @pytest.mark.asyncio
-async def test_invalid_verification_key(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_invalid_verification_key(tmp_path: Path, trustchain: App) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -516,7 +516,7 @@ async def test_invalid_verification_key(tmp_path: Path, trustchain: Trustchain) 
 
 @pytest.mark.asyncio
 async def test_email_verification(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
@@ -548,7 +548,7 @@ async def test_email_verification(
 
 @pytest.mark.asyncio
 async def test_bad_verification_code(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
@@ -595,7 +595,7 @@ PreUser = namedtuple(
 
 
 async def set_up_preshare(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> Tuple[User, PreUser]:
     fake = Faker()
     bob_email = fake.email()
@@ -621,7 +621,7 @@ async def set_up_preshare(
 
 @pytest.mark.asyncio
 async def test_cannot_decrypt_if_provisional_identity_not_attached(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
@@ -634,7 +634,7 @@ async def test_cannot_decrypt_if_provisional_identity_not_attached(
 
 
 async def share_and_attach_provisional_identity(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> Tuple[PreUser, bytes, bytes]:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
@@ -658,7 +658,7 @@ async def share_and_attach_provisional_identity(
 
 @pytest.mark.asyncio
 async def test_attach_provisional_identity_simple(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     bob, encrypted, message = await share_and_attach_provisional_identity(
         tmp_path, trustchain, admin
@@ -669,7 +669,7 @@ async def test_attach_provisional_identity_simple(
 
 @pytest.mark.asyncio
 async def test_attach_provisional_identity_after_sign_out(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     bob, encrypted, message = await share_and_attach_provisional_identity(
         tmp_path, trustchain, admin
@@ -682,7 +682,7 @@ async def test_attach_provisional_identity_after_sign_out(
 
 @pytest.mark.asyncio
 async def test_already_attached_identity(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     bob, _, _ = await share_and_attach_provisional_identity(tmp_path, trustchain, admin)
     attach_result = await bob.session.attach_provisional_identity(
@@ -694,7 +694,7 @@ async def test_already_attached_identity(
 
 @pytest.mark.asyncio
 async def test_attach_provisional_identity_with_incorrect_code(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you"
@@ -709,7 +709,7 @@ async def test_attach_provisional_identity_with_incorrect_code(
 
 @pytest.mark.asyncio
 async def test_update_verification_passphrase(
-    tmp_path: Path, trustchain: Trustchain
+    tmp_path: Path, trustchain: App
 ) -> None:
     fake = Faker()
     old_passphrase = "plop"
@@ -742,7 +742,7 @@ async def test_update_verification_passphrase(
 
 @pytest.mark.asyncio
 async def test_create_group_with_prov_id(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"I love you all, my group"
@@ -758,7 +758,7 @@ async def test_create_group_with_prov_id(
 
 @pytest.mark.asyncio
 async def test_add_to_group_with_prov_id(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, trustchain, admin)
     message = b"Hi, this is for a group"
@@ -776,7 +776,7 @@ async def test_add_to_group_with_prov_id(
 
 
 @pytest.mark.asyncio
-async def test_user_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_user_not_found(tmp_path: Path, trustchain: App) -> None:
     user_id = encode("*" * 32)
     identity_obj = {"trustchain_id": trustchain.id, "target": "user", "value": user_id}
     identity = encode(json.dumps(identity_obj))
@@ -787,7 +787,7 @@ async def test_user_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
-async def test_decrypt_invalid_argument(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_decrypt_invalid_argument(tmp_path: Path, trustchain: App) -> None:
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
         await alice.session.decrypt(b"zz")
@@ -795,7 +795,7 @@ async def test_decrypt_invalid_argument(tmp_path: Path, trustchain: Trustchain) 
 
 
 @pytest.mark.asyncio
-async def test_recipient_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_recipient_not_found(tmp_path: Path, trustchain: App) -> None:
     group_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
@@ -804,7 +804,7 @@ async def test_recipient_not_found(tmp_path: Path, trustchain: Trustchain) -> No
 
 
 @pytest.mark.asyncio
-async def test_group_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_group_not_found(tmp_path: Path, trustchain: App) -> None:
     group_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
@@ -813,7 +813,7 @@ async def test_group_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
 
 
 @pytest.mark.asyncio
-async def test_device_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
+async def test_device_not_found(tmp_path: Path, trustchain: App) -> None:
     device_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, trustchain)
     with pytest.raises(TankerError) as error:
@@ -823,7 +823,7 @@ async def test_device_not_found(tmp_path: Path, trustchain: Trustchain) -> None:
 
 @pytest.mark.asyncio
 async def test_get_verification_methods(
-    tmp_path: Path, trustchain: Trustchain, admin: Admin
+    tmp_path: Path, trustchain: App, admin: Admin
 ) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     faker = Faker()

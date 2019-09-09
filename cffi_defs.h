@@ -255,8 +255,8 @@ typedef void (*tanker_event_callback_t)(void* arg, void* data);
 struct tanker_options
 {
   uint8_t version;
-  b64char const* trustchain_id; /*!< Must not be NULL. */
-  char const* trustchain_url;   /*!< Must not be NULL. */
+  b64char const* app_id; /*!< Must not be NULL. */
+  char const* url;   /*!< Must not be NULL. */
   char const* writable_path;    /*!< Must not be NULL. */
   char const* sdk_type;         /*!< Must not be NULL. */
   char const* sdk_version;      /*!< Must not be NULL. */
@@ -717,47 +717,47 @@ tanker_future_t* tanker_stream_close(tanker_stream_t* stream);
 
 // ctanker/admin.h
 
-typedef struct tanker_trustchain_descriptor
+typedef struct tanker_app_descriptor
 {
   char const* name;
   b64char const* id;
   b64char const* private_key;
   b64char const* public_key;
-} tanker_trustchain_descriptor_t;
+} tanker_app_descriptor_t;
 
 typedef struct tanker_admin tanker_admin_t;
 
 /*!
  * Authenticates to the Tanker admin server API
  *
- * \param trustchain_url The URL of the tanker server to connect to
+ * \param url The URL of the tanker server to connect to
  * \param id_token The authentication token string for the admin API
  * \return The admin instance. Free with tanker_admin_destroy.
  */
-tanker_future_t* tanker_admin_connect(char const* trustchain_url,
+tanker_future_t* tanker_admin_connect(char const* url,
                                       char const* id_token);
 
 /*!
- * Creates a new trustchain
+ * Creates a new app
  *
- * \return The trustchain_descriptor. Free with tanker_admin_trustchain_descriptor_free
+ * \return The app. Free with tanker_admin_app_descriptor_free
  */
-tanker_future_t* tanker_admin_create_trustchain(tanker_admin_t* admin,
-                                                char const* name);
+tanker_future_t* tanker_admin_create_app(tanker_admin_t* admin,
+                                         char const* name);
 
 /*!
- * Deletes the trustchain permanently
+ * Deletes the app permanently
  *
- * \return A future that resolves when the trustchain has been deleted
+ * \return A future that resolves when the app has been deleted
  */
-tanker_future_t* tanker_admin_delete_trustchain(tanker_admin_t* admin,
-                                                char const* trustchain_id);
+tanker_future_t* tanker_admin_delete_app(tanker_admin_t* admin,
+                                         char const* app_id);
 
 /*!
- * Frees the trustchain descriptor structure
+ * Frees the app descriptor structure
  */
-void tanker_admin_trustchain_descriptor_free(
-    tanker_trustchain_descriptor_t* trustchain);
+void tanker_admin_app_descriptor_free(
+    tanker_app_descriptor_t* app);
 
 /*!
  * Disconnects and destroys the admin instance.
@@ -770,7 +770,7 @@ tanker_future_t* tanker_admin_destroy(tanker_admin_t* admin);
  * Gets verification code of a user from the server
  */
 tanker_future_t* tanker_admin_get_verification_code(
-    tanker_admin_t* admin, char const* trustchain_id, char const* user_email);
+    tanker_admin_t* admin, char const* app_id, char const* user_email);
 
 
 // cffi specific
