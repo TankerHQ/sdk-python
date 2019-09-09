@@ -153,9 +153,7 @@ async def test_start_new_account(tmp_path: Path, trustchain: App) -> None:
 
 
 @pytest.mark.asyncio
-async def test_start_identity_incorrect_format(
-    tmp_path: Path, trustchain: App
-) -> None:
+async def test_start_identity_incorrect_format(tmp_path: Path, trustchain: App) -> None:
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
     with pytest.raises(TankerError) as error:
         await tanker.start("bad identity")
@@ -164,9 +162,7 @@ async def test_start_identity_incorrect_format(
 
 
 @pytest.mark.asyncio
-async def test_create_account_then_sign_in(
-    tmp_path: Path, trustchain: App
-) -> None:
+async def test_create_account_then_sign_in(tmp_path: Path, trustchain: App) -> None:
     fake = Faker()
     user_id = fake.email()
     tanker = create_tanker(trustchain.id, writable_path=tmp_path)
@@ -246,9 +242,7 @@ class TestStreams:
         await alice.session.stop()
 
     @pytest.mark.asyncio
-    async def test_async_read_in_one_go(
-        self, tmp_path: Path, trustchain: App
-    ) -> None:
+    async def test_async_read_in_one_go(self, tmp_path: Path, trustchain: App) -> None:
         alice = await create_user_session(tmp_path, trustchain)
         chunk_size = 1024 ** 2
         message = bytearray(
@@ -708,9 +702,7 @@ async def test_attach_provisional_identity_with_incorrect_code(
 
 
 @pytest.mark.asyncio
-async def test_update_verification_passphrase(
-    tmp_path: Path, trustchain: App
-) -> None:
+async def test_update_verification_passphrase(tmp_path: Path, trustchain: App) -> None:
     fake = Faker()
     old_passphrase = "plop"
     new_passphrase = "zzzz"

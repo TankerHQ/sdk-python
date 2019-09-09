@@ -12,19 +12,9 @@ from _tanker import lib as tankerlib
 
 from .error import Error as TankerError
 from .version import __version__
-from .ffi_helpers import (
-    CCharList,
-    CData,
-    OptionalStrList,
-    bytes_to_c_buffer,
-    c_buffer_to_bytes,
-    c_string_to_bytes,
-    c_string_to_str,
-    handle_tanker_future,
-    str_to_c_string,
-    unwrap_expected,
-    wait_fut_or_raise,
-)
+from .ffi_helpers import CCharList, CData, OptionalStrList, FFIHelpers
+
+ffihelpers = FFIHelpers(ffi, tankerlib)
 
 
 @ffi.def_extern()  # type: ignore
@@ -34,8 +24,8 @@ def log_handler(record: CData) -> None:
         #  (it depends on a lot of things)
         #  So to be safe we check if the message from Native is readable in ASCII, and
         #  if this fails we print `repr(message)` so that no information is lost.
-        message_bytes = c_string_to_bytes(record.message)
-        category = c_string_to_str(record.category)
+        message_bytes = ffihelpers.c_string_to_bytes(record.message)
+        category = ffihelpers.c_string_to_str(record.category)
         try:
             message = message_bytes.decode("ascii")
         except UnicodeDecodeError:
@@ -94,7 +84,7 @@ class VerificationMethod:
         )
         if method_type == VerificationMethodType.EMAIL:
             c_email = c_verification_method.email
-            email = c_string_to_str(c_email)
+            email = ffihelpers.c_string_to_str(c_email)
             return cls(method_type, email=email)
         else:
             return cls(method_type)
@@ -126,8 +116,8 @@ class CEncryptionOptions:
         share_with_users: OptionalStrList = None,
         share_with_groups: OptionalStrList = None,
     ) -> None:
-        self.user_list = CCharList(share_with_users)
-        self.group_list = CCharList(share_with_groups)
+        self.user_list = CCharList(share_with_users, ffi, tankerlib)
+        self.group_list = CCharList(share_with_groups, ffi, tankerlib)
 
         self._c_data = ffi.new(
             "tanker_encrypt_options_t *",
@@ -141,7 +131,7 @@ class CEncryptionOptions:
         )
 
     def get(self) -> CData:
-        return cast(CData, self._c_data)
+        return self._c_data
 
 
 class CVerification:
@@ -168,13 +158,13 @@ class CVerification:
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
             )
-            self._verification_key = str_to_c_string(verification_key)
+            self._verification_key = ffihelpers.str_to_c_string(verification_key)
             c_verification.verification_key = self._verification_key
         elif passphrase is not None:
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_PASSPHRASE
             )
-            self._passphrase = str_to_c_string(passphrase)
+            self._passphrase = ffihelpers.str_to_c_string(passphrase)
             c_verification.passphrase = self._passphrase
         elif email is not None:
             if verification_code is None:
@@ -186,14 +176,14 @@ class CVerification:
             )
             self._email_verification = {
                 "version": 1,
-                "email": str_to_c_string(email),
-                "verification_code": str_to_c_string(verification_code),
+                "email": ffihelpers.str_to_c_string(email),
+                "verification_code": ffihelpers.str_to_c_string(verification_code),
             }
             c_verification.email_verification = self._email_verification
         self._c_verification = c_verification
 
     def get(self) -> CData:
-        return self._c_verification  # type: ignore
+        return self._c_verification
 
 
 class DeviceDescription:
@@ -210,7 +200,7 @@ class DeviceDescription:
 
     @classmethod
     def from_c(cls, c_device_list_elem: CData) -> "DeviceDescription":
-        device_id = c_string_to_str(c_device_list_elem.device_id)
+        device_id = ffihelpers.c_string_to_str(c_device_list_elem.device_id)
         is_revoked = c_device_list_elem.is_revoked
         return cls(device_id, is_revoked)
 
@@ -259,7 +249,7 @@ class StreamWrapper:
         c_buf = ffi.from_buffer("uint8_t[]", buf)
         read_fut = tankerlib.tanker_stream_read(self.c_stream, c_buf, size)
         try:
-            c_voidptr = await handle_tanker_future(read_fut)
+            c_voidptr = await ffihelpers.handle_tanker_future(read_fut)
         except TankerError:
             if self.error:
                 raise self.error
@@ -329,11 +319,11 @@ class Tanker:
         self.on_revoked = None  # type: Optional[RevokeFunc]
 
     def _create_tanker_obj(self) -> None:
-        c_url = str_to_c_string(self.url)
-        c_app_id = str_to_c_string(self.app_id)
-        c_writable_path = str_to_c_string(self.writable_path)
-        c_sdk_type = str_to_c_string(self.sdk_type)
-        c_sdk_version = str_to_c_string(__version__)
+        c_url = ffihelpers.str_to_c_string(self.url)
+        c_app_id = ffihelpers.str_to_c_string(self.app_id)
+        c_writable_path = ffihelpers.str_to_c_string(self.writable_path)
+        c_sdk_type = ffihelpers.str_to_c_string(self.sdk_type)
+        c_sdk_version = ffihelpers.str_to_c_string(__version__)
         tanker_options = ffi.new(
             "tanker_options_t *",
             {
@@ -346,7 +336,7 @@ class Tanker:
             },
         )
         create_fut = tankerlib.tanker_create(tanker_options)
-        wait_fut_or_raise(create_fut)
+        ffihelpers.wait_fut_or_raise(create_fut)
         c_voidp = tankerlib.tanker_future_get_voidptr(create_fut)
         self.c_tanker = ffi.cast("tanker_t*", c_voidp)
 
@@ -359,7 +349,7 @@ class Tanker:
             tankerlib.revoke_callback,
             self._userdata,
         )
-        wait_fut_or_raise(c_future_connect)
+        ffihelpers.wait_fut_or_raise(c_future_connect)
 
     @property
     def status(self) -> Status:
@@ -372,15 +362,15 @@ class Tanker:
         :param identity: The user's Tanker identity
         :return: A :py:class:`Status` enum
         """
-        c_identity = str_to_c_string(identity)
+        c_identity = ffihelpers.str_to_c_string(identity)
         c_future = tankerlib.tanker_start(self.c_tanker, c_identity)
-        c_voidp = await handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
         return Status(int(ffi.cast("int", c_voidp)))
 
     async def stop(self) -> None:
         """Stop the Tanker session"""
         c_future = tankerlib.tanker_stop(self.c_tanker)
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)
 
     async def encrypt(
         self,
@@ -397,8 +387,8 @@ class Tanker:
         c_encrypt_options = CEncryptionOptions(
             share_with_users=share_with_users, share_with_groups=share_with_groups
         )
-        c_clear_buffer = bytes_to_c_buffer(clear_data)  # type: CData
-        clear_size = len(c_clear_buffer)  # type: ignore
+        c_clear_buffer = ffihelpers.bytes_to_c_buffer(clear_data)  # type: CData
+        clear_size = len(c_clear_buffer)
         size = tankerlib.tanker_encrypted_size(clear_size)
         c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
         c_future = tankerlib.tanker_encrypt(
@@ -409,8 +399,8 @@ class Tanker:
             c_encrypt_options.get(),
         )
 
-        await handle_tanker_future(c_future)
-        return c_buffer_to_bytes(c_encrypted_buffer)
+        await ffihelpers.handle_tanker_future(c_future)
+        return ffihelpers.c_buffer_to_bytes(c_encrypted_buffer)
 
     async def decrypt(self, encrypted_data: bytes) -> bytes:
         """Decrypt `encrypted_data`"""
@@ -418,14 +408,14 @@ class Tanker:
         c_expected_size = tankerlib.tanker_decrypted_size(
             c_encrypted_buffer, len(c_encrypted_buffer)
         )
-        c_size = unwrap_expected(c_expected_size, "uint64_t")
+        c_size = ffihelpers.unwrap_expected(c_expected_size, "uint64_t")
         size = cast(int, c_size)
         c_clear_buffer = ffi.new("uint8_t[%i]" % size)
         c_future = tankerlib.tanker_decrypt(
             self.c_tanker, c_clear_buffer, c_encrypted_buffer, len(c_encrypted_buffer)
         )
-        await handle_tanker_future(c_future)
-        return c_buffer_to_bytes(c_clear_buffer)
+        await ffihelpers.handle_tanker_future(c_future)
+        return ffihelpers.c_buffer_to_bytes(c_clear_buffer)
 
     async def encrypt_stream(
         self,
@@ -455,7 +445,7 @@ class Tanker:
             handle,
             c_encrypt_options.get(),
         )
-        result.c_stream = await handle_tanker_future(encryption_fut)
+        result.c_stream = await ffihelpers.handle_tanker_future(encryption_fut)
         return result
 
     async def decrypt_stream(self, encrypted_stream: StreamWrapper) -> StreamWrapper:
@@ -472,7 +462,7 @@ class Tanker:
             self.c_tanker, tankerlib.stream_input_source_callback, handle
         )
         try:
-            result.c_stream = await handle_tanker_future(decryption_fut)
+            result.c_stream = await ffihelpers.handle_tanker_future(decryption_fut)
         except TankerError:
             if result.error:
                 raise result.error
@@ -483,9 +473,9 @@ class Tanker:
     async def device_id(self) -> str:
         """:return: the current device id"""
         c_future = tankerlib.tanker_device_id(self.c_tanker)
-        c_voidp = await handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
-        res = c_string_to_str(c_str)
+        res = ffihelpers.c_string_to_str(c_str)
         tankerlib.tanker_free_buffer(c_str)
         return res
 
@@ -495,7 +485,7 @@ class Tanker:
         :returns: a list of :py:class`DeviceDescription` instances
         """
         c_future = tankerlib.tanker_get_device_list(self.c_tanker)
-        c_voidp = await handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_list = ffi.cast("tanker_device_list_t*", c_voidp)
         count = c_list.count
         c_devices = c_list.devices
@@ -509,15 +499,15 @@ class Tanker:
 
     async def revoke_device(self, device_id: str) -> None:
         """Revoke the given device"""
-        c_device_id = str_to_c_string(device_id)
+        c_device_id = ffihelpers.str_to_c_string(device_id)
         c_future = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)
 
     def get_resource_id(self, encrypted: bytes) -> str:
         """Get resource ID from `encrypted` data"""
         c_expected = tankerlib.tanker_get_resource_id(encrypted, len(encrypted))
-        c_id = unwrap_expected(c_expected, "char*")
-        return c_string_to_str(c_id)
+        c_id = ffihelpers.unwrap_expected(c_expected, "char*")
+        return ffihelpers.c_string_to_str(c_id)
 
     async def share(
         self,
@@ -527,9 +517,9 @@ class Tanker:
         groups: OptionalStrList = None,
     ) -> None:
         """Share the given list of resources to users or groups"""
-        resource_list = CCharList(resources)
-        user_list = CCharList(users)
-        group_list = CCharList(groups)
+        resource_list = CCharList(resources, ffi, tankerlib)
+        user_list = CCharList(users, ffi, tankerlib)
+        group_list = CCharList(groups, ffi, tankerlib)
 
         c_future = tankerlib.tanker_share(
             self.c_tanker,
@@ -541,7 +531,7 @@ class Tanker:
             resource_list.size,
         )
 
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)
 
     async def register_identity(
         self,
@@ -562,7 +552,7 @@ class Tanker:
         c_future = tankerlib.tanker_register_identity(
             self.c_tanker, c_verification.get()
         )
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)
 
     async def verify_identity(
         self,
@@ -580,7 +570,7 @@ class Tanker:
             verification_code=verification_code,
         )
         c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification.get())
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)
 
     async def generate_verification_key(self) -> str:
         """Generate a private unlock key
@@ -588,9 +578,9 @@ class Tanker:
         This can be used to verify an indentity later on
         """
         c_future = tankerlib.tanker_generate_verification_key(self.c_tanker)
-        c_voidp = await handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
-        res = c_string_to_str(c_str)
+        res = ffihelpers.c_string_to_str(c_str)
         tankerlib.tanker_free_buffer(c_str)
         return res
 
@@ -613,12 +603,12 @@ class Tanker:
             self.c_tanker, c_verification.get()
         )
 
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)
 
     async def get_verification_methods(self) -> List[VerificationMethod]:
         """Get the list of available verification methods"""
         c_future = tankerlib.tanker_get_verification_methods(self.c_tanker)
-        c_voidp = await handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
 
         c_list = ffi.cast("tanker_verification_method_list_t*", c_voidp)
         count = c_list.count
@@ -633,26 +623,26 @@ class Tanker:
 
     async def create_group(self, user_ids: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""
-        user_list = CCharList(user_ids)
+        user_list = CCharList(user_ids, ffi, tankerlib)
         c_future = tankerlib.tanker_create_group(
             self.c_tanker, user_list.data, user_list.size
         )
 
-        c_voidp = await handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
-        return c_string_to_str(c_str)
+        return ffihelpers.c_string_to_str(c_str)
 
     async def update_group_members(
         self, group_id: str, *, add: OptionalStrList = None
     ) -> None:
         """Add some users to an existing group"""
-        add_list = CCharList(add)
-        c_group_id = str_to_c_string(group_id)
+        add_list = CCharList(add, ffi, tankerlib)
+        c_group_id = ffihelpers.str_to_c_string(group_id)
         c_future = tankerlib.tanker_update_group_members(
             self.c_tanker, c_group_id, add_list.data, add_list.size
         )
 
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)
 
     async def attach_provisional_identity(
         self, provisional_identity: str
@@ -662,9 +652,9 @@ class Tanker:
         :return: an instance of :py:class:`AttachResult`
         """
         c_future = tankerlib.tanker_attach_provisional_identity(
-            self.c_tanker, str_to_c_string(provisional_identity)
+            self.c_tanker, ffihelpers.str_to_c_string(provisional_identity)
         )
-        c_voidp = await handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_attach_result = ffi.cast("tanker_attach_result_t*", c_voidp)
         status = Status(c_attach_result.status)
         result = AttachResult(status)
@@ -674,7 +664,8 @@ class Tanker:
             method_type = VerificationMethodType(c_method_type)
             if method_type == VerificationMethodType.EMAIL:
                 verification_method = VerificationMethod(
-                    VerificationMethodType.EMAIL, email=c_string_to_str(c_method.email)
+                    VerificationMethodType.EMAIL,
+                    email=ffihelpers.c_string_to_str(c_method.email),
                 )
             else:
                 verification_method = VerificationMethod(method_type)
@@ -691,4 +682,4 @@ class Tanker:
             self.c_tanker, verification.get()
         )
 
-        await handle_tanker_future(c_future)
+        await ffihelpers.handle_tanker_future(c_future)

@@ -6,7 +6,8 @@ import cli_ui as ui
 from cffi import FFI
 from path import Path
 
-ffibuilder = FFI()
+tanker_ext = FFI()
+admin_ext = FFI()
 
 
 def get_lib_name(name):
@@ -32,8 +33,10 @@ def on_import() -> None:
     if not build_info.exists():
         ui.warning("%s does not exist" % build_info)
         ui.warning("building dummy Python extension")
-        ffibuilder.set_source("_tanker", "")
-        ffibuilder.cdef("")
+        tanker_ext.set_source("_tanker", "")
+        tanker_ext.cdef("")
+        admin_ext.set_source("_tanker_admin", "")
+        admin_ext.cdef("")
         return
 
     conaninfo = json.loads(build_info.text())
@@ -51,12 +54,13 @@ def on_import() -> None:
     includes = tanker_package["include_paths"]
 
     tanker_cffi_source = Path("cffi_src.c").text()
+    admin_cffi_source = Path("cffi_admin_src.c").text()
 
     if sys.platform == "win32":
         system_libs = ["crypt32"]
     else:
         system_libs = ["dl", "pthread", "stdc++"]
-    ffibuilder.set_source(
+    tanker_ext.set_source(
         "_tanker",
         tanker_cffi_source,
         libraries=system_libs,
@@ -64,11 +68,22 @@ def on_import() -> None:
         include_dirs=includes,
         language="c",
     )
+    admin_ext.set_source(
+        "_tanker_admin",
+        admin_cffi_source,
+        libraries=system_libs,
+        extra_objects=libs,
+        include_dirs=includes,
+        language="c",
+    )
 
     tanker_cffi_defs = Path("cffi_defs.h").text()
-    ffibuilder.cdef(tanker_cffi_defs)
+    tanker_ext.cdef(tanker_cffi_defs)
+    admin_cffi_defs = Path("cffi_admin_defs.h").text()
+    admin_ext.cdef(admin_cffi_defs)
 
 
 on_import()
 if __name__ == "__main__":
-    ffibuilder.compile(verbose=True)
+    tanker_ext.compile(verbose=True)
+    admin_ext.compile(verbose=True)

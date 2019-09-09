@@ -70,7 +70,7 @@ setup(
         "cffi>=1.12",
         "path.py",
     ],
-    cffi_modules=["build_tanker.py:ffibuilder"],
+    cffi_modules=["build_tanker.py:tanker_ext", "build_tanker.py:admin_ext"],
     cmdclass={"native": NativeCommand},
     install_requires=["attrs", "cffi>=1.12", "typing-extensions"],
     extras_require={
