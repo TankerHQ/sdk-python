@@ -313,10 +313,15 @@ class Tanker:
         self.app_id = app_id
         self.url = url or "https://api.tanker.io"
         self.writable_path = writable_path
+        self.c_tanker = None
 
         self._create_tanker_obj()
         self._set_event_callbacks()
         self.on_revoked = None  # type: Optional[RevokeFunc]
+
+    def __del__(self) -> None:
+        if self.c_tanker:
+            tankerlib.tanker_destroy(self.c_tanker)
 
     def _create_tanker_obj(self) -> None:
         c_url = ffihelpers.str_to_c_string(self.url)
