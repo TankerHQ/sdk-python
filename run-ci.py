@@ -11,7 +11,7 @@ import ci.git
 import ci.dmenv
 import ci.tanker_configs
 
-DEPLOYED_TANKER = "tanker/2.0.1@tanker/stable"
+DEPLOYED_TANKER = "tanker/2.1.0@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
 
 
