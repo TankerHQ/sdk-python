@@ -78,47 +78,6 @@ unsigned char tanker_future_has_error(tanker_future_t* future);
 
 void tanker_future_destroy(tanker_future_t* future);
 
-
-// ctanker/base64.h
-
-typedef char b64char;
-
-/*!
- * Get the size of a base64 encoded buffer given a buffer of \p decoded_size.
- */
-uint64_t tanker_base64_encoded_size(uint64_t decoded_size);
-
-/*!
- * Get the maximum decoded size possible from the size of the encoded data.
- */
-uint64_t tanker_base64_decoded_max_size(uint64_t encoded_size);
-
-/*!
- * Encode in base64 the buffer
- * \param to buffer to fill with the encoded data.
- * \pre to buffer must have been allocated with at least the size returned by
- *      the tanker_base64_encoded_size() function.
- * \param from buffer to encode
- * \pre from_size must be the size of the from parameter
- */
-void tanker_base64_encode(b64char* to, void const* from, uint64_t from_size);
-
-/*!
- * Decode the buffer with a base64
- * \param to buffer to fill with the decoded datas.
- * \pre to buffer must have been allocated with the size returned by the
- *      tanker_base64_decoded_size() function.
- * \param from buffer to decode
- * \pre from_size must be the size of the from parameter
- * \return an empty expected.
- */
-tanker_expected_t* tanker_base64_decode(void* to,
-                                        uint64_t* to_size,
-                                        b64char const* from,
-                                        uint64_t from_size);
-
-
-
 // ctanker/error.h
 
 enum tanker_error_code
@@ -213,7 +172,7 @@ struct tanker_device_list
  */
 struct tanker_device_list_elem
 {
-  b64char const* device_id;
+  char const* device_id;
   bool is_revoked;
 };
 
@@ -255,7 +214,7 @@ typedef void (*tanker_event_callback_t)(void* arg, void* data);
 struct tanker_options
 {
   uint8_t version;
-  b64char const* app_id; /*!< Must not be NULL. */
+  char const* app_id; /*!< Must not be NULL. */
   char const* url;   /*!< Must not be NULL. */
   char const* writable_path;    /*!< Must not be NULL. */
   char const* sdk_type;         /*!< Must not be NULL. */
@@ -298,9 +257,9 @@ struct tanker_verification_method
 struct tanker_encrypt_options
 {
   uint8_t version;
-  b64char const* const* recipient_public_identities;
+  char const* const* recipient_public_identities;
   uint32_t nb_recipient_public_identities;
-  b64char const* const* recipient_gids;
+  char const* const* recipient_gids;
   uint32_t nb_recipient_gids;
 };
 
@@ -445,7 +404,7 @@ enum tanker_status tanker_status(tanker_t* tanker);
  * Get the current device id.
  * \param session A tanker_t* instance.
  * \pre tanker_status == TANKER_STATUS_READY
- * \return a future of b64char* that must be freed with tanker_free_buffer.
+ * \return a future of char* that must be freed with tanker_free_buffer.
  */
 tanker_future_t* tanker_device_id(tanker_t* session);
 
@@ -462,7 +421,7 @@ tanker_future_t* tanker_get_device_list(tanker_t* session);
  * Generate an verificationKey that can be used to accept a device
  * \param session A tanker tanker_t* instance
  * \pre tanker_status == TANKER_STATUS_READY
- * \return a future of b64char* that must be freed with tanker_free_buffer
+ * \return a future of char* that must be freed with tanker_free_buffer
  * \throws TANKER_ERROR_OTHER could not connect to the Tanker server or the
  * server returned an error
  */
@@ -582,7 +541,7 @@ tanker_future_t* tanker_share(tanker_t* session,
                               uint64_t nb_recipient_public_identities,
                               char const* const* recipient_gids,
                               uint64_t nb_recipient_gids,
-                              b64char const* const* resource_ids,
+                              char const* const* resource_ids,
                               uint64_t nb_resource_ids);
 
 /*!
@@ -632,7 +591,7 @@ tanker_future_t* tanker_verify_provisional_identity(
  * another user's device.
  */
 tanker_future_t* tanker_revoke_device(tanker_t* session,
-                                      b64char const* device_id);
+                                      char const* device_id);
 
 void tanker_free_buffer(void const* buffer);
 
