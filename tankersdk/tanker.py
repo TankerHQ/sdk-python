@@ -5,6 +5,7 @@ from asyncio import Future  # noqa
 import asyncio
 from enum import Enum
 import os
+import weakref
 
 
 from _tanker import ffi
@@ -38,8 +39,8 @@ tankerlib.tanker_set_log_handler(tankerlib.log_handler)
 
 @ffi.def_extern()  # type: ignore
 def revoke_callback(args: CData, data: CData) -> None:
-    tanker_instance = ffi.from_handle(data)
-    if tanker_instance.on_revoked:
+    tanker_instance = ffi.from_handle(data)()  # data is a weakref.ref
+    if tanker_instance and tanker_instance.on_revoked:
         tanker_instance.on_revoked()
 
 
@@ -289,6 +290,9 @@ def stream_input_source_callback(
         tankerlib.tanker_stream_read_operation_finish(c_op, -1)
 
 
+_GLOBAL_TANKERS: "weakref.WeakKeyDictionary[Tanker, Any]" = weakref.WeakKeyDictionary()
+
+
 class Tanker:
     """
     tankersdk.Tanker(app_id: str, *, writable_path: str)
@@ -346,13 +350,15 @@ class Tanker:
         self.c_tanker = ffi.cast("tanker_t*", c_voidp)
 
     def _set_event_callbacks(self) -> None:
-        userdata = ffi.new_handle(self)
-        self._userdata = userdata  # Must keep this alive
+        # userdata must live as long as self, and userdata must not hold a
+        # reference on self
+        userdata = ffi.new_handle(weakref.ref(self))
+        _GLOBAL_TANKERS[self] = userdata
         c_future_connect = tankerlib.tanker_event_connect(
             self.c_tanker,
             tankerlib.TANKER_EVENT_DEVICE_REVOKED,
             tankerlib.revoke_callback,
-            self._userdata,
+            userdata,
         )
         ffihelpers.wait_fut_or_raise(c_future_connect)
 
