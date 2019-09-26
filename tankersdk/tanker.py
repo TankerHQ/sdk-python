@@ -153,7 +153,7 @@ class CVerification:
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
-        c_verification = ffi.new("tanker_verification_t *", {"version": 1})
+        c_verification = ffi.new("tanker_verification_t *", {"version": 2})
         if verification_key is not None:
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
