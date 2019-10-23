@@ -32,7 +32,6 @@ tanker_future_t* tanker_promise_get_future(tanker_promise_t* promise);
  */
 void tanker_promise_set_value(tanker_promise_t* promise, void* value);
 
-
 /*!
  * Get the content of the future.
  * \return The void pointer representing the value. Refer to the documentation
@@ -133,8 +132,9 @@ enum tanker_verification_method_type
   TANKER_VERIFICATION_METHOD_EMAIL = 0x1,
   TANKER_VERIFICATION_METHOD_PASSPHRASE,
   TANKER_VERIFICATION_METHOD_VERIFICATION_KEY,
+  TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN,
 
-  TANKER_VERIFICATION_METHOD_LAST = TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
+  TANKER_VERIFICATION_METHOD_LAST = TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN
 };
 
 enum tanker_log_level
@@ -214,11 +214,11 @@ typedef void (*tanker_event_callback_t)(void* arg, void* data);
 struct tanker_options
 {
   uint8_t version;
-  char const* app_id; /*!< Must not be NULL. */
-  char const* url;   /*!< Must not be NULL. */
-  char const* writable_path;    /*!< Must not be NULL. */
-  char const* sdk_type;         /*!< Must not be NULL. */
-  char const* sdk_version;      /*!< Must not be NULL. */
+  char const* app_id;        /*!< Must not be NULL. */
+  char const* url;           /*!< Must not be NULL. */
+  char const* writable_path; /*!< Must not be NULL. */
+  char const* sdk_type;      /*!< Must not be NULL. */
+  char const* sdk_version;   /*!< Must not be NULL. */
 };
 
 struct tanker_email_verification
@@ -237,6 +237,7 @@ struct tanker_verification
   char const* verification_key;
   tanker_email_verification_t email_verification;
   char const* passphrase;
+  char const* oidc_id_token;
 };
 
 struct tanker_verification_method
@@ -584,8 +585,7 @@ tanker_future_t* tanker_verify_provisional_identity(
  * \throws TANKER_INVALID_ARGUMENT The device_id in parameter correspond to
  * another user's device.
  */
-tanker_future_t* tanker_revoke_device(tanker_t* session,
-                                      char const* device_id);
+tanker_future_t* tanker_revoke_device(tanker_t* session, char const* device_id);
 
 void tanker_free_buffer(void const* buffer);
 
@@ -603,8 +603,9 @@ void tanker_free_attach_result(tanker_attach_result_t* result);
  *
  * \param session A tanker tanker_t* instance.
  * \pre tanker_status == TANKER_STATUS_READY
- * \param public_identities_to_add Array of the group members' public identities.
- * \param nb_public_identities_to_add The number of members in public_identities_to_add.
+ * \param public_identities_to_add Array of the group members' public
+ * identities. \param nb_public_identities_to_add The number of members in
+ * public_identities_to_add.
  *
  * \return A future of the group ID as a string.
  * \throws TANKER_ERROR_USER_NOT_FOUND One of the members was not found, no
@@ -624,8 +625,9 @@ tanker_future_t* tanker_create_group(
  * \param session A tanker tanker_t* instance.
  * \pre tanker_status == TANKER_STATUS_READY
  * \param group_id The group ID returned by tanker_create_group
- * \param public_identities_to_add Array of the new group members' public identities.
- * \param nb_public_identities_to_add The number of users in public_identities_to_add.
+ * \param public_identities_to_add Array of the new group members' public
+ * identities. \param nb_public_identities_to_add The number of users in
+ * public_identities_to_add.
  *
  * \return An empty future.
  * \throws TANKER_ERROR_USER_NOT_FOUND One of the users was not found, no
@@ -650,19 +652,20 @@ typedef void (*tanker_stream_input_source_t)(
     tanker_stream_read_operation_t* operation,
     void* additional_data);
 
-tanker_future_t* tanker_stream_encrypt(
-    tanker_t* tanker,
-    tanker_stream_input_source_t cb,
-    void* additional_data,
-    tanker_encrypt_options_t const* options);
+tanker_future_t* tanker_stream_encrypt(tanker_t* tanker,
+                                       tanker_stream_input_source_t cb,
+                                       void* additional_data,
+                                       tanker_encrypt_options_t const* options);
 
-tanker_future_t* tanker_stream_decrypt(
-    tanker_t* tanker, tanker_stream_input_source_t cb, void* additional_data);
+tanker_future_t* tanker_stream_decrypt(tanker_t* tanker,
+                                       tanker_stream_input_source_t cb,
+                                       void* additional_data);
 
-void tanker_stream_read_operation_finish(
-    tanker_stream_read_operation_t* op, int64_t nb_read);
+void tanker_stream_read_operation_finish(tanker_stream_read_operation_t* op,
+                                         int64_t nb_read);
 
-tanker_future_t *tanker_stream_read(tanker_stream_t *stream, uint8_t *buffer,
+tanker_future_t* tanker_stream_read(tanker_stream_t* stream,
+                                    uint8_t* buffer,
                                     int64_t buffer_size);
 
 tanker_expected_t* tanker_stream_get_resource_id(tanker_stream_t* stream);
@@ -671,7 +674,8 @@ tanker_future_t* tanker_stream_close(tanker_stream_t* stream);
 // cffi specific
 extern "Python" void log_handler(tanker_log_record_t*);
 extern "Python" void revoke_callback(void* arg, void* data);
-extern "Python" void
-stream_input_source_callback(uint8_t *buffer, int64_t buffer_size,
-                             tanker_stream_read_operation_t *operation,
-                             void *additional_data);
+extern "Python" void stream_input_source_callback(
+    uint8_t* buffer,
+    int64_t buffer_size,
+    tanker_stream_read_operation_t* operation,
+    void* additional_data);
