@@ -132,8 +132,9 @@ enum tanker_verification_method_type
   TANKER_VERIFICATION_METHOD_EMAIL = 0x1,
   TANKER_VERIFICATION_METHOD_PASSPHRASE,
   TANKER_VERIFICATION_METHOD_VERIFICATION_KEY,
+  TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN,
 
-  TANKER_VERIFICATION_METHOD_LAST = TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
+  TANKER_VERIFICATION_METHOD_LAST = TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN
 };
 
 enum tanker_log_level
@@ -236,6 +237,7 @@ struct tanker_verification
   char const* verification_key;
   tanker_email_verification_t email_verification;
   char const* passphrase;
+  char const* oidc_id_token;
 };
 
 struct tanker_verification_method
