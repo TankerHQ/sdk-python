@@ -313,7 +313,7 @@ class Tanker:
     """
     tankersdk.Tanker(app_id: str, *, writable_path: str)
 
-    :param app_id: The Trustchain ID
+    :param app_id: The App ID
     :param writeable_path: A writeable path to store user data
 
     """
