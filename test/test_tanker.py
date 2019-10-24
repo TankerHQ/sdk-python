@@ -7,7 +7,8 @@ import json
 
 from path import Path
 from faker import Faker
-from typing import cast, Dict, Iterator, Tuple
+import requests
+from typing import cast, Any, Dict, Iterator, Tuple
 
 import tankersdk
 from tankersdk import Admin, Tanker, Error as TankerError, ErrorCode
@@ -29,12 +30,17 @@ def assert_env(name: str) -> str:
     return value
 
 
-def read_test_config() -> Dict[str, str]:
+def read_test_config() -> Dict[str, Any]:
     config_path = assert_env("TANKER_CONFIG_FILEPATH")
+    test_config = json.loads(Path(config_path).text())
+
     config_name = assert_env("TANKER_CONFIG_NAME")
-    config = json.loads(Path(config_path).text())
-    assert config_name in config, f"unknown TANKER_CONFIG_NAME: {config_name}"
-    return cast(Dict[str, str], config[config_name])
+    assert config_name in test_config, f"unknown TANKER_CONFIG_NAME: {config_name}"
+
+    res = {}
+    res["server"] = test_config[config_name]
+    res["oidc"] = test_config["oidc"]
+    return res
 
 
 TEST_CONFIG = read_test_config()
@@ -43,7 +49,7 @@ TEST_CONFIG = read_test_config()
 def create_tanker(trustchain_id: str, *, writable_path: str) -> Tanker:
     return Tanker(
         trustchain_id,
-        url=TEST_CONFIG["url"],
+        url=cast(str, TEST_CONFIG["server"]["url"]),
         sdk_type="sdk-python-test",
         writable_path=writable_path,
     )
@@ -56,7 +62,9 @@ def tmp_path(tmpdir: str) -> Path:
 
 @pytest.fixture(scope="session")
 def admin() -> Iterator[Admin]:
-    yield Admin(url=TEST_CONFIG["url"], token=TEST_CONFIG["idToken"])
+    yield Admin(
+        url=TEST_CONFIG["server"]["url"], token=TEST_CONFIG["server"]["idToken"]
+    )
 
 
 class TestVerificationSanityChecks:
@@ -94,7 +102,9 @@ def test_native_version() -> None:
 
 def test_create_trustchain() -> None:
     name = "python_bindings"
-    admin = Admin(url=TEST_CONFIG["url"], token=TEST_CONFIG["idToken"])
+    admin = Admin(
+        url=TEST_CONFIG["server"]["url"], token=TEST_CONFIG["server"]["idToken"]
+    )
     trustchain = admin.create_app(name)
     assert trustchain.name == name
     admin.delete_app(trustchain.id)
@@ -102,7 +112,7 @@ def test_create_trustchain() -> None:
 
 def test_init_tanker_ok(tmp_path: Path, trustchain: App) -> None:
     tanker = create_tanker(trustchain_id=trustchain.id, writable_path=tmp_path)
-    assert tanker.url == TEST_CONFIG["url"]
+    assert tanker.url == TEST_CONFIG["server"]["url"]
 
 
 def test_init_tanker_invalid_id(tmp_path: Path) -> None:
