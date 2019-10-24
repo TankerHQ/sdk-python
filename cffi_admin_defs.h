@@ -138,6 +138,17 @@ tanker_future_t* tanker_admin_destroy(tanker_admin_t* admin);
 tanker_future_t* tanker_admin_get_verification_code(
     tanker_admin_t* admin, char const* app_id, char const* user_email);
 
+
+/*!
+ * Updates app properties
+ */
+tanker_future_t* tanker_admin_app_update(
+    tanker_admin_t* admin,
+    char const* app_id,
+    char const* oidc_client_id,
+    char const* oidc_client_provider);
+
+
 // ctanker/error.h
 
 enum tanker_error_code
