@@ -1,9 +1,10 @@
+from typing import Optional
 import attr
 
 from _tanker_admin import lib
 from _tanker_admin import ffi
 
-from .ffi_helpers import FFIHelpers
+from .ffi_helpers import FFIHelpers, CData
 
 
 ffihelpers = FFIHelpers(ffi, lib)
@@ -15,6 +16,20 @@ class App:
     id = attr.ib()  # type: str
     private_key = attr.ib()  # type: str
     public_key = attr.ib()  # type: str
+
+
+@attr.s
+class OIDCConfig:
+    client_id = attr.ib()  # type: str
+    client_provider = attr.ib()  # type: str
+
+    @property
+    def c_client_id(self) -> CData:
+        return ffihelpers.str_to_c_string(self.client_id)
+
+    @property
+    def c_client_provider(self) -> CData:
+        return ffihelpers.str_to_c_string(self.client_provider)
 
 
 class Admin:
@@ -66,6 +81,18 @@ class Admin:
         c_str = ffi.cast("char*", c_voidp)
         lib.tanker_future_destroy(get_verif_fut)
         return ffihelpers.c_string_to_str(c_str)
+
+    def update_app(
+        self, app_id: str, *, oidc_config: Optional[OIDCConfig] = None
+    ) -> None:
+        c_app_id = ffihelpers.str_to_c_string(app_id)
+        if oidc_config:
+            c_client_id = oidc_config.c_client_id
+            c_client_provider = oidc_config.c_client_provider
+            update_fut = lib.tanker_admin_app_update(
+                self._c_admin, c_app_id, c_client_id, c_client_provider
+            )
+            ffihelpers.wait_fut_or_raise(update_fut)
 
     def __del__(self) -> None:
         lib.tanker_admin_destroy(self._c_admin)
