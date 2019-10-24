@@ -39,7 +39,7 @@ def init_checks():
     append_check(
         "mypy",
         "mypy", "--strict", "--ignore-missing-imports",
-        "tankersdk", "test", "demo.py",
+        "tankersdk", "test",
         env=env
     )
     append_check(

@@ -28,7 +28,7 @@ Here's a typical usage:
 
 
    async def main():
-         tanker = Tanker(trustchain_id, writable_path=...)
+         tanker = Tanker(app_id, writable_path=...)
          await tanker.open(user_id, user_token)
          alice_id = ...
          encrypted = await tanker.encrypt(b'I love you')
