@@ -16,22 +16,14 @@ LOCAL_TANKER = "tanker/dev@tanker/dev"
 
 
 class Builder:
-    def __init__(self, src_path: Path, tanker_conan_ref: str, profile: str):
+    def __init__(self, src_path: Path, profile: str):
         self.profile = profile
         self.src_path = src_path
-        self.tanker_conan_ref = tanker_conan_ref
 
     def _run_setup_py(self, *args: str) -> None:
         ci.dmenv.run("python", "setup.py", *args, cwd=self.src_path)
 
     def build(self) -> None:
-        # fmt: off
-        self._run_setup_py(
-            "native",
-            "--tanker-conan-ref", self.tanker_conan_ref,
-            "--profile", self.profile,
-        )
-        # fmt: on
         self._run_setup_py("clean", "build", "develop")
 
     def test(self) -> None:
@@ -95,7 +87,19 @@ def build(use_tanker: str, profile: str):
     else:
         sys.exit()
 
-    builder = Builder(src_path, tanker_conan_ref, profile)
+    conan_out_path = src_path / "conan" / "out"
+    # fmt: off
+    ci.conan.run(
+        "install", tanker_conan_ref,
+        "--update",
+        "--profile", profile,
+        "--build", "missing",
+        "--install-folder", conan_out_path,
+        "--generator=json",
+    )
+    # fmt: on
+
+    builder = Builder(src_path, profile)
     builder.build()
     return builder
 
@@ -125,7 +129,7 @@ def main() -> None:
     build_and_check_parser.add_argument(
         "--use-tanker", choices=["deployed", "local", "same-as-branch"], default="local"
     )
-    build_and_check_parser.add_argument("--profile", required=True)
+    build_and_check_parser.add_argument("--profile", default="default")
 
     deploy_parser = subparsers.add_parser("deploy")
     deploy_parser.add_argument("--profile", required=True)
