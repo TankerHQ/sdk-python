@@ -14,7 +14,7 @@ import tankersdk
 from tankersdk import Admin, Tanker, Error as TankerError, ErrorCode
 from tankersdk import Status as TankerStatus
 from tankersdk.tanker import CVerification, VerificationMethodType
-from tankersdk.admin import App
+from tankersdk.admin import App, OIDCConfig
 import tankersdk_identity
 
 import pytest
@@ -857,3 +857,61 @@ async def test_get_verification_methods(
     assert len(email_methods) == 1
     (email_method,) = email_methods
     assert email_method.email == email
+
+
+@pytest.mark.asyncio
+async def test_oidc_verification(tmp_path: Path, trustchain: App, admin: Admin) -> None:
+    oidc_test_config = TEST_CONFIG["oidc"]["googleAuth"]
+
+    oidc_client_id = oidc_test_config["clientId"]
+    oidc_client_secret = oidc_test_config["clientSecret"]
+    oidc_client_provider = oidc_test_config["provider"]
+    oidc_app_config = OIDCConfig(
+        client_id=oidc_client_id, client_provider=oidc_client_provider
+    )
+    admin.update_app(trustchain.id, oidc_config=oidc_app_config)
+
+    test_users = oidc_test_config["users"]
+    user = "martine"
+    assert user in test_users
+    email = test_users[user]["email"]
+    refresh_token = test_users[user]["refreshToken"]
+
+    phone_path = tmp_path / "phone"
+    phone_path.mkdir()
+    martine_phone = create_tanker(trustchain.id, writable_path=phone_path)
+    identity = tankersdk_identity.create_identity(
+        trustchain.id, trustchain.private_key, email
+    )
+
+    response = requests.post(
+        "https://www.googleapis.com/oauth2/v4/token",
+        headers={"content-type": "application/json"},
+        json={
+            "client_id": oidc_client_id,
+            "client_secret": oidc_client_secret,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        },
+    )
+    response.raise_for_status()
+    oidc_id_token = response.json()["id_token"]
+
+    await martine_phone.start(identity)
+    await martine_phone.register_identity(oidc_id_token=oidc_id_token)
+    await martine_phone.stop()
+
+    laptop_path = tmp_path / "laptop"
+    laptop_path.mkdir()
+    martine_laptop = create_tanker(trustchain.id, writable_path=laptop_path)
+    await martine_laptop.start(identity)
+
+    assert martine_laptop.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    await martine_laptop.verify_identity(oidc_id_token=oidc_id_token)
+    assert martine_laptop.status == TankerStatus.READY
+
+    actual_methods = await martine_laptop.get_verification_methods()
+    actual_method, = actual_methods
+    assert actual_method.method_type == VerificationMethodType.OIDC_ID_TOKEN
+
+    await martine_laptop.stop()

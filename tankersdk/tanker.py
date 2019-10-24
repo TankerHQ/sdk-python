@@ -58,7 +58,8 @@ class VerificationMethodType(Enum):
 
     EMAIL = 1
     PASSPHRASE = 2
-    VERIFICATION_KEY = 2
+    VERIFICATION_KEY = 3
+    OIDC_ID_TOKEN = 4
 
 
 class VerificationMethod:
@@ -144,13 +145,18 @@ class CVerification:
         verification_key: Optional[str] = None,
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
+        oidc_id_token: Optional[str] = None,
     ):
 
         options_set = [
-            x for x in (passphrase, verification_key, email) if x is not None
+            x
+            for x in (passphrase, verification_key, email, oidc_id_token)
+            if x is not None
         ]
         if len(options_set) != 1:
-            raise ValueError("Chose one among passphrase, verification_key and email")
+            raise ValueError(
+                "Chose one among passphrase, verification_key, email or oidc_id_token"
+            )
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
@@ -161,12 +167,14 @@ class CVerification:
             )
             self._verification_key = ffihelpers.str_to_c_string(verification_key)
             c_verification.verification_key = self._verification_key
+
         elif passphrase is not None:
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_PASSPHRASE
             )
             self._passphrase = ffihelpers.str_to_c_string(passphrase)
             c_verification.passphrase = self._passphrase
+
         elif email is not None:
             if verification_code is None:
                 raise ValueError(
@@ -181,6 +189,14 @@ class CVerification:
                 "verification_code": ffihelpers.str_to_c_string(verification_code),
             }
             c_verification.email_verification = self._email_verification
+
+        elif oidc_id_token is not None:
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN
+            )
+            self._oidc_id_token = ffihelpers.str_to_c_string(oidc_id_token)
+            c_verification.oidc_id_token = self._oidc_id_token
+
         self._c_verification = c_verification
 
     def get(self) -> CData:
@@ -551,6 +567,7 @@ class Tanker:
         passphrase: Optional[str] = None,
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
+        oidc_id_token: Optional[str] = None,
     ) -> None:
         """Register users' identity"""
         c_verification = CVerification(
@@ -558,6 +575,7 @@ class Tanker:
             passphrase=passphrase,
             email=email,
             verification_code=verification_code,
+            oidc_id_token=oidc_id_token,
         )
 
         c_future = tankerlib.tanker_register_identity(
@@ -572,6 +590,7 @@ class Tanker:
         passphrase: Optional[str] = None,
         email: Optional[str] = None,
         verification_code: Optional[str] = None,
+        oidc_id_token: Optional[str] = None,
     ) -> None:
         """Verify users' identity"""
         c_verification = CVerification(
@@ -579,6 +598,7 @@ class Tanker:
             passphrase=passphrase,
             email=email,
             verification_code=verification_code,
+            oidc_id_token=oidc_id_token,
         )
         c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification.get())
         await ffihelpers.handle_tanker_future(c_future)
