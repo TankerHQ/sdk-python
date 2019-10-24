@@ -31,13 +31,10 @@ def on_import() -> None:
     conan_out = this_path / "conan" / "out"
     build_info = conan_out / "conanbuildinfo.json"
     if not build_info.exists():
-        ui.warning("%s does not exist" % build_info)
-        ui.warning("building dummy Python extension")
-        tanker_ext.set_source("_tanker", "")
-        tanker_ext.cdef("")
-        admin_ext.set_source("_tanker_admin", "")
-        admin_ext.cdef("")
-        return
+        ui.fatal(
+            build_info,
+            "does not exist - cannot configure compilation with taker/native",
+        )
 
     conaninfo = json.loads(build_info.text())
     libs = list()
