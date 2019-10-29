@@ -5,6 +5,7 @@ import sys
 import ci
 import ci.tanker_configs
 import cli_ui as ui
+from path import Path
 
 
 class Check:
@@ -31,10 +32,12 @@ def init_checks():
     env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
     env["MYPYPATH"] = "stubs"
 
+    py_files = Path.getcwd().files("*.py")
+
     # fmt: off
     append_check(
         "black",
-        "black", "--check", "tankersdk"
+        "black", "--check", "tankersdk", *py_files,
     )
     append_check(
         "mypy",
