@@ -11,7 +11,7 @@ import ci.git
 import ci.dmenv
 import ci.tanker_configs
 
-DEPLOYED_TANKER = "tanker/2.1.0@tanker/stable"
+DEPLOYED_TANKER = "tanker/2.2.0@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
 
 
@@ -63,10 +63,6 @@ class Builder:
         if len(wheels) != 1:
             raise Exception("multiple wheels found: {}".format(wheels))
         wheel_path = wheels[0]
-        if sys.platform == "win32":
-            wheel_path = wheel_path.lower()
-            wheel_path = wheel_path.replace(os.path.sep, "/")
-            wheel_path = wheel_path.replace("c:/", "/c/")
         ci.run("scp", wheel_path, "pypi@tanker.local:packages")
 
 
