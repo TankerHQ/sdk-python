@@ -705,10 +705,18 @@ class Tanker:
         return result
 
     async def verify_provisional_identity(
-        self, *, email: str, verification_code: str
+        self,
+        *,
+        email: Optional[str] = None,
+        verification_code: Optional[str] = None,
+        oidc_id_token: Optional[str] = None,
     ) -> None:
         """Verify a provisional identity"""
-        verification = CVerification(email=email, verification_code=verification_code)
+        verification = CVerification(
+            email=email,
+            verification_code=verification_code,
+            oidc_id_token=oidc_id_token,
+        )
         c_future = tankerlib.tanker_verify_provisional_identity(
             self.c_tanker, verification.get()
         )

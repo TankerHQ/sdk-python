@@ -1,9 +1,10 @@
 import asyncio
 import base64
 from collections import namedtuple
-import os
 import io
 import json
+import os
+import uuid
 
 from path import Path
 from faker import Faker
@@ -831,8 +832,7 @@ async def test_get_verification_methods(tmp_path: Path, app: App, admin: Admin) 
     assert email_method.email == email
 
 
-@pytest.mark.asyncio
-async def test_oidc_verification(tmp_path: Path, app: App, admin: Admin) -> None:
+def set_up_oidc(app: App, admin: Admin, user: str) -> Tuple[str, str]:
     oidc_test_config = TEST_CONFIG["oidc"]["googleAuth"]
 
     oidc_client_id = oidc_test_config["clientId"]
@@ -844,16 +844,9 @@ async def test_oidc_verification(tmp_path: Path, app: App, admin: Admin) -> None
     admin.update_app(app.id, oidc_config=oidc_app_config)
 
     test_users = oidc_test_config["users"]
-    user = "martine"
     assert user in test_users
     email = test_users[user]["email"]
     refresh_token = test_users[user]["refreshToken"]
-
-    phone_path = tmp_path / "phone"
-    phone_path.mkdir()
-    martine_phone = create_tanker(app.id, writable_path=phone_path)
-    identity = tankersdk_identity.create_identity(app.id, app.private_key, email)
-
     response = requests.post(
         "https://www.googleapis.com/oauth2/v4/token",
         headers={"content-type": "application/json"},
@@ -866,6 +859,18 @@ async def test_oidc_verification(tmp_path: Path, app: App, admin: Admin) -> None
     )
     response.raise_for_status()
     oidc_id_token = response.json()["id_token"]
+    return email, oidc_id_token
+
+
+@pytest.mark.asyncio
+async def test_oidc_verification(tmp_path: Path, app: App, admin: Admin) -> None:
+    _, oidc_id_token = set_up_oidc(app, admin, "martine")
+
+    phone_path = tmp_path / "phone"
+    phone_path.mkdir()
+    martine_phone = create_tanker(app.id, writable_path=phone_path)
+    user_id = str(uuid.uuid4())
+    identity = tankersdk_identity.create_identity(app.id, app.private_key, user_id)
 
     await martine_phone.start(identity)
     await martine_phone.register_identity(oidc_id_token=oidc_id_token)
@@ -885,3 +890,34 @@ async def test_oidc_verification(tmp_path: Path, app: App, admin: Admin) -> None
     assert actual_method.method_type == VerificationMethodType.OIDC_ID_TOKEN
 
     await martine_laptop.stop()
+
+
+@pytest.mark.asyncio
+async def test_oidc_preshare(tmp_path: Path, app: App, admin: Admin) -> None:
+    email, oidc_id_token = set_up_oidc(app, admin, "martine")
+    alice = await create_user_session(tmp_path, app)
+
+    provisional_identity = tankersdk_identity.create_provisional_identity(app.id, email)
+    public_provisional_identity = tankersdk_identity.get_public_identity(
+        provisional_identity
+    )
+
+    message = b"hello OIDC user"
+    encrypted = await alice.session.encrypt(
+        message, share_with_users=[public_provisional_identity]
+    )
+
+    martine_phone = create_tanker(app.id, writable_path=tmp_path)
+    user_id = str(uuid.uuid4())
+    identity = tankersdk_identity.create_identity(app.id, app.private_key, user_id)
+
+    status = await martine_phone.start(identity)
+    assert status == TankerStatus.IDENTITY_REGISTRATION_NEEDED
+    await martine_phone.register_identity(oidc_id_token=oidc_id_token)
+    res = await martine_phone.attach_provisional_identity(provisional_identity)
+    assert res.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    await martine_phone.verify_provisional_identity(oidc_id_token=oidc_id_token)
+    clear_data = await alice.session.decrypt(encrypted)
+    assert clear_data == message
+    await martine_phone.stop()
+    await alice.session.stop()
