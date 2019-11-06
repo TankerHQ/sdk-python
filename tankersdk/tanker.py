@@ -341,6 +341,25 @@ class Tanker:
 
     def __del__(self) -> None:
         if self.c_tanker:
+            # We can't tanker_future_wait() this future here because this object
+            # can be deleted at any time: when its refcount reaches zero, or
+            # when the GC is invoked. Since these events can occur while a lock
+            # (a simple python lock, not the GIL or any internal incantation) is
+            # held, it can lead to a dead lock. Here's a scenario:
+            # - some python code takes a lock (in Future, or ThreadPoolExecutor,
+            # or anything)
+            # - there's no more memory and the GC is called while the lock is
+            # held
+            # - this function is called and we wait for the async destruction on
+            # tconcurrent's thread
+            # - tconcurrent's thread is currently executing python code and
+            # waiting for the previous python lock
+            # - DEADLOCK
+            # One solution to this can be to never run python code on
+            # tconcurrent's thread but asynchronously on another thread. Doing
+            # this would force us to drop the guarantee that when
+            # tanker_destroy() returns, no more event callback will be running
+            # or will run in the future for that instance.
             tankerlib.tanker_destroy(self.c_tanker)
 
     def _create_tanker_obj(self) -> None:
