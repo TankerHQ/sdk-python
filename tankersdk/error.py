@@ -18,6 +18,7 @@ class ErrorCode(Enum):
     EXPIRED_VERIFICATION = 10
 
     IO_ERROR = 11
+    DEVICE_REVOKED = 12
 
 
 class Error(Exception):
