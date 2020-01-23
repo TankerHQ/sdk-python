@@ -396,6 +396,9 @@ async def test_revoke_device(tmp_path: Path, app: App) -> None:
 
     laptop.on_revoked = on_revoked
     await phone.revoke_device(laptop_id)
+    with pytest.raises(TankerError) as error:
+        await laptop.encrypt(b'will fail')
+    assert error.value.code == ErrorCode.DEVICE_REVOKED
     # Check callback is called
     await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
     assert laptop.status == TankerStatus.STOPPED
