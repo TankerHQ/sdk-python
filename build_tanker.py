@@ -1,4 +1,5 @@
 from typing import Iterator, List
+import os
 import json
 import sys
 
@@ -27,9 +28,13 @@ def find_libs(names: List[str], paths: List[str]) -> Iterator[Path]:
 
 
 def on_import() -> None:
-    this_path = Path(__file__).parent.abspath()
-    conan_out = this_path / "conan" / "out"
-    build_info = conan_out / "conanbuildinfo.json"
+    path_from_env = os.environ.get("TANKER_PYTHON_SDK_SRC")
+    if path_from_env:
+        this_path = Path(path_from_env)
+    else:
+        this_path = Path(__file__).parent.abspath()
+    conan_out_path = this_path / "conan" / "out"
+    build_info = conan_out_path / "conanbuildinfo.json"
     if not build_info.exists():
         ui.fatal(
             build_info,
@@ -50,8 +55,8 @@ def on_import() -> None:
     tanker_package = tanker_packages[0]
     includes = tanker_package["include_paths"]
 
-    tanker_cffi_source = Path("cffi_src.c").text()
-    admin_cffi_source = Path("cffi_admin_src.c").text()
+    tanker_cffi_source = (this_path / "cffi_src.c").text()
+    admin_cffi_source = (this_path / "cffi_admin_src.c").text()
 
     if sys.platform == "win32":
         system_libs = ["crypt32"]
@@ -97,13 +102,15 @@ def on_import() -> None:
         extra_link_args=exported_admin_symbols_flags,
     )
 
-    tanker_cffi_defs = Path("cffi_defs.h").text()
+    tanker_cffi_defs = (this_path / "cffi_defs.h").text()
     tanker_ext.cdef(tanker_cffi_defs)
-    admin_cffi_defs = Path("cffi_admin_defs.h").text()
+    admin_cffi_defs = (this_path / "cffi_admin_defs.h").text()
     admin_ext.cdef(admin_cffi_defs)
 
 
 on_import()
+
+
 if __name__ == "__main__":
     tanker_ext.compile(verbose=True)
     admin_ext.compile(verbose=True)
