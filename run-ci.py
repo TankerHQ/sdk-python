@@ -8,7 +8,6 @@ import ci
 import ci.bump
 import ci.conan
 import ci.git
-import ci.dmenv
 import ci.tanker_configs
 
 DEPLOYED_TANKER = "tanker/2.2.2@tanker/stable"
@@ -20,29 +19,31 @@ class Builder:
         self.profile = profile
         self.src_path = src_path
 
-    def _run_setup_py(self, *args: str) -> None:
-        ci.dmenv.run("python", "setup.py", *args, cwd=self.src_path)
-
     def build(self) -> None:
-        self._run_setup_py("clean", "build", "develop")
+        # Note: this re-installs the root package, which was skipped
+        # when using poetry install --no-root in the .gitlab-ci.yml
+        # This is because we need to run some conan commands before the
+        # code in build.py can be run
+        ci.run("poetry", "install", cwd=self.src_path)
 
     def test(self) -> None:
-        ci.dmenv.run("python", "lint.py", cwd=self.src_path)
+        ci.run("poetry", "run", "python", "lint.py", cwd=self.src_path)
 
         env = os.environ.copy()
         env["TANKER_CONFIG_NAME"] = "dev"
         env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
         env["TANKER_SDK_DEBUG"] = "1"
-        ci.dmenv.run(
-            "pytest",
+        # fmt: off
+        ci.run(
+            "poetry", "run", "pytest",
             "--verbose",
             "--capture=no",
             "--cov=tankersdk",
-            "--cov-report",
-            "html",
+            "--cov-report", "html",
             env=env,
             cwd=self.src_path,
         )
+        # fmt: on
         coverage_dir = self.src_path / "htmlcov"
         dest_dir = Path.getcwd() / "coverage"
         dest_dir.rmtree_p()
@@ -58,12 +59,21 @@ class Builder:
         dist_path = self.src_path / "dist"
         dist_path.rmtree_p()
 
-        ci.dmenv.run("python", "setup.py", "bdist_wheel", cwd=self.src_path)
+        env = os.environ.copy()
+        env["TANKER_PYTHON_SDK_SRC"] = self.src_path
+        # Note: poetry generates a temporary directory,
+        # goes there, then cretaes a `setup.py` from scratch
+        # and run it.
+        # In the process, all the conan stuff generated in the
+        # sources get lost. So we set this environ variable
+        # so that they can be found, and we make sure *all*
+        # paths used in build_tanker.py are absolute
+        ci.run("poetry", "build", env=env)
         wheels = dist_path.files("tankersdk-*.whl")
         if len(wheels) != 1:
             raise Exception("multiple wheels found: {}".format(wheels))
         wheel_path = wheels[0]
-        ci.run("scp", wheel_path, "pypi@tanker.local:packages")
+        ci.run("scp", wheel_path, "conan@tanker.local:locks")
 
 
 def build(use_tanker: str, profile: str):

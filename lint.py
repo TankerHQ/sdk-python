@@ -11,7 +11,7 @@ from path import Path
 class Check:
     def __init__(self, name, cmd, env=None):
         self.name = name
-        self.cmd = ["dmenv", "run", "--", *cmd]
+        self.cmd = ["poetry", "run", *cmd]
         self.ok = False
         self.env = env
 
