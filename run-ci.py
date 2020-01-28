@@ -65,7 +65,7 @@ class Builder:
         # goes there, then creates a `setup.py` from scratch
         # and runs it.
         # In the process, all the conan stuff generated in the
-        # sources gets lost. We set this environ variable
+        # sources gets lost. we set this environ variable
         # so that they can be found, and we make sure *all*
         # paths used in build_tanker.py are absolute
         ci.run("poetry", "build", env=env)
@@ -73,7 +73,7 @@ class Builder:
         if len(wheels) != 1:
             raise Exception("multiple wheels found: {}".format(wheels))
         wheel_path = wheels[0]
-        ci.run("scp", wheel_path, "conan@tanker.local:locks")
+        ci.run("scp", wheel_path, "pypi@tanker.local:packages")
 
 
 def build(use_tanker: str, profile: str):
