@@ -10,7 +10,7 @@ deploy/linux:
     - export PATH=$HOME/.local/bin:$PATH
     - python3 -m pip install poetry --user
     - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home deploy --use-tanker=same-as-branch --profile gcc8-release
+    - poetry run python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
   artifacts:
     paths:
       - coverage

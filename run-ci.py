@@ -62,10 +62,10 @@ class Builder:
         env = os.environ.copy()
         env["TANKER_PYTHON_SDK_SRC"] = self.src_path
         # Note: poetry generates a temporary directory,
-        # goes there, then cretaes a `setup.py` from scratch
-        # and run it.
+        # goes there, then creates a `setup.py` from scratch
+        # and runs it.
         # In the process, all the conan stuff generated in the
-        # sources get lost. So we set this environ variable
+        # sources gets lost. We set this environ variable
         # so that they can be found, and we make sure *all*
         # paths used in build_tanker.py are absolute
         ci.run("poetry", "build", env=env)
