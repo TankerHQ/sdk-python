@@ -1,20 +1,5 @@
 stages:
-  - check
   - deploy
-
-check/linux:
-  stage: check
-  tags: [linux]
-  script:
-    # Put that in the base dockerfile maybe?
-    - export PATH=$HOME/.local/bin:$PATH
-    - python3 -m pip install poetry --user
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile gcc8-release
-  artifacts:
-    paths:
-      - coverage
-    expire_in: 7 days
 
 deploy/linux:
   stage: deploy
