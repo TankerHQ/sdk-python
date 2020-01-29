@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "tankersdk"
+version = "0.0.0"
+description = "Python client fo Tanker"
+authors = ["Tanker team <tech@tanker.io>"]
+build = "build.py"
+
+include = [
+  "build_tanker.py",
+  "build.py",
+  "cffi_admin_defs.h",
+  "cffi_admin_src.c",
+  "cffi_defs.h",
+  "cffi_src.c",
+]
+
+
+
+[tool.poetry.dependencies]
+python = "^3.6"
+cffi = "^1.13.2"
+attrs = "^19.3.0"
+typing_extensions = "^3.7.4"
+
+[tool.poetry.dev-dependencies]
+ci = { git = "git+ssh://git@tanker.local/Tanker/ci", branch = "master" }
+
+# linters
+black = "^19.3b0"
+flake8 = "^3.7.9"
+flake8-docstrings = "^1.5.0"
+mypy = "0.701"
+
+# tests
+faker = "^4.0.0"
+requests = "^2.22.0"
+pytest = "^5.3.4"
+pytest-cov = "^2.8.1"
+pytest-asyncio = "^0.10.0"
+path = "^13.1.0"
+tankersdk_identity = "^1.3.0"
+
+# doc
+sphinx = "^2.3.1"
+ghp-import = "^0.5.5"
+sphinxcontrib-trio = "^1.1.0"
+
+[build-system]
+requires = ["poetry>=0.12", "setuptools", "wheel", "cffi >= 1.12", "path"]
+build-backend = "poetry.masonry.api"

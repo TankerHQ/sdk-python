@@ -1,9 +1,7 @@
 [version]
-current = "dev"
+current = "0.0.0"
 
 regex = '''
-  (dev)
-  |
   (
   (?P<major>\d+)
   \.
@@ -27,8 +25,8 @@ message_template = "Bump to {new_version}"
 tag_template = "v{new_version}"
 
 [[file]]
-src = "setup.py"
-search = 'version="{current_version}"'
+src = "pyproject.toml"
+search = 'version = "{current_version}"'
 
 [[file]]
 src = "tankersdk/version.py"
