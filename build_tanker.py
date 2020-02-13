@@ -38,7 +38,7 @@ def on_import() -> None:
     if not build_info.exists():
         ui.fatal(
             build_info,
-            "does not exist - cannot configure compilation with taker/native",
+            "does not exist - cannot configure compilation with tanker/native",
         )
 
     conaninfo = json.loads(build_info.text())
