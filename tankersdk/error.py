@@ -20,6 +20,8 @@ class ErrorCode(Enum):
     IO_ERROR = 11
     DEVICE_REVOKED = 12
 
+    CONFLICT = 13
+
 
 class Error(Exception):
     def __init__(self, message: str, code: ErrorCode):
