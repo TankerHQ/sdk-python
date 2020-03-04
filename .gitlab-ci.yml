@@ -20,10 +20,11 @@ check/macos:
   extends: .check
   tags: [macos]
   script:
-    - poetry env remove $(which python3)
+    - poetry env remove $(which python3) || true
         # poetry runs pip install -e . _without_ the --no-deps and it causes
         # the _next_ build to fail. So always remove the virtualenv before proceeding
         # https://github.com/python-poetry/poetry/issues/2126
+        # we need `|| true` because the command will fail if the virtualenv does not exist
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile macos-release
 
@@ -50,7 +51,7 @@ check/deployed-macos:
   extends: .check-deployed
   tags: [macos]
   script:
-    - poetry env remove $(which python3)
+    - poetry env remove $(which python3) || true
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile macos-release
 
@@ -79,7 +80,7 @@ deploy/macos:
   extends: .deploy
   tags: [macos]
   script:
-    - poetry env remove $(which python3)
+    - poetry env remove $(which python3) || true
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home deploy --profile macos-release
 
