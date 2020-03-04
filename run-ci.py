@@ -24,7 +24,15 @@ class Builder:
         # when using poetry install --no-root in the .gitlab-ci.yml
         # This is because we need to run some conan commands before the
         # code in build.py can run
-        ci.run("poetry", "install", cwd=self.src_path)
+        ci.run(
+            "poetry",
+            "run",
+            "python",
+            "setup.py",
+            "develop",
+            "--no-deps",
+            cwd=self.src_path,
+        )
 
     def test(self) -> None:
         ci.run("poetry", "run", "python", "lint.py", cwd=self.src_path)
