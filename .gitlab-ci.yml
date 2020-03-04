@@ -1,6 +1,3 @@
-before_script:
-  - poetry install --no-root
-
 stages:
   - check
   - deploy
@@ -12,6 +9,7 @@ check/linux:
   extends: .check
   tags: [linux]
   script:
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile gcc8-release
   artifacts:
     paths:
@@ -22,12 +20,18 @@ check/macos:
   extends: .check
   tags: [macos]
   script:
+    - poetry env remove $(which python3)
+        # poetry runs pip install -e . _without_ the --no-deps and it causes
+        # the _next_ build to fail. So always remove the virtualenv before proceeding
+        # https://github.com/python-poetry/poetry/issues/2126
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile macos-release
 
 check/windows:
   extends: .check
   tags: [windows]
   script:
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile vs2019-release
 
 
@@ -39,18 +43,22 @@ check/deployed-linux:
   extends: .check-deployed
   tags: [linux]
   script:
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile gcc8-release
 
 check/deployed-macos:
   extends: .check-deployed
   tags: [macos]
   script:
+    - poetry env remove $(which python3)
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile macos-release
 
 check/deployed-windows:
   extends: .check-deployed
   tags: [windows]
   script:
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile vs2019-release
 
 
@@ -64,18 +72,22 @@ deploy/linux:
   extends: .deploy
   tags: [linux]
   script:
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
 
 deploy/macos:
   extends: .deploy
   tags: [macos]
   script:
+    - poetry env remove $(which python3)
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home deploy --profile macos-release
 
 deploy/windows:
   extends: .deploy
   tags: [windows]
   script:
+    - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home deploy --profile vs2019-release
 
 mirror:

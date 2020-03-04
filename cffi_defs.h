@@ -594,6 +594,29 @@ void tanker_free_device_list(tanker_device_list_t* list);
 void tanker_free_verification_method_list(
     tanker_verification_method_list_t* list);
 
+/*!
+ * Hash a passphrase before sending it to the application server.
+ *
+ * If you decide to synchronize the Tanker passphrase with the user password,
+ * you will need to hash it client-side (in addition to hashing it server-side,
+ * as explained in the "Good practices" section of the documentation). This
+ * function allows you to do that hashing.
+ *
+ * \warning This is not a password hash function, it is only used to
+ * solve the specific problem of passphrase synchronization described above, a
+ * proper password hash function is still needed server-side. Please read the
+ * documentation for more detail.
+ *
+ * \param passphrase the passphrase to hash
+ *
+ * \return an expected of the hashed passphrase which must be freed with
+ * tanker_free_buffer
+ *
+ * \throws TANKER_ERROR_INVALID_ARGUMENT \p passphrase is null or empty
+ */
+tanker_expected_t* tanker_hash_passphrase(
+    char const* passphrase);
+
 void tanker_free_attach_result(tanker_attach_result_t* result);
 // ctanker/groups.h
 

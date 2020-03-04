@@ -306,6 +306,14 @@ def stream_input_source_callback(
         tankerlib.tanker_stream_read_operation_finish(c_op, -1)
 
 
+def hash_passphrase(passphrase: str) -> str:
+    c_passphrase = ffihelpers.str_to_c_string(passphrase)
+    c_expected_hashed = tankerlib.tanker_hash_passphrase(c_passphrase)
+    c_hashed = ffihelpers.unwrap_expected(c_expected_hashed, "char*")
+    hashed = ffihelpers.c_string_to_str(c_hashed)
+    return hashed
+
+
 _GLOBAL_TANKERS: "weakref.WeakKeyDictionary[Tanker, Any]" = weakref.WeakKeyDictionary()
 
 
