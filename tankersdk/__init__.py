@@ -14,7 +14,7 @@ from .tanker import (  # noqa
     VerificationMethodType,
     AttachResult,
     StreamWrapper,
-    hash_passphrase,
+    prehash_password,
 )
 from .admin import Admin  # noqa
 from .version import __version__  # noqa
