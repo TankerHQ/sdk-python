@@ -926,19 +926,19 @@ async def test_oidc_preshare(tmp_path: Path, app: App, admin: Admin) -> None:
     await alice.session.stop()
 
 
-def test_hash_passphrase_empty() -> None:
+def test_prehash_password_empty() -> None:
     with pytest.raises(TankerError) as e:
-        tankersdk.hash_passphrase("")
+        tankersdk.prehash_password("")
     assert e.value.code == ErrorCode.INVALID_ARGUMENT
 
 
-def test_hash_passphrase_vector_1() -> None:
+def test_prehash_password_vector_1() -> None:
     input = "super secretive password"
     expected = "UYNRgDLSClFWKsJ7dl9uPJjhpIoEzadksv/Mf44gSHI="
-    assert tankersdk.hash_passphrase(input) == expected
+    assert tankersdk.prehash_password(input) == expected
 
 
-def test_hash_passphrase_vector_2() -> None:
+def test_prehash_password_vector_2() -> None:
     input = "test éå 한국어 😃"
     expected = "Pkn/pjub2uwkBDpt2HUieWOXP5xLn0Zlen16ID4C7jI="
-    assert tankersdk.hash_passphrase(input) == expected
+    assert tankersdk.prehash_password(input) == expected
