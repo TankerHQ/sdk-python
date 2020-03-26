@@ -10,7 +10,7 @@ import ci.conan
 import ci.git
 import ci.tanker_configs
 
-DEPLOYED_TANKER = "tanker/2.3.1@tanker/stable"
+DEPLOYED_TANKER = "tanker/2.3.2@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
 
 
