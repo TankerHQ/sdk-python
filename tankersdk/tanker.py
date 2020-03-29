@@ -276,6 +276,57 @@ class StreamWrapper:
         return buf[0:nb_read]
 
 
+class EncryptionSession:
+    """Allows doing multiple encryption operations with a reduced number of keys."""
+
+    def __init__(self, c_session: CData) -> None:
+        """Create a new `StreamWrapper` from the underlying `stream`"""
+        self.c_session = c_session
+
+    async def __aexit__(self, *unused: Any) -> None:
+        tankerlib.tanker_future_destroy(
+            tankerlib.tanker_encryption_session_close(self.c_session)
+        )
+
+    async def __aenter__(self) -> "EncryptionSession":
+        return self
+
+    def get_resource_id(self) -> str:
+        """Get the session's resource id"""
+        c_expected = tankerlib.tanker_encryption_session_get_resource_id(self.c_session)
+        c_id = ffihelpers.unwrap_expected(c_expected, "char*")
+        return ffihelpers.c_string_to_str(c_id)
+
+    async def encrypt(self, clear_data: bytes) -> bytes:
+        """Encrypt `clear_data` with the session"""
+        c_clear_buffer = ffihelpers.bytes_to_c_buffer(clear_data)  # type: CData
+        clear_size = len(c_clear_buffer)
+        size = tankerlib.tanker_encryption_session_encrypted_size(clear_size)
+        c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
+        c_future = tankerlib.tanker_encryption_session_encrypt(
+            self.c_session, c_encrypted_buffer, c_clear_buffer, clear_size
+        )
+
+        await ffihelpers.handle_tanker_future(c_future)
+        return ffihelpers.c_buffer_to_bytes(c_encrypted_buffer)
+
+    async def encrypt_stream(self, clear_stream: InputStreamProtocol) -> StreamWrapper:
+        """Encrypt `clear_stream` with the session
+
+        :param clear_stream: Any object with an async `read` method taking a `size` parameter
+        :return: A :py:class:`StreamWrapper` object
+        """
+        result = StreamWrapper(clear_stream)
+        handle = ffi.new_handle([result, asyncio.get_event_loop()])
+        result.c_handle = handle
+
+        encryption_fut = tankerlib.tanker_encryption_session_stream_encrypt(
+            self.c_session, tankerlib.stream_input_source_callback, handle
+        )
+        result.c_stream = await ffihelpers.handle_tanker_future(encryption_fut)
+        return result
+
+
 async def read_coroutine(
     c_output_buffer: CData,
     c_buffer_size: int,
@@ -701,6 +752,28 @@ class Tanker:
         )
 
         await ffihelpers.handle_tanker_future(c_future)
+
+    async def create_encryption_session(
+        self, *, users: OptionalStrList = None, groups: OptionalStrList = None
+    ) -> EncryptionSession:
+        """Create an encryption session
+
+        :param users: An (optional) list of identities to share the session with
+        :param groups: An (optional) list of groups to share the session with
+        :return: an EncryptionSession object
+        """
+        user_list = CCharList(users, ffi, tankerlib)
+        group_list = CCharList(groups, ffi, tankerlib)
+
+        c_future = tankerlib.tanker_encryption_session_open(
+            self.c_tanker,
+            user_list.data,
+            user_list.size,
+            group_list.data,
+            group_list.size,
+        )
+        c_session = await ffihelpers.handle_tanker_future(c_future)
+        return EncryptionSession(c_session)
 
     async def attach_provisional_identity(
         self, provisional_identity: str
