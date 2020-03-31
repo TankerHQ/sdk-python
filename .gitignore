@@ -12,3 +12,5 @@ coverage
 
 # vim
 *.un~
+.idea/
+

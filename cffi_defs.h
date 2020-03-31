@@ -694,6 +694,36 @@ tanker_future_t* tanker_stream_read(tanker_stream_t* stream,
 tanker_expected_t* tanker_stream_get_resource_id(tanker_stream_t* stream);
 tanker_future_t* tanker_stream_close(tanker_stream_t* stream);
 
+// ctanker/encryptionsession.h
+
+typedef struct tanker_encryption_session tanker_encryption_session_t;
+
+tanker_future_t* tanker_encryption_session_open(
+    tanker_t* tanker,
+    char const* const* recipient_public_identities,
+    uint64_t nb_recipient_public_identities,
+    char const* const* recipient_gids,
+    uint64_t nb_recipient_gids);
+
+tanker_future_t* tanker_encryption_session_close(
+    tanker_encryption_session_t* session);
+
+uint64_t tanker_encryption_session_encrypted_size(uint64_t clear_size);
+
+tanker_expected_t* tanker_encryption_session_get_resource_id(
+    tanker_encryption_session_t* session);
+
+tanker_future_t* tanker_encryption_session_encrypt(
+    tanker_encryption_session_t* session,
+    uint8_t* encrypted_data,
+    uint8_t const* data,
+    uint64_t data_size);
+
+tanker_future_t* tanker_encryption_session_stream_encrypt(
+    tanker_encryption_session_t* session,
+    tanker_stream_input_source_t cb,
+    void* additional_data);
+
 // cffi specific
 extern "Python" void log_handler(tanker_log_record_t*);
 extern "Python" void revoke_callback(void* arg, void* data);
