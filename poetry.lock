@@ -938,7 +938,7 @@ description = "Tanker identity library"
 name = "tankersdk-identity"
 optional = false
 python-versions = ">=3.5,<4.0"
-version = "1.3.2"
+version = "1.3.4"
 
 [package.dependencies]
 PyNacl = ">=1.3.0,<2.0.0"
@@ -1061,7 +1061,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "f9d1e14ad931743734a0b0c539592c5e87cb362a68353b7280d587dc3e2d080e"
+content-hash = "6e1fb796656d6c1196d433e63a80efd8c487121ee8a7572547c94a0b542c7504"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1549,8 +1549,8 @@ tabulate = [
     {file = "tabulate-0.8.6.tar.gz", hash = "sha256:5470cc6687a091c7042cee89b2946d9235fe9f6d49c193a4ae2ac7bf386737c8"},
 ]
 tankersdk-identity = [
-    {file = "tankersdk-identity-1.3.2.tar.gz", hash = "sha256:fed9e7cd10c80f4205d9ba3ca904fe41544be1b53775b273bebfafab8d0166e6"},
-    {file = "tankersdk_identity-1.3.2-py3-none-any.whl", hash = "sha256:8df41bf4184a58109bb7f73088e69c62348598bb63fb8c8016080fea93462481"},
+    {file = "tankersdk-identity-1.3.4.tar.gz", hash = "sha256:69bb1346e6940321161e7042a78840f6d9e91eecfe7c206c58057db8696df253"},
+    {file = "tankersdk_identity-1.3.4-py3-none-any.whl", hash = "sha256:c4b1378387982cec558b1f1ee8d93ac5208b660065df64aed8d8dcda350baed9"},
 ]
 tbump = [
     {file = "tbump-6.0.7-py3-none-any.whl", hash = "sha256:ca840d97d52f4ea7add3e24f3511f6ab16042657a9fec30abcc3110851da941e"},
