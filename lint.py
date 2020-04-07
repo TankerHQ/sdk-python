@@ -30,7 +30,6 @@ def init_checks():
     env = os.environ.copy()
     env["TANKER_CONFIG_NAME"] = "dev"
     env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
-    env["MYPYPATH"] = "stubs"
 
     py_files = Path.getcwd().files("*.py")
 
@@ -39,18 +38,10 @@ def init_checks():
         "black",
         "black", "--check", "tankersdk", *py_files,
     )
-    append_check(
-        "mypy",
-        "mypy", "--strict", "--ignore-missing-imports",
-        "tankersdk", "test",
-        env=env
-    )
-    append_check(
-        "flake8",
-        "flake8", ".",
-        env=env
-    )
     # fmt: on
+    append_check("mypy", "mypy")
+    append_check("flake8", "flake8", ".", env=env)
+
     return res
 
 
