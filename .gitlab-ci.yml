@@ -117,3 +117,10 @@ pages:
     expire_in: 7 days
   tags:
     - linux
+
+safety:
+  stage: check
+  only: [schedules]
+  script:
+    - poetry install --no-root
+    - poetry run safety check --full-report
