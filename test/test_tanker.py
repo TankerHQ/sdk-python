@@ -32,15 +32,20 @@ def assert_env(name: str) -> str:
 
 
 def read_test_config() -> Dict[str, Any]:
-    config_path = assert_env("TANKER_CONFIG_FILEPATH")
-    test_config = json.loads(Path(config_path).text())
-
-    config_name = assert_env("TANKER_CONFIG_NAME")
-    assert config_name in test_config, f"unknown TANKER_CONFIG_NAME: {config_name}"
-
-    res = {}
-    res["server"] = test_config[config_name]
-    res["oidc"] = test_config["oidc"]
+    res: Dict[str, Any] = {}
+    res["server"] = {"url": assert_env("TANKER_TRUSTCHAIND_URL"),
+                     "idToken": assert_env("TANKER_ID_TOKEN")}
+    res["oidc"] = {
+        "clientId": assert_env("TANKER_OIDC_CLIENT_ID"),
+        "clientSecret": assert_env("TANKER_OIDC_CLIENT_SECRET"),
+        "provider": assert_env("TANKER_OIDC_PROVIDER")
+    }
+    res["oidc"]["users"] = {
+        "martine": {
+            "email": assert_env("TANKER_OIDC_MARTINE_EMAIL"),
+            "refreshToken": assert_env("TANKER_OIDC_MARTINE_REFRESH_TOKEN")
+        }
+    }
     return res
 
 
@@ -879,7 +884,7 @@ async def test_get_verification_methods(tmp_path: Path, app: App, admin: Admin) 
 
 
 def set_up_oidc(app: App, admin: Admin, user: str) -> Tuple[str, str]:
-    oidc_test_config = TEST_CONFIG["oidc"]["googleAuth"]
+    oidc_test_config = TEST_CONFIG["oidc"]
 
     oidc_client_id = oidc_test_config["clientId"]
     oidc_client_secret = oidc_test_config["clientSecret"]
