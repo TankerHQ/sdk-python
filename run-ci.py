@@ -40,6 +40,7 @@ class Builder:
             "--capture=no",
             "--cov=tankersdk",
             "--cov-report", "html",
+            "--numprocesses", "auto",
             env=env,
             cwd=self.src_path,
         )
