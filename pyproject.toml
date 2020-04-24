@@ -23,7 +23,7 @@ attrs = "^19.3.0"
 typing_extensions = "^3.7.4"
 
 [tool.poetry.dev-dependencies]
-ci = "2020.2.2093"
+ci = "2020.04.2291"
 
 # linters
 black = "^19.3b0"
