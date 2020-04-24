@@ -146,6 +146,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.home_isolation:
         ci.conan.set_home_isolation()
+        ci.conan.update_config()
 
     command = args.command
 
