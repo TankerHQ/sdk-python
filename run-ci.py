@@ -10,7 +10,7 @@ import ci.conan
 import ci.git
 import ci.tanker_configs
 
-DEPLOYED_TANKER = "tanker/2.3.2@tanker/stable"
+DEPLOYED_TANKER = "tanker/2.4.0-beta1@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
 
 
@@ -146,6 +146,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.home_isolation:
         ci.conan.set_home_isolation()
+        ci.conan.update_config()
 
     command = args.command
 
