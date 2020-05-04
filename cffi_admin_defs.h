@@ -87,6 +87,7 @@ typedef struct tanker_app_descriptor
 {
   char const* name;
   b64char const* id;
+  b64char const* auth_token;
   b64char const* private_key;
   b64char const* public_key;
 } tanker_app_descriptor_t;
@@ -135,8 +136,11 @@ tanker_future_t* tanker_admin_destroy(tanker_admin_t* admin);
 /*!
  * Gets verification code of a user from the server
  */
-tanker_future_t* tanker_admin_get_verification_code(
-    tanker_admin_t* admin, char const* app_id, char const* user_email);
+tanker_future_t* tanker_get_verification_code(
+    char const* url,
+    char const* app_id,
+    char const* auth_token,
+    char const* user_email);
 
 
 /*!

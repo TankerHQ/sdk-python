@@ -16,6 +16,20 @@ class App:
     id = attr.ib()  # type: str
     private_key = attr.ib()  # type: str
     public_key = attr.ib()  # type: str
+    auth_token = attr.ib()  # type: str
+
+    def get_verification_code(self, url: str, email: str) -> str:
+        get_verif_fut = lib.tanker_get_verification_code(
+            ffihelpers.str_to_c_string(url),
+            ffihelpers.str_to_c_string(self.id),
+            ffihelpers.str_to_c_string(self.auth_token),
+            ffihelpers.str_to_c_string(email),
+        )
+        ffihelpers.wait_fut_or_raise(get_verif_fut)
+        c_voidp = lib.tanker_future_get_voidptr(get_verif_fut)
+        c_str = ffi.cast("char*", c_voidp)
+        lib.tanker_future_destroy(get_verif_fut)
+        return ffihelpers.c_string_to_str(c_str)
 
 
 @attr.s
@@ -58,6 +72,7 @@ class Admin:
             id=ffihelpers.c_string_to_str(c_app.id),
             public_key=ffihelpers.c_string_to_str(c_app.public_key),
             private_key=ffihelpers.c_string_to_str(c_app.private_key),
+            auth_token=ffihelpers.c_string_to_str(c_app.auth_token),
         )
         lib.tanker_admin_app_descriptor_free(c_app)
         lib.tanker_future_destroy(app_fut)
@@ -69,18 +84,6 @@ class Admin:
         )
         ffihelpers.wait_fut_or_raise(delete_fut)
         lib.tanker_future_destroy(delete_fut)
-
-    def get_verification_code(self, app_id: str, email: str) -> str:
-        get_verif_fut = lib.tanker_admin_get_verification_code(
-            self._c_admin,
-            ffihelpers.str_to_c_string(app_id),
-            ffihelpers.str_to_c_string(email),
-        )
-        ffihelpers.wait_fut_or_raise(get_verif_fut)
-        c_voidp = lib.tanker_future_get_voidptr(get_verif_fut)
-        c_str = ffi.cast("char*", c_voidp)
-        lib.tanker_future_destroy(get_verif_fut)
-        return ffihelpers.c_string_to_str(c_str)
 
     def update_app(
         self, app_id: str, *, oidc_config: Optional[OIDCConfig] = None
