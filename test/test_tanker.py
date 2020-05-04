@@ -431,7 +431,7 @@ async def test_add_device(tmp_path: Path, app: App) -> None:
 
 @pytest.mark.asyncio
 async def test_revoke_device(tmp_path: Path, app: App) -> None:
-    identity, laptop, phone = await create_two_devices(tmp_path, app)
+    _, laptop, phone = await create_two_devices(tmp_path, app)
     laptop_id = await laptop.device_id()
     laptop_revoked = asyncio.Event()
     loop = asyncio.get_event_loop()
