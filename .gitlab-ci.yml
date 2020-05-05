@@ -122,5 +122,6 @@ safety:
   stage: check
   only: [schedules]
   script:
+    - poetry env remove $(which python3)
     - poetry install --no-root
     - poetry run safety check --full-report
