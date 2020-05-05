@@ -33,8 +33,11 @@ def assert_env(name: str) -> str:
 
 def read_test_config() -> Dict[str, Any]:
     res: Dict[str, Any] = {}
-    res["server"] = {"url": assert_env("TANKER_TRUSTCHAIND_URL"),
-                     "idToken": assert_env("TANKER_ID_TOKEN")}
+    res["server"] = {
+        "adminUrl": assert_env("TANKER_ADMIND_URL"),
+        "idToken": assert_env("TANKER_ID_TOKEN"),
+        "url": assert_env("TANKER_TRUSTCHAIND_URL"),
+    }
     res["oidc"] = {
         "clientId": assert_env("TANKER_OIDC_CLIENT_ID"),
         "clientSecret": assert_env("TANKER_OIDC_CLIENT_SECRET"),
@@ -69,7 +72,7 @@ def tmp_path(tmpdir: str) -> Path:
 @pytest.fixture(scope="session")
 def admin() -> Iterator[Admin]:
     yield Admin(
-        url=TEST_CONFIG["server"]["url"], token=TEST_CONFIG["server"]["idToken"]
+        url=TEST_CONFIG["server"]["adminUrl"], token=TEST_CONFIG["server"]["idToken"]
     )
 
 
@@ -109,7 +112,7 @@ def test_native_version() -> None:
 def test_create_app() -> None:
     name = "python_bindings"
     admin = Admin(
-        url=TEST_CONFIG["server"]["url"], token=TEST_CONFIG["server"]["idToken"]
+        url=TEST_CONFIG["server"]["adminUrl"], token=TEST_CONFIG["server"]["idToken"]
     )
     app = admin.create_app(name)
     assert app.name == name
@@ -431,7 +434,7 @@ async def test_add_device(tmp_path: Path, app: App) -> None:
 
 @pytest.mark.asyncio
 async def test_revoke_device(tmp_path: Path, app: App) -> None:
-    identity, laptop, phone = await create_two_devices(tmp_path, app)
+    _, laptop, phone = await create_two_devices(tmp_path, app)
     laptop_id = await laptop.device_id()
     laptop_revoked = asyncio.Event()
     loop = asyncio.get_event_loop()
@@ -555,7 +558,7 @@ async def test_invalid_verification_key(tmp_path: Path, app: App) -> None:
 
 
 @pytest.mark.asyncio
-async def test_email_verification(tmp_path: Path, app: App, admin: Admin) -> None:
+async def test_email_verification(tmp_path: Path, app: App) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -563,7 +566,7 @@ async def test_email_verification(tmp_path: Path, app: App, admin: Admin) -> Non
     email = fake.email()
     alice_identity = tankersdk_identity.create_identity(app.id, app.private_key, email)
     await laptop_tanker.start(alice_identity)
-    verification_code = admin.get_verification_code(app.id, email)
+    verification_code = app.get_verification_code(TEST_CONFIG["server"]["url"], email)
     await laptop_tanker.register_identity(
         email=email, verification_code=verification_code
     )
@@ -575,7 +578,7 @@ async def test_email_verification(tmp_path: Path, app: App, admin: Admin) -> Non
 
     await phone_tanker.start(alice_identity)
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
-    verification_code = admin.get_verification_code(app.id, email)
+    verification_code = app.get_verification_code(TEST_CONFIG["server"]["url"], email)
     await phone_tanker.verify_identity(email=email, verification_code=verification_code)
     assert phone_tanker.status == TankerStatus.READY
     await laptop_tanker.stop()
@@ -583,7 +586,7 @@ async def test_email_verification(tmp_path: Path, app: App, admin: Admin) -> Non
 
 
 @pytest.mark.asyncio
-async def test_bad_verification_code(tmp_path: Path, app: App, admin: Admin) -> None:
+async def test_bad_verification_code(tmp_path: Path, app: App) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir_p()
@@ -594,7 +597,7 @@ async def test_bad_verification_code(tmp_path: Path, app: App, admin: Admin) -> 
     phone_path.mkdir_p()
     phone_tanker = create_tanker(app.id, writable_path=phone_path)
     await laptop_tanker.start(alice_identity)
-    verification_code = admin.get_verification_code(app.id, email)
+    verification_code = app.get_verification_code(TEST_CONFIG["server"]["url"], email)
     await laptop_tanker.register_identity(
         email=email, verification_code=verification_code
     )
@@ -626,9 +629,7 @@ PreUser = namedtuple(
 )
 
 
-async def set_up_preshare(
-    tmp_path: Path, app: App, admin: Admin
-) -> Tuple[User, PreUser]:
+async def set_up_preshare(tmp_path: Path, app: App) -> Tuple[User, PreUser]:
     fake = Faker()
     bob_email = fake.email()
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
@@ -646,16 +647,16 @@ async def set_up_preshare(
         public_provisional_identity=bob_public_provisional_identity,
         private_provisional_identity=bob_provisional_identity,
         email=bob_email,
-        verification_code=admin.get_verification_code(app.id, bob_email),
+        verification_code=app.get_verification_code(TEST_CONFIG["server"]["url"], bob_email),
     )
     return alice, pre_bob
 
 
 @pytest.mark.asyncio
 async def test_cannot_decrypt_if_provisional_identity_not_attached(
-    tmp_path: Path, app: App, admin: Admin
+    tmp_path: Path, app: App
 ) -> None:
-    alice, bob = await set_up_preshare(tmp_path, app, admin)
+    alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
         message, share_with_users=[bob.public_provisional_identity]
@@ -666,9 +667,9 @@ async def test_cannot_decrypt_if_provisional_identity_not_attached(
 
 
 async def share_and_attach_provisional_identity(
-    tmp_path: Path, app: App, admin: Admin
+    tmp_path: Path, app: App
 ) -> Tuple[PreUser, bytes, bytes]:
-    alice, bob = await set_up_preshare(tmp_path, app, admin)
+    alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
         message, share_with_users=[bob.public_provisional_identity]
@@ -681,7 +682,7 @@ async def share_and_attach_provisional_identity(
     assert actual_method.email == bob.email
     assert actual_method.method_type == tankersdk.VerificationMethodType.EMAIL
 
-    verification_code = admin.get_verification_code(app.id, bob.email)
+    verification_code = app.get_verification_code(TEST_CONFIG["server"]["url"], bob.email)
     await bob.session.verify_provisional_identity(
         email=bob.email, verification_code=verification_code
     )
@@ -689,23 +690,15 @@ async def share_and_attach_provisional_identity(
 
 
 @pytest.mark.asyncio
-async def test_attach_provisional_identity_simple(
-    tmp_path: Path, app: App, admin: Admin
-) -> None:
-    bob, encrypted, message = await share_and_attach_provisional_identity(
-        tmp_path, app, admin
-    )
+async def test_attach_provisional_identity_simple(tmp_path: Path, app: App) -> None:
+    bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, app)
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
 
 
 @pytest.mark.asyncio
-async def test_attach_provisional_identity_after_sign_out(
-    tmp_path: Path, app: App, admin: Admin
-) -> None:
-    bob, encrypted, message = await share_and_attach_provisional_identity(
-        tmp_path, app, admin
-    )
+async def test_attach_provisional_identity_after_sign_out(tmp_path: Path, app: App) -> None:
+    bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, app)
     await bob.session.stop()
     await bob.session.start(bob.private_identity)
     decrypted = await bob.session.decrypt(encrypted)
@@ -713,10 +706,8 @@ async def test_attach_provisional_identity_after_sign_out(
 
 
 @pytest.mark.asyncio
-async def test_already_attached_identity(
-    tmp_path: Path, app: App, admin: Admin
-) -> None:
-    bob, _, _ = await share_and_attach_provisional_identity(tmp_path, app, admin)
+async def test_already_attached_identity(tmp_path: Path, app: App) -> None:
+    bob, _, _ = await share_and_attach_provisional_identity(tmp_path, app)
     attach_result = await bob.session.attach_provisional_identity(
         bob.private_provisional_identity
     )
@@ -725,10 +716,8 @@ async def test_already_attached_identity(
 
 
 @pytest.mark.asyncio
-async def test_attach_provisional_identity_with_incorrect_code(
-    tmp_path: Path, app: App, admin: Admin
-) -> None:
-    alice, bob = await set_up_preshare(tmp_path, app, admin)
+async def test_attach_provisional_identity_with_incorrect_code(tmp_path: Path, app: App) -> None:
+    alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
     await alice.session.encrypt(
         message, share_with_users=[bob.public_provisional_identity]
@@ -771,10 +760,8 @@ async def test_update_verification_passphrase(tmp_path: Path, app: App) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_group_with_prov_id(
-    tmp_path: Path, app: App, admin: Admin
-) -> None:
-    alice, bob = await set_up_preshare(tmp_path, app, admin)
+async def test_create_group_with_prov_id(tmp_path: Path, app: App) -> None:
+    alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you all, my group"
     group_id = await alice.session.create_group([bob.public_provisional_identity])
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
@@ -787,10 +774,8 @@ async def test_create_group_with_prov_id(
 
 
 @pytest.mark.asyncio
-async def test_add_to_group_with_prov_id(
-    tmp_path: Path, app: App, admin: Admin
-) -> None:
-    alice, bob = await set_up_preshare(tmp_path, app, admin)
+async def test_add_to_group_with_prov_id(tmp_path: Path, app: App) -> None:
+    alice, bob = await set_up_preshare(tmp_path, app)
     message = b"Hi, this is for a group"
     group_id = await alice.session.create_group([alice.public_identity])
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
@@ -852,7 +837,7 @@ async def test_device_not_found(tmp_path: Path, app: App) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_verification_methods(tmp_path: Path, app: App, admin: Admin) -> None:
+async def test_get_verification_methods(tmp_path: Path, app: App) -> None:
     tanker = create_tanker(app.id, writable_path=tmp_path)
     faker = Faker()
     email = faker.email()
@@ -868,7 +853,7 @@ async def test_get_verification_methods(tmp_path: Path, app: App, admin: Admin) 
     (actual_method,) = methods
     assert actual_method.method_type == VerificationMethodType.PASSPHRASE
 
-    verification_code = admin.get_verification_code(app.id, email)
+    verification_code = app.get_verification_code(TEST_CONFIG["server"]["url"], email)
     await tanker.set_verification_method(
         email=email, verification_code=verification_code
     )
