@@ -16,7 +16,6 @@ from .tanker import (  # noqa
     StreamWrapper,
     prehash_password,
 )
-from .admin import Admin  # noqa
 from .version import __version__  # noqa
 
 

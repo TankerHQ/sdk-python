@@ -1,2 +1,0 @@
-#include <ctanker/admin.h>
-
