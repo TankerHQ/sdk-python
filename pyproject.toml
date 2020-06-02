@@ -42,7 +42,7 @@ tankeradminsdk = "0.1.1"
 tankersdk-identity = "^1.3.4"
 
 # doc
-sphinx = "^2.3.1"
+sphinx = "^3.0.4"
 ghp-import = "^0.5.5"
 sphinxcontrib-trio = "^1.1.0"
 
