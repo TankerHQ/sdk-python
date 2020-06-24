@@ -105,6 +105,7 @@ typedef struct tanker_email_verification tanker_email_verification_t;
 typedef struct tanker_verification tanker_verification_t;
 typedef struct tanker_verification_method tanker_verification_method_t;
 typedef struct tanker_encrypt_options tanker_encrypt_options_t;
+typedef struct tanker_sharing_options tanker_sharing_options_t;
 typedef struct tanker_log_record tanker_log_record_t;
 typedef struct tanker_device_list_elem tanker_device_list_elem_t;
 typedef struct tanker_device_list tanker_device_list_t;
@@ -185,10 +186,20 @@ struct tanker_verification_method
 struct tanker_encrypt_options
 {
   uint8_t version;
-  char const* const* recipient_public_identities;
-  uint32_t nb_recipient_public_identities;
-  char const* const* recipient_gids;
-  uint32_t nb_recipient_gids;
+  char const* const* share_with_users;
+  uint32_t nb_users;
+  char const* const* share_with_groups;
+  uint32_t nb_groups;
+  bool share_with_self;
+};
+
+struct tanker_sharing_options
+{
+  uint8_t version;
+  char const* const* share_with_users;
+  uint32_t nb_users;
+  char const* const* share_with_groups;
+  uint32_t nb_groups;
 };
 
 struct tanker_attach_result
@@ -261,12 +272,9 @@ tanker_future_t* tanker_decrypt(tanker_t* session,
                                 uint64_t data_size);
 
 tanker_future_t* tanker_share(tanker_t* session,
-                              char const* const* recipient_public_identities,
-                              uint64_t nb_recipient_public_identities,
-                              char const* const* recipient_gids,
-                              uint64_t nb_recipient_gids,
                               char const* const* resource_ids,
-                              uint64_t nb_resource_ids);
+                              uint64_t nb_resource_ids,
+                              tanker_sharing_options_t* options);
 
 tanker_future_t* tanker_attach_provisional_identity(
     tanker_t* session, char const* provisional_identity);
@@ -335,11 +343,7 @@ tanker_future_t* tanker_stream_close(tanker_stream_t* stream);
 typedef struct tanker_encryption_session tanker_encryption_session_t;
 
 tanker_future_t* tanker_encryption_session_open(
-    tanker_t* tanker,
-    char const* const* recipient_public_identities,
-    uint64_t nb_recipient_public_identities,
-    char const* const* recipient_gids,
-    uint64_t nb_recipient_gids);
+    tanker_t* tanker, tanker_encrypt_options_t const* options);
 
 tanker_future_t* tanker_encryption_session_close(
     tanker_encryption_session_t* session);

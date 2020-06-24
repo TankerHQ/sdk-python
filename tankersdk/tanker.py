@@ -115,8 +115,9 @@ class CEncryptionOptions:
 
     def __init__(
         self,
-        share_with_users: OptionalStrList = None,
-        share_with_groups: OptionalStrList = None,
+        share_with_users: OptionalStrList,
+        share_with_groups: OptionalStrList,
+        share_with_self: bool,
     ) -> None:
         self.user_list = CCharList(share_with_users, ffi, tankerlib)
         self.group_list = CCharList(share_with_groups, ffi, tankerlib)
@@ -124,11 +125,36 @@ class CEncryptionOptions:
         self._c_data = ffi.new(
             "tanker_encrypt_options_t *",
             {
-                "version": 2,
-                "recipient_public_identities": self.user_list.data,
-                "nb_recipient_public_identities": self.user_list.size,
-                "recipient_gids": self.group_list.data,
-                "nb_recipient_gids": self.group_list.size,
+                "version": 3,
+                "share_with_users": self.user_list.data,
+                "nb_users": self.user_list.size,
+                "share_with_groups": self.group_list.data,
+                "nb_groups": self.group_list.size,
+                "share_with_self": share_with_self,
+            },
+        )
+
+    def get(self) -> CData:
+        return self._c_data
+
+
+class CSharingOptions:
+    """Wraps the tanker_sharing_options_t C type"""
+
+    def __init__(
+        self, share_with_users: OptionalStrList, share_with_groups: OptionalStrList,
+    ) -> None:
+        self.user_list = CCharList(share_with_users, ffi, tankerlib)
+        self.group_list = CCharList(share_with_groups, ffi, tankerlib)
+
+        self._c_data = ffi.new(
+            "tanker_sharing_options_t *",
+            {
+                "version": 1,
+                "share_with_users": self.user_list.data,
+                "nb_users": self.user_list.size,
+                "share_with_groups": self.group_list.data,
+                "nb_groups": self.group_list.size,
             },
         )
 
@@ -483,6 +509,7 @@ class Tanker:
         *,
         share_with_users: OptionalStrList = None,
         share_with_groups: OptionalStrList = None,
+        share_with_self: bool = True,
     ) -> bytes:
         """Encrypt `clear_data`
 
@@ -490,7 +517,9 @@ class Tanker:
         :param share_with_groups: A list of groups to share with
         """
         c_encrypt_options = CEncryptionOptions(
-            share_with_users=share_with_users, share_with_groups=share_with_groups
+            share_with_users=share_with_users,
+            share_with_groups=share_with_groups,
+            share_with_self=share_with_self,
         )
         c_clear_buffer = ffihelpers.bytes_to_c_buffer(clear_data)  # type: CData
         clear_size = len(c_clear_buffer)
@@ -528,6 +557,7 @@ class Tanker:
         *,
         share_with_users: OptionalStrList = None,
         share_with_groups: OptionalStrList = None,
+        share_with_self: bool = True,
     ) -> StreamWrapper:
         """Encrypt `clear_stream`
 
@@ -537,7 +567,9 @@ class Tanker:
         :return: A :py:class:`StreamWrapper` object
         """
         c_encrypt_options = CEncryptionOptions(
-            share_with_users=share_with_users, share_with_groups=share_with_groups
+            share_with_users=share_with_users,
+            share_with_groups=share_with_groups,
+            share_with_self=share_with_self,
         )
 
         result = StreamWrapper(clear_stream)
@@ -623,17 +655,15 @@ class Tanker:
     ) -> None:
         """Share the given list of resources to users or groups"""
         resource_list = CCharList(resources, ffi, tankerlib)
-        user_list = CCharList(users, ffi, tankerlib)
-        group_list = CCharList(groups, ffi, tankerlib)
+        c_sharing_options = CSharingOptions(
+            share_with_users=users, share_with_groups=groups
+        )
 
         c_future = tankerlib.tanker_share(
             self.c_tanker,
-            user_list.data,
-            user_list.size,
-            group_list.data,
-            group_list.size,
             resource_list.data,
             resource_list.size,
+            c_sharing_options.get(),
         )
 
         await ffihelpers.handle_tanker_future(c_future)
@@ -754,7 +784,11 @@ class Tanker:
         await ffihelpers.handle_tanker_future(c_future)
 
     async def create_encryption_session(
-        self, *, users: OptionalStrList = None, groups: OptionalStrList = None
+        self,
+        *,
+        users: OptionalStrList = None,
+        groups: OptionalStrList = None,
+        share_with_self: bool = True,
     ) -> EncryptionSession:
         """Create an encryption session
 
@@ -762,15 +796,14 @@ class Tanker:
         :param groups: An (optional) list of groups to share the session with
         :return: an EncryptionSession object
         """
-        user_list = CCharList(users, ffi, tankerlib)
-        group_list = CCharList(groups, ffi, tankerlib)
+        c_encrypt_options = CEncryptionOptions(
+            share_with_users=users,
+            share_with_groups=groups,
+            share_with_self=share_with_self,
+        )
 
         c_future = tankerlib.tanker_encryption_session_open(
-            self.c_tanker,
-            user_list.data,
-            user_list.size,
-            group_list.data,
-            group_list.size,
+            self.c_tanker, c_encrypt_options.get(),
         )
         c_session = await ffihelpers.handle_tanker_future(c_future)
         return EncryptionSession(c_session)
