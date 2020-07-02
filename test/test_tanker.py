@@ -309,6 +309,25 @@ async def test_share_during_encrypt(tmp_path: Path, app: Dict[str, str]) -> None
 
 
 @pytest.mark.asyncio
+async def test_share_during_encrypt_without_self(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice = await create_user_session(tmp_path, app)
+    bob = await create_user_session(tmp_path, app)
+    message = b"I love you"
+    encrypted = await alice.session.encrypt(
+        message, share_with_users=[bob.public_identity], share_with_self=False
+    )
+    with pytest.raises(TankerError) as error:
+        await alice.session.decrypt(encrypted)
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
+    decrypted = await bob.session.decrypt(encrypted)
+    assert decrypted == message
+    await alice.session.stop()
+    await bob.session.stop()
+
+
+@pytest.mark.asyncio
 async def test_postponed_share(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
@@ -385,6 +404,28 @@ async def test_share_with_encryption_session(
         users=[bob.public_identity]
     )
     encrypted = await enc_session.encrypt(message)
+
+    decrypted = await bob.session.decrypt(encrypted)
+    assert decrypted == message
+    await alice.session.stop()
+    await bob.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_share_with_encryption_session_without_self(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice = await create_user_session(tmp_path, app)
+    bob = await create_user_session(tmp_path, app)
+    message = b"Ceci n'est pas un test"
+    enc_session = await alice.session.create_encryption_session(
+        users=[bob.public_identity], share_with_self=False,
+    )
+    encrypted = await enc_session.encrypt(message)
+
+    with pytest.raises(TankerError) as error:
+        await alice.session.decrypt(encrypted)
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
