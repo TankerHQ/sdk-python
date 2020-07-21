@@ -1,9 +1,6 @@
-import os
 import subprocess
 import sys
 
-import ci
-import ci.tanker_configs
 import cli_ui as ui
 from path import Path
 
@@ -27,10 +24,6 @@ def init_checks():
     def append_check(name, *cmd, env=None):
         res.append(Check(name, cmd, env=env))
 
-    env = os.environ.copy()
-    env["TANKER_CONFIG_NAME"] = "dev"
-    env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
-
     py_files = Path.getcwd().files("*.py")
 
     # fmt: off
@@ -40,7 +33,7 @@ def init_checks():
     )
     # fmt: on
     append_check("mypy", "mypy")
-    append_check("flake8", "flake8", ".", env=env)
+    append_check("flake8", "flake8", ".")
 
     return res
 
