@@ -8,7 +8,6 @@ import ci
 import ci.bump
 import ci.conan
 import ci.git
-import ci.tanker_configs
 
 DEPLOYED_TANKER = "tanker/2.4.1@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
@@ -30,8 +29,6 @@ class Builder:
         ci.run("poetry", "run", "python", "lint.py", cwd=self.src_path)
 
         env = os.environ.copy()
-        env["TANKER_CONFIG_NAME"] = "dev"
-        env["TANKER_CONFIG_FILEPATH"] = ci.tanker_configs.get_path()
         env["TANKER_SDK_DEBUG"] = "1"
         # fmt: off
         ci.run(
