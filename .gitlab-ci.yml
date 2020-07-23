@@ -2,6 +2,13 @@ stages:
   - check
   - deploy
 
+lint:
+  tags: [linux]
+  stage: check
+  script:
+    - poetry install --no-root
+    - ./lint.sh
+
 .check:
   stage: check
 
