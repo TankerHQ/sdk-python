@@ -26,8 +26,6 @@ class Builder:
         tankerci.run("poetry", "install", cwd=self.src_path)
 
     def test(self) -> None:
-        tankerci.run("poetry", "run", "python", "lint.py", cwd=self.src_path)
-
         env = os.environ.copy()
         env["TANKER_SDK_DEBUG"] = "1"
         # fmt: off
