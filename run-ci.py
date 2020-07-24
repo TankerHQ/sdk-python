@@ -4,10 +4,10 @@ import sys
 
 from path import Path
 
-import ci
-import ci.bump
-import ci.conan
-import ci.git
+import tankerci
+import tankerci.bump
+import tankerci.conan
+import tankerci.git
 
 DEPLOYED_TANKER = "tanker/2.4.1@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
@@ -23,15 +23,15 @@ class Builder:
         # when using poetry install --no-root in the .gitlab-ci.yml
         # This is because we need to run some conan commands before the
         # code in build.py can run
-        ci.run("poetry", "install", cwd=self.src_path)
+        tankerci.run("poetry", "install", cwd=self.src_path)
 
     def test(self) -> None:
-        ci.run("poetry", "run", "python", "lint.py", cwd=self.src_path)
+        tankerci.run("poetry", "run", "python", "lint.py", cwd=self.src_path)
 
         env = os.environ.copy()
         env["TANKER_SDK_DEBUG"] = "1"
         # fmt: off
-        ci.run(
+        tankerci.run(
             "poetry", "run", "pytest",
             "--verbose",
             "--capture=no",
@@ -52,8 +52,8 @@ class Builder:
         if tag is None:
             raise Exception("No tag found, cannot deploy")
         with self.src_path:
-            version = ci.bump.version_from_git_tag(tag)
-            ci.bump.bump_files(version)
+            version = tankerci.bump.version_from_git_tag(tag)
+            tankerci.bump.bump_files(version)
         dist_path = self.src_path / "dist"
         dist_path.rmtree_p()
 
@@ -67,12 +67,12 @@ class Builder:
         # so that they can be found even when the working directory
         # changes, and we make sure *all* paths used in build_tanker.py
         # are absolute
-        ci.run("poetry", "build", env=env)
+        tankerci.run("poetry", "build", env=env)
         wheels = dist_path.files("tankersdk-*.whl")
         if len(wheels) != 1:
             raise Exception("multiple wheels found: {}".format(wheels))
         wheel_path = wheels[0]
-        ci.run("scp", wheel_path, "pypi@tanker.local:packages")
+        tankerci.run("scp", wheel_path, "pypi@tanker.local:packages")
 
 
 def build(use_tanker: str, profile: str):
@@ -82,19 +82,21 @@ def build(use_tanker: str, profile: str):
     if use_tanker == "deployed":
         tanker_conan_ref = DEPLOYED_TANKER
     elif use_tanker == "local":
-        ci.conan.export(
+        tankerci.conan.export(
             src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev"
         )
     elif use_tanker == "same-as-branch":
-        workspace = ci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
+        workspace = tankerci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
         src_path = workspace / "sdk-python"
-        ci.conan.export(src_path=workspace / "sdk-native", ref_or_channel="tanker/dev")
+        tankerci.conan.export(
+            src_path=workspace / "sdk-native", ref_or_channel="tanker/dev"
+        )
     else:
         sys.exit()
 
     conan_out_path = src_path / "conan" / "out"
     # fmt: off
-    ci.conan.run(
+    tankerci.conan.run(
         "install", tanker_conan_ref,
         "--update",
         "--profile", profile,
@@ -142,8 +144,8 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.home_isolation:
-        ci.conan.set_home_isolation()
-        ci.conan.update_config()
+        tankerci.conan.set_home_isolation()
+        tankerci.conan.update_config()
 
     command = args.command
 
@@ -152,7 +154,7 @@ def main() -> None:
         sys.exit(1)
 
     if command == "mirror":
-        ci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
+        tankerci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
         return
 
     if command == "build-and-check":
