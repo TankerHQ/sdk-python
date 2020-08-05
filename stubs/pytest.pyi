@@ -1,3 +1,5 @@
+# Note: we still need this file because we use
+# pytest-asyncio, which is not typed.
 from typing import Any, Callable, Type, NoReturn
 
 AnyFunc = Callable[..., Any]
