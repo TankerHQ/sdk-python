@@ -9,7 +9,7 @@ import tankerci.bump
 import tankerci.conan
 import tankerci.git
 
-DEPLOYED_TANKER = "tanker/2.5.0@tanker/stable"
+DEPLOYED_TANKER = "tanker/2.5.1-alpha1@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
 
 
