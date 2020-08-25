@@ -3,6 +3,7 @@ import os
 import sys
 
 from path import Path
+from enum import Enum
 
 import tankerci
 import tankerci.bump
@@ -11,6 +12,12 @@ import tankerci.git
 
 DEPLOYED_TANKER = "tanker/2.5.0@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
+
+
+class TankerSource(Enum):
+    LOCAL = "local"
+    SAME_AS_BRANCH = "same-as-branch"
+    DEPLOYED = "deployed"
 
 
 class Builder:
@@ -73,30 +80,30 @@ class Builder:
         tankerci.run("scp", wheel_path, "pypi@tanker.local:packages")
 
 
-def build(use_tanker: str, profile: str):
+def build(tanker_source: TankerSource, profile: str) -> Builder:
     src_path = Path.getcwd()
     tanker_conan_ref = LOCAL_TANKER
+    tanker_conan_extra_flags = ["--update", "--build=tanker"]
 
-    if use_tanker == "deployed":
+    if tanker_source == TankerSource.DEPLOYED:
         tanker_conan_ref = DEPLOYED_TANKER
-    elif use_tanker == "local":
+        tanker_conan_extra_flags = []
+    elif tanker_source == TankerSource.LOCAL:
         tankerci.conan.export(
             src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev"
         )
-    elif use_tanker == "same-as-branch":
+    elif tanker_source == TankerSource.SAME_AS_BRANCH:
         workspace = tankerci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
         src_path = workspace / "sdk-python"
         tankerci.conan.export(
             src_path=workspace / "sdk-native", ref_or_channel="tanker/dev"
         )
-    else:
-        sys.exit()
 
     conan_out_path = src_path / "conan" / "out"
     # fmt: off
     tankerci.conan.run(
         "install", tanker_conan_ref,
-        "--update",
+        *tanker_conan_extra_flags,
         "--profile", profile,
         "--install-folder", conan_out_path,
         "--generator=json",
@@ -108,8 +115,8 @@ def build(use_tanker: str, profile: str):
     return builder
 
 
-def build_and_check(args):
-    builder = build(args.use_tanker, args.profile)
+def build_and_check(args) -> None:
+    builder = build(args.tanker_source, args.profile)
     builder.test()
 
 
@@ -131,7 +138,10 @@ def main() -> None:
 
     build_and_check_parser = subparsers.add_parser("build-and-check")
     build_and_check_parser.add_argument(
-        "--use-tanker", choices=["deployed", "local", "same-as-branch"], default="local"
+        "--use-tanker",
+        type=TankerSource,
+        default=TankerSource.LOCAL,
+        dest="tanker_source",
     )
     build_and_check_parser.add_argument("--profile", default="default")
 
