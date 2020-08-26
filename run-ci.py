@@ -83,7 +83,7 @@ class Builder:
 def build(tanker_source: TankerSource, profile: str) -> Builder:
     src_path = Path.getcwd()
     tanker_conan_ref = LOCAL_TANKER
-    tanker_conan_extra_flags = ["--update", "--build=tanker"]
+    tanker_conan_extra_flags = ["--build=tanker"]
 
     if tanker_source == TankerSource.DEPLOYED:
         tanker_conan_ref = DEPLOYED_TANKER
@@ -104,6 +104,7 @@ def build(tanker_source: TankerSource, profile: str) -> Builder:
     tankerci.conan.run(
         "install", tanker_conan_ref,
         *tanker_conan_extra_flags,
+        "--update",
         "--profile", profile,
         "--install-folder", conan_out_path,
         "--generator=json",
