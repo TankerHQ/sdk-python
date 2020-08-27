@@ -151,6 +151,7 @@ mirror:
     - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9.]+\z/ # public release tags only
     - if: $CI_COMMIT_REF_NAME == "master"
   script:
+    - poetry install --no-root
     - poetry run python run-ci.py mirror
 
 pages:
