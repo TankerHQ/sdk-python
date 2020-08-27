@@ -9,6 +9,7 @@ import tankerci
 import tankerci.bump
 import tankerci.conan
 import tankerci.git
+import tankerci.gitlab
 
 DEPLOYED_TANKER = "tanker/2.5.0@tanker/stable"
 LOCAL_TANKER = "tanker/dev@tanker/dev"
@@ -18,6 +19,7 @@ class TankerSource(Enum):
     LOCAL = "local"
     SAME_AS_BRANCH = "same-as-branch"
     DEPLOYED = "deployed"
+    UPSTREAM = "upstream"
 
 
 class Builder:
@@ -88,6 +90,18 @@ def build(tanker_source: TankerSource, profile: str) -> Builder:
     if tanker_source == TankerSource.DEPLOYED:
         tanker_conan_ref = DEPLOYED_TANKER
         tanker_conan_extra_flags = []
+    elif tanker_source == TankerSource.UPSTREAM:
+        tanker_conan_ref = LOCAL_TANKER
+        tanker_conan_extra_flags = []
+
+        package_folder = Path.getcwd() / "package" / profile
+
+        tankerci.conan.export_pkg(
+            Path.getcwd() / "package" / "conanfile.py",
+            profile=profile,
+            force=True,
+            package_folder=package_folder,
+        )
     elif tanker_source == TankerSource.LOCAL:
         tankerci.conan.export(
             src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev"
@@ -146,6 +160,14 @@ def main() -> None:
     )
     build_and_check_parser.add_argument("--profile", default="default")
 
+    reset_branch_parser = subparsers.add_parser("reset-branch")
+    reset_branch_parser.add_argument("branch")
+
+    download_artifacts_parser = subparsers.add_parser("download-artifacts")
+    download_artifacts_parser.add_argument("--project-id", required=True)
+    download_artifacts_parser.add_argument("--pipeline-id", required=True)
+    download_artifacts_parser.add_argument("--job-name", required=True)
+
     deploy_parser = subparsers.add_parser("deploy")
     deploy_parser.add_argument("--profile", required=True)
 
@@ -158,18 +180,26 @@ def main() -> None:
 
     command = args.command
 
-    if not command:
-        parser.print_help()
-        sys.exit(1)
-
     if command == "mirror":
         tankerci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
-        return
-
-    if command == "build-and-check":
+    elif command == "build-and-check":
         build_and_check(args)
     elif command == "deploy":
         deploy(args.profile)
+    elif command == "reset-branch":
+        ref = tankerci.git.find_ref(
+            Path.getcwd(), [f"origin/{args.branch}", "origin/master"]
+        )
+        tankerci.git.reset(Path.getcwd(), ref)
+    elif command == "download-artifacts":
+        tankerci.gitlab.download_artifacts(
+            project_id=args.project_id,
+            pipeline_id=args.pipeline_id,
+            job_name=args.job_name,
+        )
+    else:
+        parser.print_help()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
