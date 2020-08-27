@@ -1055,7 +1055,7 @@ description = "Tanker CI library"
 name = "tankerci"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "2020.7.2652"
+version = "2020.8.2719"
 
 [package.dependencies]
 cli-ui = ">=0.10.0,<0.11.0"
@@ -1729,8 +1729,8 @@ tankeradminsdk = [
     {file = "tankeradminsdk-0.1.1.tar.gz", hash = "md5:891b8ffbcb29f1ef9aff35462919a5c5"},
 ]
 tankerci = [
-    {file = "tankerci-2020.7.2652-py3-none-any.whl", hash = "md5:d12d336bdca0a7f99244bd075cec69f3"},
-    {file = "tankerci-2020.7.2652.tar.gz", hash = "md5:030edf1491518f463ee1f8421cae806d"},
+    {file = "tankerci-2020.8.2719-py3-none-any.whl", hash = "md5:0c3f78263b771978caaef01ac8a88922"},
+    {file = "tankerci-2020.8.2719.tar.gz", hash = "md5:e1c9254e98f3d89b0a8f4a8af7320602"},
 ]
 tankersdk-identity = [
     {file = "tankersdk-identity-1.3.4.tar.gz", hash = "sha256:69bb1346e6940321161e7042a78840f6d9e91eecfe7c206c58057db8696df253"},
