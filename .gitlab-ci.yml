@@ -47,14 +47,14 @@ check/windows:
   stage: check
   when: manual
 
-check/deployed-linux:
+check/linux/deployed:
   extends: .check-deployed
   tags: [linux]
   script:
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile gcc8-release
 
-check/deployed-macos:
+check/macos/deployed:
   extends: .check-deployed
   tags: [macos]
   script:
@@ -62,7 +62,7 @@ check/deployed-macos:
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile macos-release
 
-check/deployed-windows:
+check/windows/deployed:
   extends: .check-deployed
   tags: [windows]
   script:
