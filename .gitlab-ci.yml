@@ -4,6 +4,8 @@ stages:
 
 lint:
   tags: [linux]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   stage: check
   script:
     - poetry install --no-root
@@ -11,6 +13,9 @@ lint:
 
 .check:
   stage: check
+  rules:
+    - if: $CI_COMMIT_TAG == null && $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_MERGE_REQUEST_ID == null && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "master"
 
 check/linux:
   extends: .check
@@ -42,10 +47,13 @@ check/windows:
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile vs2019-release
 
-
 .check-deployed:
   stage: check
-  when: manual
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
 
 check/linux/deployed:
   extends: .check-deployed
@@ -72,9 +80,9 @@ check/windows/deployed:
 
 .deploy:
   stage: deploy
-  when: manual
-  only:
-    - tags
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_TAG
+      when: manual
 
 deploy/linux:
   extends: .deploy
@@ -102,20 +110,19 @@ mirror:
   tags:
     - linux
   stage: deploy
-  only:
-    - /\Av[0-9.]+\z/   # public release tags only
-    - master
-  except:
-    - schedules
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "push"
+      when: never
+    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9.]+\z/ # public release tags only
+    - if: $CI_COMMIT_REF_NAME == "master"
   script:
     - poetry run python run-ci.py mirror
 
 pages:
   stage: deploy
-  only:
-    - master
-  dependencies:
-    - check/linux
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "master"
+  needs: ["check/linux"]
   script:
     - mv coverage/ public/
   artifacts:
@@ -127,7 +134,8 @@ pages:
 
 safety:
   stage: check
-  only: [schedules]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
   script:
     - poetry env remove $(which python3)
     - poetry install --no-root
