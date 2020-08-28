@@ -17,7 +17,7 @@ lint:
     - if: $CI_COMMIT_TAG == null && $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_MERGE_REQUEST_ID == null && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "master"
 
-check/linux:
+.check/linux:
   extends: .check
   tags: [linux]
   script:
@@ -27,6 +27,16 @@ check/linux:
     paths:
       - coverage
     expire_in: 7 days
+
+check/linux/3.7:
+  extends: .check/linux
+  variables:
+     PYENV_VERSION: 3.7.8
+
+check/linux/3.8:
+  extends: .check/linux
+  variables:
+     PYENV_VERSION: 3.8.5
 
 check/macos:
   extends: .check
@@ -77,7 +87,7 @@ check/windows/deployed:
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile vs2019-release
 
-check/linux/downstream:
+.check/linux/downstream:
   stage: check
   tags:
     - linux
@@ -88,6 +98,16 @@ check/linux/downstream:
     - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
     - poetry run python run-ci.py download-artifacts --project-id=$UPSTREAM_PROJECT_ID --pipeline-id=$UPSTREAM_PIPELINE_ID --job-name=$UPSTREAM_JOB_NAME
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile gcc8-release
+
+check/linux/downstream/3.7:
+  extends: .check/linux/downstream
+  variables:
+     PYENV_VERSION: 3.7.8
+
+check/linux/downstream/3.8:
+  extends: .check/linux/downstream
+  variables:
+     PYENV_VERSION: 3.8.5
 
 check/macos/downstream:
   stage: check
@@ -119,12 +139,22 @@ check/windows/downstream:
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_TAG
       when: manual
 
-deploy/linux:
+.deploy/linux:
   extends: .deploy
   tags: [linux]
   script:
     - poetry install --no-root
     - poetry run python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
+
+deploy/linux/3.7:
+  extends: .deploy/linux
+  variables:
+     PYENV_VERSION: 3.7.8
+
+deploy/linux/3.8:
+  extends: .deploy/linux
+  variables:
+     PYENV_VERSION: 3.8.5
 
 deploy/macos:
   extends: .deploy
@@ -158,7 +188,7 @@ pages:
   stage: deploy
   rules:
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "master"
-  needs: ["check/linux"]
+  needs: ["check/linux/3.7"]
   script:
     - mv coverage/ public/
   artifacts:
