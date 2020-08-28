@@ -12,7 +12,7 @@ import tankerci.git
 import tankerci.gitlab
 
 DEPLOYED_TANKER = "tanker/2.5.0@tanker/stable"
-LOCAL_TANKER = "tanker/dev@tanker/dev"
+LOCAL_TANKER = "tanker/dev@"
 
 
 class TankerSource(Enum):
@@ -104,13 +104,13 @@ def build(tanker_source: TankerSource, profile: str) -> Builder:
         )
     elif tanker_source == TankerSource.LOCAL:
         tankerci.conan.export(
-            src_path=Path.getcwd().parent / "sdk-native", ref_or_channel="tanker/dev"
+            src_path=Path.getcwd().parent / "sdk-native", ref_or_channel=LOCAL_TANKER
         )
     elif tanker_source == TankerSource.SAME_AS_BRANCH:
         workspace = tankerci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
         src_path = workspace / "sdk-python"
         tankerci.conan.export(
-            src_path=workspace / "sdk-native", ref_or_channel="tanker/dev"
+            src_path=workspace / "sdk-native", ref_or_channel=LOCAL_TANKER
         )
 
     conan_out_path = src_path / "conan" / "out"
