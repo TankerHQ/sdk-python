@@ -136,7 +136,7 @@ def build_and_check(args) -> None:
 
 
 def deploy(profile: str) -> None:
-    builder = build("deployed", profile)
+    builder = build(TankerSource.DEPLOYED, profile)
     builder.deploy()
 
 
