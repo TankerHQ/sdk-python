@@ -74,7 +74,15 @@ class Builder:
         # so that they can be found even when the working directory
         # changes, and we make sure *all* paths used in build_tanker.py
         # are absolute
-        tankerci.run("poetry", "publish", "--build", "--repository", "gitlab", env=env)
+        tankerci.run("poetry", "build", env=env)
+        env["TWINE_PASSWORD"] = env["GITLAB_TOKEN"]
+        env["TWINE_USERNAME"] = env["GITLAB_USERNAME"]
+        repository = env["POETRY_REPOSITORIES_GITLAB_URL"]
+        tankerci.run(
+            f"poetry run twine upload --repository-url {repository} dist/*.whl",
+            shell=True,
+            env=env,
+        )
 
 
 def build(tanker_source: TankerSource, profile: str) -> Builder:
