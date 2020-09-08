@@ -1173,7 +1173,7 @@ description = "Tanker CI library"
 name = "tankerci"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "2020.9.2780"
+version = "2020.9.2810"
 
 [package.dependencies]
 cli-ui = ">=0.10.0,<0.11.0"
@@ -1186,7 +1186,6 @@ python-gitlab = ">=2.0.0,<3.0.0"
 selenium = ">=3.141.0,<4.0.0"
 tbump = ">=6.0.5,<7.0.0"
 tomlkit = ">=0.5.8,<0.6.0"
-twine = ">=3.2.0,<4.0.0"
 
 [package.source]
 reference = "gitlab"
@@ -1337,7 +1336,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "705e69ed87c0f44c1a34dd8d7239f514bbf43c7ae8df213c9fb24716e1299b28"
+content-hash = "7ee94c65fe52ddff74b5d8511b417e5406dec73232e2c4f147113a5f0a0cf28c"
 lock-version = "1.0"
 python-versions = "^3.7"
 
@@ -1918,8 +1917,8 @@ tankeradminsdk = [
     {file = "tankeradminsdk-0.1.1.tar.gz", hash = "md5:891b8ffbcb29f1ef9aff35462919a5c5"},
 ]
 tankerci = [
-    {file = "tankerci-2020.9.2780-py3-none-any.whl", hash = "sha256:26cd5037beb82a85922728ecd6d200afec0937af5dfb775832c600e522fa2d9e"},
-    {file = "tankerci-2020.9.2780.tar.gz", hash = "sha256:d440fdebec686afae7ac4160d83d8793cd7ce13164cd39cd7b875ec0be8c9e5f"},
+    {file = "tankerci-2020.9.2810-py3-none-any.whl", hash = "sha256:39b72c1777be70aa17dac3aa3e95b5e1d09bb7d601da9782a18f9f5cc4e82755"},
+    {file = "tankerci-2020.9.2810.tar.gz", hash = "sha256:082ea02abbb6acafec73b64ca6c43b7561c9b3091129e000ab2c500a6cd7ca0f"},
 ]
 tankersdk-identity = [
     {file = "tankersdk-identity-1.3.4.tar.gz", hash = "sha256:69bb1346e6940321161e7042a78840f6d9e91eecfe7c206c58057db8696df253"},

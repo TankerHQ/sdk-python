@@ -79,7 +79,19 @@ class Builder:
         if len(wheels) != 1:
             raise Exception("multiple wheels found: {}".format(wheels))
         wheel_path = wheels[0]
-        tankerci.run("scp", wheel_path, "pypi@tanker.local:packages")
+        env["TWINE_PASSWORD"] = env["GITLAB_TOKEN"]
+        env["TWINE_USERNAME"] = env["GITLAB_USERNAME"]
+        repository = env["POETRY_REPOSITORIES_GITLAB_URL"]
+        tankerci.run(
+            "poetry",
+            "run",
+            "twine",
+            "upload",
+            "--repository-url",
+            repository,
+            wheel_path,
+            env=env,
+        )
 
 
 def build(tanker_source: TankerSource, profile: str) -> Builder:
