@@ -1156,16 +1156,16 @@ description = "Tanker Python Admin SDK"
 name = "tankeradminsdk"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.1.1"
+version = "0.2.1"
 
 [package.dependencies]
 pynacl = ">=1.3.0,<2.0.0"
 requests = ">=2.23.0,<3.0.0"
 
 [package.source]
-reference = "tanker.local"
+reference = "gitlab"
 type = "legacy"
-url = "http://tanker.local:8181"
+url = "https://gitlab.com/api/v4/projects/20917546/packages/pypi/simple"
 
 [[package]]
 category = "dev"
@@ -1336,7 +1336,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "7ee94c65fe52ddff74b5d8511b417e5406dec73232e2c4f147113a5f0a0cf28c"
+content-hash = "8dd5807bdb38fb929d632c4b881ed9784c5488abb5d6f514408a10d150abe89d"
 lock-version = "1.0"
 python-versions = "^3.7"
 
@@ -1913,8 +1913,8 @@ tabulate = [
     {file = "tabulate-0.8.7.tar.gz", hash = "sha256:db2723a20d04bcda8522165c73eea7c300eda74e0ce852d9022e0159d7895007"},
 ]
 tankeradminsdk = [
-    {file = "tankeradminsdk-0.1.1-py3-none-any.whl", hash = "md5:210c493cb21d0dd333d0bd0898c6f7ac"},
-    {file = "tankeradminsdk-0.1.1.tar.gz", hash = "md5:891b8ffbcb29f1ef9aff35462919a5c5"},
+    {file = "tankeradminsdk-0.2.1-py3-none-any.whl", hash = "sha256:7f2252fb5d22e75d1fa804cd5db69e168ce450343af3d944370b45fa20e07ea3"},
+    {file = "tankeradminsdk-0.2.1.tar.gz", hash = "sha256:20c4bb48db1485d7fc336a58362f1e45b3acd1aba21b9233a1abc89eb267856b"},
 ]
 tankerci = [
     {file = "tankerci-2020.9.2810-py3-none-any.whl", hash = "sha256:39b72c1777be70aa17dac3aa3e95b5e1d09bb7d601da9782a18f9f5cc4e82755"},
