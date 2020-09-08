@@ -74,12 +74,7 @@ class Builder:
         # so that they can be found even when the working directory
         # changes, and we make sure *all* paths used in build_tanker.py
         # are absolute
-        tankerci.run("poetry", "build", env=env)
-        wheels = dist_path.files("tankersdk-*.whl")
-        if len(wheels) != 1:
-            raise Exception("multiple wheels found: {}".format(wheels))
-        wheel_path = wheels[0]
-        tankerci.run("scp", wheel_path, "pypi@tanker.local:packages")
+        tankerci.run("poetry", "publish", "--build", "--repository", "gitlab", env=env)
 
 
 def build(tanker_source: TankerSource, profile: str) -> Builder:
