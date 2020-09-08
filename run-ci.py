@@ -74,7 +74,7 @@ class Builder:
         # so that they can be found even when the working directory
         # changes, and we make sure *all* paths used in build_tanker.py
         # are absolute
-        tankerci.run("poetry", "publish", "--build", "--repository", "gitlab", env=env)
+        tankerci.run("poetry", "publish", "-vvv", "--build", "--repository", "gitlab", env=env)
 
 
 def build(tanker_source: TankerSource, profile: str) -> Builder:
