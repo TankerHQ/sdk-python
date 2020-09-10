@@ -671,7 +671,7 @@ async def test_bad_verification_code(tmp_path: Path, app: Dict[str, str]) -> Non
     assert error.value.code == ErrorCode.INVALID_VERIFICATION
     with pytest.raises(TankerError) as error:
         await phone_tanker.verify_identity(email=email, verification_code="")
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION
+    assert error.value.code == ErrorCode.INVALID_ARGUMENT
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     await laptop_tanker.stop()
 
