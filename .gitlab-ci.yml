@@ -1,208 +1,464 @@
+default:
+  before_script: &global_before_script
+  - poetry install --no-root
+
 stages:
   - check
+  - build-wheel
   - deploy
 
-lint:
-  tags: [linux]
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  stage: check
-  script:
-    - poetry install --no-root
-    - ./lint.sh
+##########
+# Stages #
+##########
 
 .check:
   stage: check
-  rules:
-    - if: $CI_COMMIT_TAG == null && $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_MERGE_REQUEST_ID == null && $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "master"
 
-.check/linux:
-  extends: .check
-  tags: [linux]
-  script:
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile gcc8-release
+.build-wheel:
+  stage: build-wheel
+
+.deploy:
+  stage: deploy
+
+#############################
+# Default settings override #
+#############################
+
+.before-script/download-artifacts:
+  before_script:
+    - *global_before_script
+    - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
+    - poetry run python run-ci.py download-artifacts --project-id=$UPSTREAM_PROJECT_ID --pipeline-id=$UPSTREAM_PIPELINE_ID --job-name=$UPSTREAM_JOB_NAME
+
+########
+# Tags #
+########
+
+.tags/windows:
+  tags:
+    - windows
+
+.tags/linux:
+  tags:
+    - linux
+
+.tags/macos:
+  tags:
+    - macos
+
+##############
+# Conditions #
+##############
+
+.if-valid-python-release-version: &if-valid-python-release-version
+    if: $SDK_PYTHON_RELEASE_VERSION =~ /\A[0-9.]+([a-b][0-9]+)?\z/
+
+.if-invalid-python-release-version: &if-invalid-python-release-version
+    if: $SDK_PYTHON_RELEASE_VERSION !~ /\A[0-9.]+([a-b][0-9]+)?\z/
+
+.if-invalid-native-conan-reference: &if-invalid-native-conan-reference
+    if: $SDK_NATIVE_LATEST_CONAN_REFERENCE !~ /\Atanker\/[0-9.]+(-[a-z]+[0-9]+)?@([a-z]+\/[a-z]+)?\z/
+
+.if-upstream-release-check-stage: &if-upstream-release-check-stage
+    # UPSTREAM_BRIDGE_STAGE is needed to avoid triggering this job twice when releasing sdk-native
+    # it should be run only before deploying sdk-native
+    # i.e. after manual deploy job is launched
+    if: $CI_PIPELINE_SOURCE == "pipeline" && $SDK_PYTHON_RELEASE_VERSION =~ /\A[0-9.]+([a-b][0-9]+)?\z/ && $UPSTREAM_BRIDGE_STAGE != "deploy"
+
+.if-upstream-release-deploy-stage: &if-upstream-release-deploy-stage
+    if: $CI_PIPELINE_SOURCE == "pipeline" && $SDK_PYTHON_RELEASE_VERSION =~ /\A[0-9.]+([a-b][0-9]+)?\z/ && $UPSTREAM_BRIDGE_STAGE == "deploy"
+
+.if-invalid-web-release: &if-invalid-web-release
+    if: $CI_PIPELINE_SOURCE == "web" && $SDK_PYTHON_RELEASE_VERSION !~ /\A[0-9.]+([a-b][0-9]+)?\z/
+
+.if-merge-result: &if-merge-result
+    if: $CI_MERGE_REQUEST_ID == null && $CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_REF_NAME == "master" || $CI_COMMIT_REF_NAME =~ /\Afeat\/.+\z/)
+
+.if-upstream-ci-pipeline: &if-upstream-ci-pipeline
+    if: $CI_PIPELINE_SOURCE == "pipeline" && $SDK_PYTHON_RELEASE_VERSION == null
+
+.if-web-pipeline: &if-web-pipeline
+    if: $CI_PIPELINE_SOURCE == "web"
+
+.if-mr-pipeline: &if-mr-pipeline
+    if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+.if-schedule-pipeline: &if-schedule-pipeline
+    if: $CI_PIPELINE_SOURCE == "schedule"
+
+.if-not-push-pipeline: &if-not-push-pipeline
+    if: $CI_PIPELINE_SOURCE != "push"
+
+.if-ref-master: &if-ref-master
+    if: $CI_COMMIT_REF_NAME == "master"
+
+.if-release-tag: &if-release-tag
+    if: $CI_COMMIT_REF_NAME =~ /\Av[0-9.]+\z/
+
+.if-release-branch: &if-release-branch
+    if: $CI_COMMIT_REF_NAME =~ /\Arelease\/.*\z/
+
+.if-feature-branch: &if-feature-branch
+    if: $CI_COMMIT_REF_NAME =~ /\Afeat\/.+\z/
+
+.if-not-linux-upstream-job: &if-not-linux-upstream-job
+    if: $CI_PIPELINE_SOURCE == "pipeline" && $UPSTREAM_RUNNER_TAG != "linux"
+
+.if-not-macos-upstream-job: &if-not-macos-upstream-job
+    if: $CI_PIPELINE_SOURCE == "pipeline" && $UPSTREAM_RUNNER_TAG != "macos"
+
+.if-not-windows-upstream-job: &if-not-windows-upstream-job
+    if: $CI_PIPELINE_SOURCE == "pipeline" && $UPSTREAM_RUNNER_TAG != "windows"
+
+#########
+# Rules #
+#########
+
+.rules/mr/auto:
+  rules:
+    - <<: *if-mr-pipeline
+
+.rules/deployed-native:
+  rules:
+    - <<: *if-invalid-native-conan-reference
+      when: never
+    - <<: *if-web-pipeline
+    - <<: *if-mr-pipeline
+      when: manual
+      allow_failure: true
+
+.rules/native-from-sources:
+  rules:
+    - <<: *if-mr-pipeline
+      when: manual
+      allow_failure: true
+    - <<: *if-merge-result
+
+.rules/check/downstream/linux:
+  rules:
+    - <<: *if-not-linux-upstream-job
+      when: never
+    - <<: *if-upstream-ci-pipeline
+
+.rules/check/downstream/macos:
+  rules:
+    - <<: *if-not-macos-upstream-job
+      when: never
+    - <<: *if-upstream-ci-pipeline
+
+.rules/check/downstream/windows:
+  rules:
+    - <<: *if-not-windows-upstream-job
+      when: never
+    - <<: *if-upstream-ci-pipeline
+
+.rules/check/downstream/release/linux:
+  rules:
+    - <<: *if-not-linux-upstream-job
+      when: never
+    - <<: *if-upstream-release-check-stage
+
+.rules/check/downstream/release/macos:
+  rules:
+    - <<: *if-not-macos-upstream-job
+      when: never
+    - <<: *if-upstream-release-check-stage
+
+.rules/check/downstream/release/windows:
+  rules:
+    - <<: *if-not-windows-upstream-job
+      when: never
+    - <<: *if-upstream-release-check-stage
+
+.rules/nightly:
+  rules:
+    - <<: *if-schedule-pipeline
+
+.rules/build-wheel:
+  rules:
+    - <<: *if-invalid-native-conan-reference
+      when: never
+    - <<: *if-invalid-python-release-version
+      when: never
+    - <<: *if-web-pipeline
+    - <<: *if-upstream-release-deploy-stage
+
+.rules/deploy:
+  rules:
+    - <<: *if-invalid-native-conan-reference
+      when: never
+    - <<: *if-invalid-python-release-version
+      when: never
+    - <<: *if-web-pipeline
+      when: manual
+    - <<: *if-upstream-release-deploy-stage
+
+.rules/pages:
+  rules:
+    - <<: *if-merge-result
+
+.rules/mirror:
+  rules:
+    - <<: *if-not-push-pipeline
+      when: never
+    - <<: *if-ref-master
+    - <<: *if-release-tag
+    - <<: *if-release-branch
+    - <<: *if-feature-branch
+
+##################
+# Workflow rules #
+##################
+
+workflow:
+  rules:
+    # web pipelines for releases only
+    - <<: *if-invalid-web-release
+      when: never
+    # allow everything else
+    - when: always
+
+#################
+# Extend blocks #
+#################
+
+.coverage:
   artifacts:
     paths:
       - coverage
     expire_in: 7 days
 
-check/linux/3.7:
-  extends: .check/linux
+.check/deployed-native/linux:
+  extends:
+    - .check
+    - .tags/linux
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile gcc8-release
+
+.check/native-from-sources/linux:
+  extends:
+    - .check
+    - .tags/linux
+    - .coverage
+    - .rules/native-from-sources
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile gcc8-release
+
+.check/downstream/linux:
+  extends:
+    - .check
+    - .tags/linux
+    - .before-script/download-artifacts
+    - .rules/check/downstream/linux
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile gcc8-release
+
+.check/downstream/release/linux:
+  extends:
+    - .check
+    - .tags/linux
+    - .before-script/download-artifacts
+    - .rules/check/downstream/release/linux
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile gcc8-release
+
+.build-wheel/linux:
+  extends:
+    - .build-wheel
+    - .tags/linux
+    - .rules/build-wheel
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile gcc8-release --version $SDK_PYTHON_RELEASE_VERSION
+  artifacts:
+    paths:
+      - dist
+
+###############
+# check stage #
+###############
+
+lint:
+  extends:
+    - .check
+    - .tags/linux
+    - .rules/mr/auto
+  script:
+    - ./lint.sh
+
+check/deployed-native/linux/3.7:
+  extends: .check/deployed-native/linux
   variables:
      PYENV_VERSION: 3.7.8
 
-check/linux/3.8:
-  extends: .check/linux
+check/deployed-native/linux/3.8:
+  extends: .check/deployed-native/linux
   variables:
      PYENV_VERSION: 3.8.5
 
-check/macos:
-  extends: .check
-  tags: [macos]
-  script:
-    - poetry env remove $(which python3) || true
-        # poetry runs pip install -e . _without_ the --no-deps and it causes
-        # the _next_ build to fail. So always remove the virtualenv before proceeding
-        # https://github.com/python-poetry/poetry/issues/2126
-        # we need `|| true` because the command will fail if the virtualenv does not exist
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile macos-release
-
-check/windows:
-  extends: .check
-  tags: [windows]
-  script:
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile vs2019-release
-
-.check-deployed:
-  stage: check
-  rules:
-    - if: $CI_COMMIT_TAG
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: manual
-      allow_failure: true
-
-check/linux/deployed:
-  extends: .check-deployed
-  tags: [linux]
-  script:
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile gcc8-release
-
-check/macos/deployed:
-  extends: .check-deployed
-  tags: [macos]
-  script:
-    - poetry env remove $(which python3) || true
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile macos-release
-
-check/windows/deployed:
-  extends: .check-deployed
-  tags: [windows]
-  script:
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile vs2019-release
-
-.check/linux/downstream:
-  stage: check
-  tags:
-    - linux
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "pipeline" && $UPSTREAM_RUNNER_TAG == "linux"
-  script:
-    - poetry install --no-root
-    - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
-    - poetry run python run-ci.py download-artifacts --project-id=$UPSTREAM_PROJECT_ID --pipeline-id=$UPSTREAM_PIPELINE_ID --job-name=$UPSTREAM_JOB_NAME
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile gcc8-release
-
-check/linux/downstream/3.7:
-  extends: .check/linux/downstream
+check/native-from-sources/linux/3.7:
+  extends: .check/native-from-sources/linux
   variables:
      PYENV_VERSION: 3.7.8
 
-check/linux/downstream/3.8:
-  extends: .check/linux/downstream
+check/native-from-sources/linux/3.8:
+  extends: .check/native-from-sources/linux
+  variables:
+     PYENV_VERSION: 3.8.5
+
+check/deployed-native/macos:
+  extends:
+    - .check
+    - .tags/macos
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile macos-release
+
+check/native-from-sources/macos:
+  extends:
+    - .check
+    - .tags/macos
+    - .coverage
+    - .rules/native-from-sources
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile macos-release
+
+check/deployed-native/windows:
+  extends:
+    - .check
+    - .tags/windows
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile vs2019-release
+
+check/native-from-sources/windows:
+  extends:
+    - .check
+    - .tags/windows
+    - .coverage
+    - .rules/native-from-sources
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile vs2019-release
+
+check/downstream/linux/3.7:
+  extends: .check/downstream/linux
+  variables:
+     PYENV_VERSION: 3.7.8
+
+check/downstream/linux/3.8:
+  extends: .check/downstream/linux
+  variables:
+     PYENV_VERSION: 3.8.5
+
+check/downstream/release/linux/3.7:
+  extends: .check/downstream/release/linux
+  variables:
+     PYENV_VERSION: 3.7.8
+
+check/downstream/release/linux/3.8:
+  extends: .check/downstream/release/linux
   variables:
      PYENV_VERSION: 3.8.5
 
 check/macos/downstream:
-  stage: check
-  tags:
-    - macos
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "pipeline" && $UPSTREAM_RUNNER_TAG == "macos"
+  extends:
+    - .check
+    - .tags/macos
+    - .before-script/download-artifacts
+    - .rules/check/downstream/release/macos
   script:
-    - poetry install --no-root
-    - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
-    - poetry run python run-ci.py download-artifacts --project-id=$UPSTREAM_PROJECT_ID --pipeline-id=$UPSTREAM_PIPELINE_ID --job-name=$UPSTREAM_JOB_NAME
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile macos-release
 
 check/windows/downstream:
-  stage: check
-  tags:
-    - windows
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "pipeline" && $UPSTREAM_RUNNER_TAG == "windows"
+  extends:
+    - .check
+    - .tags/windows
+    - .before-script/download-artifacts
+    - .rules/check/downstream/release/windows
   script:
-    - poetry install --no-root
-    - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
-    - poetry run python run-ci.py download-artifacts --project-id=$UPSTREAM_PROJECT_ID --pipeline-id=$UPSTREAM_PIPELINE_ID --job-name=$UPSTREAM_JOB_NAME
     - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile vs2019-release
 
-.deploy:
-  stage: deploy
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_TAG
-      when: manual
-
-.deploy/linux:
-  extends: .deploy
-  tags: [linux]
+safety:
+  stage: check
+  extends:
+    - .check
+    - .tags/linux
+    - .rules/nightly
   script:
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home deploy --profile gcc8-release
+    - poetry run safety check --full-report
 
-deploy/linux/3.7:
-  extends: .deploy/linux
+#####################
+# build-wheel stage #
+#####################
+
+build-wheel/linux/3.7:
+  extends: .build-wheel/linux
   variables:
      PYENV_VERSION: 3.7.8
 
-deploy/linux/3.8:
-  extends: .deploy/linux
+build-wheel/linux/3.8:
+  extends: .build-wheel/linux
   variables:
      PYENV_VERSION: 3.8.5
 
-deploy/macos:
-  extends: .deploy
-  tags: [macos]
+build-wheel/macos:
+  extends:
+    - .build-wheel
+    - .tags/macos
+    - .rules/build-wheel
   script:
-    - poetry env remove $(which python3) || true
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home deploy --profile macos-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile macos-release --version $SDK_PYTHON_RELEASE_VERSION
+  artifacts:
+    paths:
+      - dist
 
-deploy/windows:
-  extends: .deploy
-  tags: [windows]
+build-wheel/windows:
+  extends:
+    - .build-wheel
+    - .tags/windows
+    - .rules/build-wheel
   script:
-    - poetry install --no-root
-    - poetry run python run-ci.py --isolate-conan-user-home deploy --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile vs2019-release --version $SDK_PYTHON_RELEASE_VERSION
+  artifacts:
+    paths:
+      - dist
+
+################
+# deploy stage #
+################
+
+deploy:
+  extends:
+    - .deploy
+    - .tags/linux
+    - .rules/deploy
+  script:
+    - poetry run python run-ci.py deploy
+  release:
+    description: sdk-python v$SDK_PYTHON_RELEASE_VERSION
+    tag_name: v$SDK_PYTHON_RELEASE_VERSION
 
 mirror:
-  tags:
-    - linux
-  stage: deploy
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "push"
-      when: never
-    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9.]+\z/ # public release tags only
-    - if: $CI_COMMIT_REF_NAME == "master"
+  extends:
+    - .deploy
+    - .tags/linux
+    - .rules/mirror
   script:
-    - poetry install --no-root
     - poetry run python run-ci.py mirror
 
 pages:
-  stage: deploy
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "master"
-  needs: ["check/linux/3.7"]
+  extends:
+    - .deploy
+    - .tags/linux
+    - .rules/pages
+  needs:
+    - check/native-from-sources/linux/3.7
   script:
     - mv coverage/ public/
   artifacts:
     paths:
       - public
     expire_in: 7 days
-  tags:
-    - linux
-
-safety:
-  stage: check
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-  script:
-    - poetry env remove $(which python3)
-    - poetry install --no-root
-    - poetry run safety check --full-report

@@ -54,12 +54,8 @@ class Builder:
         dest_dir.rmtree_p()
         coverage_dir.copytree(dest_dir)
 
-    def deploy(self) -> None:
-        tag = os.environ.get("CI_COMMIT_TAG")
-        if tag is None:
-            raise Exception("No tag found, cannot deploy")
+    def build_wheel(self, version: str) -> None:
         with self.src_path:
-            version = tankerci.bump.version_from_git_tag(tag)
             tankerci.bump.bump_files(version)
         dist_path = self.src_path / "dist"
         dist_path.rmtree_p()
@@ -78,20 +74,13 @@ class Builder:
         wheels = dist_path.files("tankersdk-*.whl")
         if len(wheels) != 1:
             raise Exception("multiple wheels found: {}".format(wheels))
-        wheel_path = wheels[0]
-        env["TWINE_PASSWORD"] = env["GITLAB_TOKEN"]
-        env["TWINE_USERNAME"] = env["GITLAB_USERNAME"]
-        repository = env["POETRY_REPOSITORIES_GITLAB_URL"]
-        tankerci.run(
-            "poetry",
-            "run",
-            "twine",
-            "upload",
-            "--repository-url",
-            repository,
-            wheel_path,
-            env=env,
-        )
+
+
+def retrieve_conan_reference(*, recipe_dir: Path) -> str:
+    recipe_info = tankerci.conan.inspect(recipe_dir)
+    name = recipe_info["name"]
+    version = recipe_info["version"]
+    return f"{name}/{version}@"
 
 
 def build(tanker_source: TankerSource, profile: str) -> Builder:
@@ -100,13 +89,14 @@ def build(tanker_source: TankerSource, profile: str) -> Builder:
     tanker_conan_extra_flags = ["--build=tanker"]
 
     if tanker_source == TankerSource.DEPLOYED:
-        tanker_conan_ref = DEPLOYED_TANKER
+        tanker_conan_ref = os.environ["SDK_NATIVE_LATEST_CONAN_REFERENCE"]
         tanker_conan_extra_flags = []
     elif tanker_source == TankerSource.UPSTREAM:
-        tanker_conan_ref = LOCAL_TANKER
-        tanker_conan_extra_flags = []
+        artifacts_folder = Path.getcwd() / "package"
+        package_folder = artifacts_folder / profile
 
-        package_folder = Path.getcwd() / "package" / profile
+        tanker_conan_ref = retrieve_conan_reference(recipe_dir=artifacts_folder)
+        tanker_conan_extra_flags = []
 
         tankerci.conan.export_pkg(
             Path.getcwd() / "package" / "conanfile.py",
@@ -147,9 +137,29 @@ def build_and_check(args) -> None:
     builder.test()
 
 
-def deploy(profile: str) -> None:
+def build_wheel(profile: str, version: str) -> None:
     builder = build(TankerSource.DEPLOYED, profile)
-    builder.deploy()
+    builder.build_wheel(version)
+
+
+def deploy() -> None:
+    env = os.environ.copy()
+    env["TWINE_PASSWORD"] = env["GITLAB_TOKEN"]
+    env["TWINE_USERNAME"] = env["GITLAB_USERNAME"]
+    repository = env["POETRY_REPOSITORIES_GITLAB_URL"]
+
+    wheels_path = Path.getcwd() / "dist"
+    for wheel in wheels_path.files("tankersdk-*.whl"):
+        tankerci.run(
+            "poetry",
+            "run",
+            "twine",
+            "upload",
+            "--repository-url",
+            repository,
+            wheel,
+            env=env,
+        )
 
 
 def main() -> None:
@@ -180,9 +190,11 @@ def main() -> None:
     download_artifacts_parser.add_argument("--pipeline-id", required=True)
     download_artifacts_parser.add_argument("--job-name", required=True)
 
-    deploy_parser = subparsers.add_parser("deploy")
-    deploy_parser.add_argument("--profile", required=True)
+    build_wheel_parser = subparsers.add_parser("build-wheel")
+    build_wheel_parser.add_argument("--profile", required=True)
+    build_wheel_parser.add_argument("--version", required=True)
 
+    subparsers.add_parser("deploy")
     subparsers.add_parser("mirror")
 
     args = parser.parse_args()
@@ -196,11 +208,14 @@ def main() -> None:
         tankerci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
     elif command == "build-and-check":
         build_and_check(args)
+    elif command == "build-wheel":
+        build_wheel(args.profile, args.version)
     elif command == "deploy":
-        deploy(args.profile)
+        deploy()
     elif command == "reset-branch":
+        fallback = os.environ["CI_COMMIT_REF_NAME"]
         ref = tankerci.git.find_ref(
-            Path.getcwd(), [f"origin/{args.branch}", "origin/master"]
+            Path.getcwd(), [f"origin/{args.branch}", f"origin/{fallback}"]
         )
         tankerci.git.reset(Path.getcwd(), ref)
     elif command == "download-artifacts":
