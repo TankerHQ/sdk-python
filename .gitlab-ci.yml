@@ -210,7 +210,7 @@ workflow:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile gcc8-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile gcc8-release
 
 .check/native-from-sources/linux:
   extends:
@@ -219,7 +219,7 @@ workflow:
     - .coverage
     - .rules/native-from-sources
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile gcc8-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile gcc8-release
 
 .check/downstream/linux:
   extends:
@@ -228,7 +228,7 @@ workflow:
     - .before-script/download-artifacts
     - .rules/check/downstream/linux
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile gcc8-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile gcc8-release
 
 .build-wheel/linux:
   extends:
@@ -280,7 +280,7 @@ check/deployed-native/macos:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile macos-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile macos-release
 
 check/native-from-sources/macos:
   extends:
@@ -289,7 +289,7 @@ check/native-from-sources/macos:
     - .coverage
     - .rules/native-from-sources
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile macos-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile macos-release
 
 check/deployed-native/windows:
   extends:
@@ -298,7 +298,7 @@ check/deployed-native/windows:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=deployed --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile vs2019-release
 
 check/native-from-sources/windows:
   extends:
@@ -307,7 +307,7 @@ check/native-from-sources/windows:
     - .coverage
     - .rules/native-from-sources
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=same-as-branch --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile vs2019-release
 
 check/downstream/linux/3.7:
   extends: .check/downstream/linux
@@ -326,7 +326,7 @@ check/macos/downstream:
     - .before-script/download-artifacts
     - .rules/check/downstream/macos
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile macos-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile macos-release
 
 check/windows/downstream:
   extends:
@@ -335,7 +335,7 @@ check/windows/downstream:
     - .before-script/download-artifacts
     - .rules/check/downstream/windows
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-check --use-tanker=upstream --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile vs2019-release
 
 safety:
   stage: check
