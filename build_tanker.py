@@ -32,12 +32,18 @@ def on_import() -> None:
         this_path = Path(path_from_env)
     else:
         this_path = Path(__file__).parent.abspath()
+
     conan_out_path = this_path / "conan" / "out"
-    build_info = conan_out_path / "conanbuildinfo.json"
-    if not build_info.exists():
+    build_info = None
+    for d in conan_out_path.dirs():
+        conan_info = d / "conanbuildinfo.json"
+        if conan_info.exists():
+            build_info = conan_info
+            break
+
+    if not build_info or not build_info.exists():
         ui.fatal(
-            build_info,
-            "does not exist - cannot configure compilation with tanker/native",
+            "conanbuildinfo.json not found - cannot configure compilation with tanker/native",
         )
 
     conaninfo = json.loads(build_info.text())

@@ -3,142 +3,79 @@ import os
 import sys
 
 from path import Path
-from enum import Enum
+from typing import List  # noqa
 
 import tankerci
 import tankerci.bump
 import tankerci.conan
+from tankerci.conan import TankerSource
 import tankerci.git
 import tankerci.gitlab
 
-LOCAL_TANKER = "tanker/dev@"
+
+def prepare(tanker_source: TankerSource, profile: str, update: bool) -> None:
+    tankerci.conan.install_tanker_source(
+        tanker_source,
+        output_path=Path("conan") / "out",
+        profiles=[profile],
+        update=update,
+    )
 
 
-class TankerSource(Enum):
-    LOCAL = "local"
-    SAME_AS_BRANCH = "same-as-branch"
-    DEPLOYED = "deployed"
-    UPSTREAM = "upstream"
+def build() -> None:
+    tankerci.run("poetry", "install", cwd=Path.getcwd())
 
 
-class Builder:
-    def __init__(self, src_path: Path, profile: str):
-        self.profile = profile
-        self.src_path = src_path
-
-    def build(self) -> None:
-        # Note: this re-installs the root package, which was skipped
-        # when using poetry install --no-root in the .gitlab-ci.yml
-        # This is because we need to run some conan commands before the
-        # code in build.py can run
-        tankerci.run("poetry", "install", cwd=self.src_path)
-
-    def test(self) -> None:
-        env = os.environ.copy()
-        env["TANKER_SDK_DEBUG"] = "1"
-        # fmt: off
-        tankerci.run(
-            "poetry", "run", "pytest",
-            "--verbose",
-            "--capture=no",
-            "--cov=tankersdk",
-            "--cov-report", "html",
-            "--numprocesses", "auto",
-            env=env,
-            cwd=self.src_path,
-        )
-        # fmt: on
-        coverage_dir = self.src_path / "htmlcov"
-        dest_dir = Path.getcwd() / "coverage"
-        dest_dir.rmtree_p()
-        coverage_dir.copytree(dest_dir)
-
-    def build_wheel(self, version: str) -> None:
-        with self.src_path:
-            tankerci.bump.bump_files(version)
-        dist_path = self.src_path / "dist"
-        dist_path.rmtree_p()
-
-        env = os.environ.copy()
-        env["TANKER_PYTHON_SDK_SRC"] = self.src_path
-        # Note: poetry generates a temporary directory,
-        # change the working directory there, creates a `setup.py`
-        # from scratch (calling `build.py`) and runs it.
-        # In the process, all the conan files generated in the
-        # sources gets lost. We set this environment variable
-        # so that they can be found even when the working directory
-        # changes, and we make sure *all* paths used in build_tanker.py
-        # are absolute
-        tankerci.run("poetry", "build", env=env)
-        wheels = dist_path.files("tankersdk-*.whl")
-        if len(wheels) != 1:
-            raise Exception("multiple wheels found: {}".format(wheels))
-
-
-def retrieve_conan_reference(*, recipe_dir: Path) -> str:
-    recipe_info = tankerci.conan.inspect(recipe_dir)
-    name = recipe_info["name"]
-    version = recipe_info["version"]
-    return f"{name}/{version}@"
-
-
-def build(tanker_source: TankerSource, profile: str) -> Builder:
+def test() -> None:
+    env = os.environ.copy()
+    env["TANKER_SDK_DEBUG"] = "1"
     src_path = Path.getcwd()
-    tanker_conan_ref = LOCAL_TANKER
-    tanker_conan_extra_flags = ["--build=tanker"]
-
-    if tanker_source == TankerSource.DEPLOYED:
-        tanker_conan_ref = os.environ["SDK_NATIVE_LATEST_CONAN_REFERENCE"]
-        tanker_conan_extra_flags = []
-    elif tanker_source == TankerSource.UPSTREAM:
-        artifacts_folder = Path.getcwd() / "package"
-        package_folder = artifacts_folder / profile
-
-        tanker_conan_ref = retrieve_conan_reference(recipe_dir=artifacts_folder)
-        tanker_conan_extra_flags = []
-
-        tankerci.conan.export_pkg(
-            Path.getcwd() / "package" / "conanfile.py",
-            profile=profile,
-            force=True,
-            package_folder=package_folder,
-        )
-    elif tanker_source == TankerSource.LOCAL:
-        tankerci.conan.export(
-            src_path=Path.getcwd().parent / "sdk-native", ref_or_channel=LOCAL_TANKER
-        )
-    elif tanker_source == TankerSource.SAME_AS_BRANCH:
-        workspace = tankerci.git.prepare_sources(repos=["sdk-native", "sdk-python"])
-        src_path = workspace / "sdk-python"
-        tankerci.conan.export(
-            src_path=workspace / "sdk-native", ref_or_channel=LOCAL_TANKER
-        )
-
-    conan_out_path = src_path / "conan" / "out"
     # fmt: off
-    tankerci.conan.run(
-        "install", tanker_conan_ref,
-        *tanker_conan_extra_flags,
-        "--update",
-        "--profile", profile,
-        "--install-folder", conan_out_path,
-        "--generator=json",
+    tankerci.run(
+        "poetry", "run", "pytest",
+        "--verbose",
+        "--capture=no",
+        "--cov=tankersdk",
+        "--cov-report", "html",
+        "--numprocesses", "auto",
+        env=env,
+        cwd=src_path,
     )
     # fmt: on
+    coverage_dir = src_path / "htmlcov"
+    dest_dir = Path.getcwd() / "coverage"
+    dest_dir.rmtree_p()
+    coverage_dir.copytree(dest_dir)
 
-    builder = Builder(src_path, profile)
-    builder.build()
-    return builder
 
-
-def build_and_check(args) -> None:
-    builder = build(args.tanker_source, args.profile)
-    builder.test()
+def build_and_test(tanker_source: TankerSource, profile: str) -> None:
+    prepare(tanker_source, profile, False)
+    build()
+    test()
 
 
 def build_wheel(profile: str, version: str) -> None:
-    builder = build(TankerSource.DEPLOYED, profile)
-    builder.build_wheel(version)
+    prepare(TankerSource.DEPLOYED, profile, False)
+    build()
+    src_path = Path.getcwd()
+    # tankerci.bump.bump_files(version)
+    dist_path = src_path / "dist"
+    dist_path.rmtree_p()
+
+    env = os.environ.copy()
+    env["TANKER_PYTHON_SDK_SRC"] = src_path
+    # Note: poetry generates a temporary directory,
+    # change the working directory there, creates a `setup.py`
+    # from scratch (calling `build.py`) and runs it.
+    # In the process, all the conan files generated in the
+    # sources gets lost. We set this environment variable
+    # so that they can be found even when the working directory
+    # changes, and we make sure *all* paths used in build_tanker.py
+    # are absolute
+    tankerci.run("poetry", "build", env=env)
+    wheels = dist_path.files("tankersdk-*.whl")
+    if len(wheels) != 1:
+        raise Exception("multiple wheels found: {}".format(wheels))
 
 
 def deploy() -> None:
@@ -172,14 +109,26 @@ def main() -> None:
 
     subparsers = parser.add_subparsers(title="subcommands", dest="command")
 
-    build_and_check_parser = subparsers.add_parser("build-and-check")
-    build_and_check_parser.add_argument(
+    build_and_test_parser = subparsers.add_parser("build-and-test")
+    build_and_test_parser.add_argument(
         "--use-tanker",
         type=TankerSource,
-        default=TankerSource.LOCAL,
+        default=TankerSource.EDITABLE,
         dest="tanker_source",
     )
-    build_and_check_parser.add_argument("--profile", default="default")
+    build_and_test_parser.add_argument("--profile", default="default")
+
+    prepare_parser = subparsers.add_parser("prepare")
+    prepare_parser.add_argument(
+        "--use-tanker",
+        type=TankerSource,
+        default=TankerSource.EDITABLE,
+        dest="tanker_source",
+    )
+    prepare_parser.add_argument("--profile", default="default")
+    prepare_parser.add_argument(
+        "--update", action="store_true", default=False, dest="update",
+    )
 
     reset_branch_parser = subparsers.add_parser("reset-branch")
     reset_branch_parser.add_argument("branch")
@@ -205,10 +154,12 @@ def main() -> None:
 
     if command == "mirror":
         tankerci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
-    elif command == "build-and-check":
-        build_and_check(args)
     elif command == "build-wheel":
         build_wheel(args.profile, args.version)
+    elif command == "prepare":
+        prepare(args.tanker_source, args.profile, args.update)
+    elif command == "build-and-test":
+        build_and_test(args.tanker_source, args.profile)
     elif command == "deploy":
         deploy()
     elif command == "reset-branch":
