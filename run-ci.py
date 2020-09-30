@@ -3,7 +3,7 @@ import os
 import sys
 
 from path import Path
-from typing import List  # noqa
+from typing import List, Optional  # noqa
 
 import tankerci
 import tankerci.bump
@@ -13,12 +13,21 @@ import tankerci.git
 import tankerci.gitlab
 
 
-def prepare(tanker_source: TankerSource, profile: str, update: bool) -> None:
+def prepare(
+    tanker_source: TankerSource,
+    profile: str,
+    update: bool,
+    tanker_ref: Optional[str] = None,
+) -> None:
+    tanker_deployed_ref = tanker_ref
+    if tanker_source == TankerSource.DEPLOYED and not tanker_ref:
+        tanker_deployed_ref = "tanker/latest-stable@"
     tankerci.conan.install_tanker_source(
         tanker_source,
         output_path=Path("conan") / "out",
         profiles=[profile],
         update=update,
+        tanker_deployed_ref=tanker_deployed_ref,
     )
 
 
@@ -48,14 +57,16 @@ def test() -> None:
     coverage_dir.copytree(dest_dir)
 
 
-def build_and_test(tanker_source: TankerSource, profile: str) -> None:
-    prepare(tanker_source, profile, False)
+def build_and_test(
+    tanker_source: TankerSource, profile: str, tanker_ref: Optional[str] = None
+) -> None:
+    prepare(tanker_source, profile, False, tanker_ref)
     build()
     test()
 
 
-def build_wheel(profile: str, version: str) -> None:
-    prepare(TankerSource.DEPLOYED, profile, False)
+def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
+    prepare(TankerSource.DEPLOYED, profile, False, tanker_ref)
     build()
     src_path = Path.getcwd()
     # tankerci.bump.bump_files(version)
@@ -117,6 +128,7 @@ def main() -> None:
         dest="tanker_source",
     )
     build_and_test_parser.add_argument("--profile", default="default")
+    build_and_test_parser.add_argument("--tanker-ref")
 
     prepare_parser = subparsers.add_parser("prepare")
     prepare_parser.add_argument(
@@ -126,6 +138,7 @@ def main() -> None:
         dest="tanker_source",
     )
     prepare_parser.add_argument("--profile", default="default")
+    prepare_parser.add_argument("--tanker-ref")
     prepare_parser.add_argument(
         "--update", action="store_true", default=False, dest="update",
     )
@@ -141,6 +154,7 @@ def main() -> None:
     build_wheel_parser = subparsers.add_parser("build-wheel")
     build_wheel_parser.add_argument("--profile", required=True)
     build_wheel_parser.add_argument("--version", required=True)
+    build_wheel_parser.add_argument("--tanker-ref", required=True)
 
     subparsers.add_parser("deploy")
     subparsers.add_parser("mirror")
@@ -155,11 +169,11 @@ def main() -> None:
     if command == "mirror":
         tankerci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
     elif command == "build-wheel":
-        build_wheel(args.profile, args.version)
+        build_wheel(args.profile, args.version, args.tanker_ref)
     elif command == "prepare":
-        prepare(args.tanker_source, args.profile, args.update)
+        prepare(args.tanker_source, args.profile, args.update, args.tanker_ref)
     elif command == "build-and-test":
-        build_and_test(args.tanker_source, args.profile)
+        build_and_test(args.tanker_source, args.profile, args.tanker_ref)
     elif command == "deploy":
         deploy()
     elif command == "reset-branch":

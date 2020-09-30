@@ -42,7 +42,7 @@ check/deployed-native/macos:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile macos-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE --profile macos-release
 
 check/native-from-sources/macos:
   extends:
@@ -60,7 +60,7 @@ check/deployed-native/windows:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile vs2019-release
 
 check/native-from-sources/windows:
   extends:
@@ -128,7 +128,7 @@ build-wheel/macos:
     - .tags/macos
     - .rules/build-wheel
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile macos-release --version $SDK_PYTHON_RELEASE_VERSION
+    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile macos-release --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
   artifacts:
     paths:
       - dist
@@ -139,7 +139,7 @@ build-wheel/windows:
     - .tags/windows
     - .rules/build-wheel
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile vs2019-release --version $SDK_PYTHON_RELEASE_VERSION
+    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile vs2019-release --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
   artifacts:
     paths:
       - dist
