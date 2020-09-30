@@ -3,7 +3,7 @@ import os
 import sys
 
 from path import Path
-from typing import List  # noqa
+from typing import List, Optional  # noqa
 
 import tankerci
 import tankerci.bump
@@ -13,12 +13,18 @@ import tankerci.git
 import tankerci.gitlab
 
 
-def prepare(tanker_source: TankerSource, profile: str, update: bool) -> None:
+def prepare(
+    tanker_source: TankerSource,
+    profile: str,
+    update: bool,
+    tanker_ref: Optional[str] = None,
+) -> None:
     tankerci.conan.install_tanker_source(
         tanker_source,
         output_path=Path("conan") / "out",
         profiles=[profile],
         update=update,
+        tanker_deployed_ref=tanker_ref,
     )
 
 
@@ -48,8 +54,10 @@ def test() -> None:
     coverage_dir.copytree(dest_dir)
 
 
-def build_and_test(tanker_source: TankerSource, profile: str) -> None:
-    prepare(tanker_source, profile, False)
+def build_and_test(
+    tanker_source: TankerSource, profile: str, tanker_ref: Optional[str] = None
+) -> None:
+    prepare(tanker_source, profile, False, tanker_ref)
     build()
     test()
 
@@ -117,6 +125,7 @@ def main() -> None:
         dest="tanker_source",
     )
     build_and_test_parser.add_argument("--profile", default="default")
+    build_and_test_parser.add_argument("--tanker-ref")
 
     prepare_parser = subparsers.add_parser("prepare")
     prepare_parser.add_argument(
@@ -126,6 +135,7 @@ def main() -> None:
         dest="tanker_source",
     )
     prepare_parser.add_argument("--profile", default="default")
+    prepare_parser.add_argument("--tanker-ref")
     prepare_parser.add_argument(
         "--update", action="store_true", default=False, dest="update",
     )
@@ -157,9 +167,9 @@ def main() -> None:
     elif command == "build-wheel":
         build_wheel(args.profile, args.version)
     elif command == "prepare":
-        prepare(args.tanker_source, args.profile, args.update)
+        prepare(args.tanker_source, args.profile, args.update, args.tanker_ref)
     elif command == "build-and-test":
-        build_and_test(args.tanker_source, args.profile)
+        build_and_test(args.tanker_source, args.profile, args.tanker_ref)
     elif command == "deploy":
         deploy()
     elif command == "reset-branch":

@@ -21,7 +21,7 @@ attrs = "^19.3.0"
 typing_extensions = "^3.7.4"
 
 [tool.poetry.dev-dependencies]
-tankerci = "*"
+tankerci = { git = "git@gitlab.com:TankerHQ/ci", branch = "theo/conan_alias" }
 
 # linters
 black = "^19.3b0"
