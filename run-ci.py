@@ -69,7 +69,7 @@ def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
     prepare(TankerSource.DEPLOYED, profile, False, tanker_ref)
     build()
     src_path = Path.getcwd()
-    # tankerci.bump.bump_files(version)
+    tankerci.bump.bump_files(version)
     dist_path = src_path / "dist"
     dist_path.rmtree_p()
 
