@@ -1,4 +1,5 @@
 import asyncio
+import random
 import base64
 from collections import namedtuple
 import io
@@ -67,7 +68,9 @@ def create_tanker(app_id: str, *, writable_path: str) -> Tanker:
 
 @pytest.fixture()
 def tmp_path(tmpdir: str) -> Path:
-    return Path(str(tmpdir))
+    path = Path(str(tmpdir))
+    path.mkdir_p()
+    return path
 
 
 @pytest.fixture(scope="session")
@@ -187,11 +190,8 @@ User = namedtuple("User", ["session", "public_identity", "private_identity"])
 
 
 async def create_user_session(tmp_path: Path, app: Dict[str, str]) -> User:
-    fake = Faker()
-    user_id = fake.email(domain="tanker.io")
-    user_path = tmp_path.joinpath(user_id)
-    user_path.mkdir_p()
-    tanker = create_tanker(app["id"], writable_path=user_path)
+    user_id = str(random.randrange(1 << 64))
+    tanker = create_tanker(app["id"], writable_path=tmp_path)
     private_identity = tankersdk_identity.create_identity(
         app["id"], app["app_secret"], user_id
     )
