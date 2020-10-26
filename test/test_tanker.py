@@ -15,7 +15,14 @@ from typing import cast, Any, Dict, Iterator, Tuple
 import tankersdk
 from tankersdk import Tanker, Error as TankerError, ErrorCode
 from tankersdk import Status as TankerStatus
-from tankersdk.tanker import CVerification, VerificationMethodType
+from tankersdk import (
+    EmailVerification,
+    EmailVerificationMethod,
+    VerificationMethodType,
+    PassphraseVerification,
+    OidcIdTokenVerification,
+    VerificationKeyVerification,
+)
 import tankersdk_identity
 import tankeradminsdk
 from tankeradminsdk import Admin
@@ -80,26 +87,6 @@ def admin() -> Iterator[Admin]:
     )
 
 
-class TestVerificationSanityChecks:
-    def assert_value_error(self, **kwargs: str) -> None:
-        with pytest.raises(ValueError):
-            CVerification(**kwargs)
-
-    def test_accepts_correct_arguments(self) -> None:
-        CVerification(passphrase="my-passphrase")
-        CVerification(verification_key="THE-KEY")
-        CVerification(email="john.test@tanker.io", verification_code="1234")
-
-    def test_rejects_all_none(self) -> None:
-        self.assert_value_error()
-
-    def test_rejects_two_methods(self) -> None:
-        self.assert_value_error(passphrase="my-passphrase", verification_key="THE-KEY")
-
-    def test_rejects_email_without_verification_code(self) -> None:
-        self.assert_value_error(email="john.test@tanker.io")
-
-
 @pytest.fixture(scope="session")
 def app(admin: Admin) -> Iterator[Dict[str, str]]:
     name = "python_bindings"
@@ -151,7 +138,7 @@ async def test_start_new_account(tmp_path: Path, app: Dict[str, str]) -> None:
     status = await tanker.start(identity)
     assert status == TankerStatus.IDENTITY_REGISTRATION_NEEDED
     key = await tanker.generate_verification_key()
-    await tanker.register_identity(verification_key=key)
+    await tanker.register_identity(VerificationKeyVerification(key))
     assert tanker.status == TankerStatus.READY
     device_id = await tanker.device_id()
     assert device_id
@@ -178,7 +165,7 @@ async def test_create_account_then_sign_in(tmp_path: Path, app: Dict[str, str]) 
     identity = tankersdk_identity.create_identity(app["id"], app["app_secret"], user_id)
     await tanker.start(identity)
     key = await tanker.generate_verification_key()
-    await tanker.register_identity(verification_key=key)
+    await tanker.register_identity(VerificationKeyVerification(key))
     await tanker.stop()
 
     await tanker.start(identity)
@@ -198,7 +185,7 @@ async def create_user_session(tmp_path: Path, app: Dict[str, str]) -> User:
     public_identity = tankersdk_identity.get_public_identity(private_identity)
     await tanker.start(private_identity)
     key = await tanker.generate_verification_key()
-    await tanker.register_identity(verification_key=key)
+    await tanker.register_identity(VerificationKeyVerification(key))
     return User(
         session=tanker,
         private_identity=private_identity,
@@ -461,14 +448,14 @@ async def create_two_devices(
         app["id"], app["app_secret"], fake.email(domain="tanker.io")
     )
     await laptop_tanker.start(identity)
-    await laptop_tanker.register_identity(passphrase=passphrase)
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(app["id"], writable_path=phone_path)
 
     await phone_tanker.start(identity)
-    await phone_tanker.verify_identity(passphrase=passphrase)
+    await phone_tanker.verify_identity(PassphraseVerification(passphrase))
     return identity, laptop_tanker, phone_tanker
 
 
@@ -533,7 +520,7 @@ async def test_must_verify_identity_on_second_device(
     )
     passphrase = "my secure passphrase"
     await laptop_tanker.start(alice_identity)
-    await laptop_tanker.register_identity(passphrase=passphrase)
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
@@ -557,13 +544,13 @@ async def test_using_verification_key_on_second_device(
     )
     await laptop_tanker.start(alice_identity)
     verification_key = await laptop_tanker.generate_verification_key()
-    await laptop_tanker.register_identity(verification_key=verification_key)
+    await laptop_tanker.register_identity(VerificationKeyVerification(verification_key))
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
     phone_tanker = create_tanker(app["id"], writable_path=phone_path)
     await phone_tanker.start(alice_identity)
-    await phone_tanker.verify_identity(verification_key=verification_key)
+    await phone_tanker.verify_identity(VerificationKeyVerification(verification_key))
     assert phone_tanker.status == TankerStatus.READY
     await laptop_tanker.stop()
     await phone_tanker.stop()
@@ -580,7 +567,7 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
     )
     await laptop_tanker.start(alice_identity)
     verification_key = await laptop_tanker.generate_verification_key()
-    await laptop_tanker.register_identity(verification_key=verification_key)
+    await laptop_tanker.register_identity(VerificationKeyVerification(verification_key))
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
@@ -588,11 +575,11 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
     await phone_tanker.start(alice_identity)
 
     with pytest.raises(TankerError) as error:
-        await phone_tanker.verify_identity(verification_key="plop")
+        await phone_tanker.verify_identity(VerificationKeyVerification("plop"))
     assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     with pytest.raises(TankerError) as error:
-        await phone_tanker.verify_identity(verification_key="")
+        await phone_tanker.verify_identity(VerificationKeyVerification(""))
     assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     key_json = base64.b64decode(verification_key.encode()).decode()
@@ -604,7 +591,7 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
     key = base64.b64encode(key_json.encode()).decode()
 
     with pytest.raises(TankerError):
-        await phone_tanker.verify_identity(verification_key=key)
+        await phone_tanker.verify_identity(VerificationKeyVerification(key))
 
 
 def get_verification_code(app: Dict[str, str], email: str) -> str:
@@ -628,9 +615,7 @@ async def test_email_verification(tmp_path: Path, app: Dict[str, str]) -> None:
     )
     await laptop_tanker.start(alice_identity)
     verification_code = get_verification_code(app, email)
-    await laptop_tanker.register_identity(
-        email=email, verification_code=verification_code
-    )
+    await laptop_tanker.register_identity(EmailVerification(email, verification_code))
     assert len(verification_code) == 8
 
     phone_path = tmp_path.joinpath("phone")
@@ -640,7 +625,7 @@ async def test_email_verification(tmp_path: Path, app: Dict[str, str]) -> None:
     await phone_tanker.start(alice_identity)
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     verification_code = get_verification_code(app, email)
-    await phone_tanker.verify_identity(email=email, verification_code=verification_code)
+    await phone_tanker.verify_identity(EmailVerification(email, verification_code))
     assert phone_tanker.status == TankerStatus.READY
     await laptop_tanker.stop()
     await phone_tanker.stop()
@@ -661,18 +646,16 @@ async def test_bad_verification_code(tmp_path: Path, app: Dict[str, str]) -> Non
     phone_tanker = create_tanker(app["id"], writable_path=phone_path)
     await laptop_tanker.start(alice_identity)
     verification_code = get_verification_code(app, email)
-    await laptop_tanker.register_identity(
-        email=email, verification_code=verification_code
-    )
+    await laptop_tanker.register_identity(EmailVerification(email, verification_code))
     await phone_tanker.start(alice_identity)
     with pytest.raises(TankerError) as error:
-        await phone_tanker.verify_identity(email=email, verification_code="12345678")
+        await phone_tanker.verify_identity(EmailVerification(email, "12345678"))
     assert error.value.code == ErrorCode.INVALID_VERIFICATION
     with pytest.raises(TankerError) as error:
-        await phone_tanker.verify_identity(email=email, verification_code="azerty")
+        await phone_tanker.verify_identity(EmailVerification(email, "azerty"))
     assert error.value.code == ErrorCode.INVALID_VERIFICATION
     with pytest.raises(TankerError) as error:
-        await phone_tanker.verify_identity(email=email, verification_code="")
+        await phone_tanker.verify_identity(EmailVerification(email, ""))
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     await laptop_tanker.stop()
@@ -747,7 +730,7 @@ async def share_and_attach_provisional_identity(
 
     verification_code = get_verification_code(app, bob.email)
     await bob.session.verify_provisional_identity(
-        email=bob.email, verification_code=verification_code
+        EmailVerification(bob.email, verification_code)
     )
     return bob, encrypted, message
 
@@ -793,7 +776,7 @@ async def test_attach_provisional_identity_with_incorrect_code(
     )
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     with pytest.raises(TankerError) as error:
-        await bob.session.verify_identity(email=bob.email, verification_code="badCode")
+        await bob.session.verify_identity(EmailVerification(bob.email, "badCode"))
     assert error.value.code == ErrorCode.PRECONDITION_FAILED
 
 
@@ -811,9 +794,9 @@ async def test_update_verification_passphrase(
         app["id"], app["app_secret"], fake.email(domain="tanker.io")
     )
     await laptop_tanker.start(alice_identity)
-    await laptop_tanker.register_identity(passphrase=old_passphrase)
+    await laptop_tanker.register_identity(PassphraseVerification(old_passphrase))
 
-    await laptop_tanker.set_verification_method(passphrase=new_passphrase)
+    await laptop_tanker.set_verification_method(PassphraseVerification(new_passphrase))
 
     phone_path = tmp_path.joinpath("phone")
     phone_path.mkdir_p()
@@ -822,11 +805,11 @@ async def test_update_verification_passphrase(
 
     # Old passphrase should not work
     with pytest.raises(TankerError) as error:
-        await phone_tanker.verify_identity(passphrase=old_passphrase)
+        await phone_tanker.verify_identity(PassphraseVerification(old_passphrase))
     assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     # But new passphrase should
-    await phone_tanker.verify_identity(passphrase=new_passphrase)
+    await phone_tanker.verify_identity(PassphraseVerification(new_passphrase))
     assert phone_tanker.status == TankerStatus.READY
 
 
@@ -838,7 +821,7 @@ async def test_create_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     await bob.session.verify_provisional_identity(
-        email=bob.email, verification_code=bob.verification_code
+        EmailVerification(bob.email, bob.verification_code)
     )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
@@ -855,7 +838,7 @@ async def test_add_to_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
     )
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     await bob.session.verify_provisional_identity(
-        email=bob.email, verification_code=bob.verification_code
+        EmailVerification(bob.email, bob.verification_code)
     )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
@@ -917,7 +900,7 @@ async def test_get_verification_methods(tmp_path: Path, app: Dict[str, str]) -> 
     identity = tankersdk_identity.create_identity(app["id"], app["app_secret"], email)
     await tanker.start(identity)
     passphrase = "my passphrase"
-    await tanker.register_identity(passphrase=passphrase)
+    await tanker.register_identity(PassphraseVerification(passphrase))
     await tanker.stop()
 
     await tanker.start(identity)
@@ -927,15 +910,11 @@ async def test_get_verification_methods(tmp_path: Path, app: Dict[str, str]) -> 
     assert actual_method.method_type == VerificationMethodType.PASSPHRASE
 
     verification_code = get_verification_code(app, email)
-    await tanker.set_verification_method(
-        email=email, verification_code=verification_code
-    )
+    await tanker.set_verification_method(EmailVerification(email, verification_code))
 
     methods = await tanker.get_verification_methods()
     assert len(methods) == 2
-    email_methods = [
-        x for x in methods if x.method_type == VerificationMethodType.EMAIL
-    ]
+    email_methods = [x for x in methods if isinstance(x, EmailVerificationMethod)]
     assert len(email_methods) == 1
     (email_method,) = email_methods
     assert email_method.email == email
@@ -983,7 +962,7 @@ async def test_oidc_verification(
     identity = tankersdk_identity.create_identity(app["id"], app["app_secret"], user_id)
 
     await martine_phone.start(identity)
-    await martine_phone.register_identity(oidc_id_token=oidc_id_token)
+    await martine_phone.register_identity(OidcIdTokenVerification(oidc_id_token))
     await martine_phone.stop()
 
     laptop_path = tmp_path / "laptop"
@@ -992,7 +971,7 @@ async def test_oidc_verification(
     await martine_laptop.start(identity)
 
     assert martine_laptop.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
-    await martine_laptop.verify_identity(oidc_id_token=oidc_id_token)
+    await martine_laptop.verify_identity(OidcIdTokenVerification(oidc_id_token))
     assert martine_laptop.status == TankerStatus.READY
 
     actual_methods = await martine_laptop.get_verification_methods()
@@ -1025,10 +1004,12 @@ async def test_oidc_preshare(tmp_path: Path, app: Dict[str, str], admin: Admin) 
 
     status = await martine_phone.start(identity)
     assert status == TankerStatus.IDENTITY_REGISTRATION_NEEDED
-    await martine_phone.register_identity(oidc_id_token=oidc_id_token)
+    await martine_phone.register_identity(OidcIdTokenVerification(oidc_id_token))
     res = await martine_phone.attach_provisional_identity(provisional_identity)
     assert res.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
-    await martine_phone.verify_provisional_identity(oidc_id_token=oidc_id_token)
+    await martine_phone.verify_provisional_identity(
+        OidcIdTokenVerification(oidc_id_token)
+    )
     clear_data = await alice.session.decrypt(encrypted)
     assert clear_data == message
     await martine_phone.stop()

@@ -61,34 +61,84 @@ class VerificationMethodType(Enum):
     OIDC_ID_TOKEN = 4
 
 
+class Verification:
+    # Note: we want every subclass to have a 'method_type' attribute
+    # of type VerificationMethodType, but there's no "good"
+    # value to use here except None
+    method_type: VerificationMethodType = None  # type: ignore
+
+
+class EmailVerification(Verification):
+    method_type = VerificationMethodType.EMAIL
+
+    def __init__(self, email: str, verification_code: str):
+        self.email = email
+        self.verification_code = verification_code
+
+
+class OidcIdTokenVerification(Verification):
+    method_type = VerificationMethodType.OIDC_ID_TOKEN
+
+    def __init__(self, oidc_id_token: str):
+        self.oidc_id_token = oidc_id_token
+
+
+class PassphraseVerification(Verification):
+    method_type = VerificationMethodType.PASSPHRASE
+
+    def __init__(self, passphrase: str):
+        self.passphrase = passphrase
+
+
+class VerificationKeyVerification(Verification):
+    method_type = VerificationMethodType.VERIFICATION_KEY
+
+    def __init__(self, verification_key: str):
+        self.verification_key = verification_key
+
+
 class VerificationMethod:
-    """Represent a verification method
+    # Note: we want every subclass to have a 'mehod_type' attribute
+    # of type VerificationMethodType, but there's no "good"
+    # value to use here except None
+    method_type: VerificationMethodType = None  # type: ignore
 
-    :ivar method_type: An instance of :py:class:`VerificationMethodType` enum
-    :ivar email: The email to use for verification, if `method_type` is `EMAIL`
-    """
 
-    def __init__(
-        self, method_type: VerificationMethodType, *, email: Optional[str] = None
-    ):
-        self.method_type = method_type
-        if method_type == VerificationMethodType.EMAIL and not email:
-            raise ValueError(
-                "need an email value if method_type is VerificationMethodType.EMAIL"
-            )
+class EmailVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.EMAIL
+
+    def __init__(self, email: str):
         self.email = email
 
-    @classmethod
-    def from_c(cls, c_verification_method: CData) -> "VerificationMethod":
-        method_type = VerificationMethodType(
-            c_verification_method.verification_method_type
-        )
-        if method_type == VerificationMethodType.EMAIL:
-            c_email = c_verification_method.email
-            email = ffihelpers.c_string_to_str(c_email)
-            return cls(method_type, email=email)
-        else:
-            return cls(method_type)
+
+class OidcIdTokenVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.OIDC_ID_TOKEN
+
+
+class PassphraseVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.PASSPHRASE
+
+
+class VerificationKeyVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.VERIFICATION_KEY
+
+
+def verification_method_from_c(c_verification_method: CData) -> VerificationMethod:
+    method_type = VerificationMethodType(c_verification_method.verification_method_type)
+    res: Optional[VerificationMethod] = None
+    if method_type == VerificationMethodType.EMAIL:
+        c_email = c_verification_method.email
+        res = EmailVerificationMethod(ffihelpers.c_string_to_str(c_email))
+    elif method_type == VerificationMethodType.PASSPHRASE:
+        res = PassphraseVerificationMethod()
+    elif method_type == VerificationMethodType.VERIFICATION_KEY:
+        res = VerificationKeyVerificationMethod()
+    elif method_type == VerificationMethodType.OIDC_ID_TOKEN:
+        res = OidcIdTokenVerificationMethod()
+    assert (
+        res
+    ), f"Could not convert C verification method to python: unknown type: {type}"
+    return res
 
 
 RevokeFunc = Callable[[], None]
@@ -165,61 +215,46 @@ class CVerification:
     """Wraps the tanker_verification_t C type"""
 
     def __init__(
-        self,
-        passphrase: Optional[str] = None,
-        verification_key: Optional[str] = None,
-        email: Optional[str] = None,
-        verification_code: Optional[str] = None,
-        oidc_id_token: Optional[str] = None,
+        self, verification: Verification,
     ):
-
-        options_set = [
-            x
-            for x in (passphrase, verification_key, email, oidc_id_token)
-            if x is not None
-        ]
-        if len(options_set) != 1:
-            raise ValueError(
-                "Chose one among passphrase, verification_key, email or oidc_id_token"
-            )
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
         c_verification = ffi.new("tanker_verification_t *", {"version": 3})
-        if verification_key is not None:
+        if isinstance(verification, VerificationKeyVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
             )
-            self._verification_key = ffihelpers.str_to_c_string(verification_key)
+            self._verification_key = ffihelpers.str_to_c_string(
+                verification.verification_key
+            )
             c_verification.verification_key = self._verification_key
 
-        elif passphrase is not None:
+        elif isinstance(verification, PassphraseVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_PASSPHRASE
             )
-            self._passphrase = ffihelpers.str_to_c_string(passphrase)
+            self._passphrase = ffihelpers.str_to_c_string(verification.passphrase)
             c_verification.passphrase = self._passphrase
 
-        elif email is not None:
-            if verification_code is None:
-                raise ValueError(
-                    "Connot create an email verification without a verification code"
-                )
+        elif isinstance(verification, EmailVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_EMAIL
             )
             self._email_verification = {
                 "version": 1,
-                "email": ffihelpers.str_to_c_string(email),
-                "verification_code": ffihelpers.str_to_c_string(verification_code),
+                "email": ffihelpers.str_to_c_string(verification.email),
+                "verification_code": ffihelpers.str_to_c_string(
+                    verification.verification_code
+                ),
             }
             c_verification.email_verification = self._email_verification
 
-        elif oidc_id_token is not None:
+        elif isinstance(verification, OidcIdTokenVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN
             )
-            self._oidc_id_token = ffihelpers.str_to_c_string(oidc_id_token)
+            self._oidc_id_token = ffihelpers.str_to_c_string(verification.oidc_id_token)
             c_verification.oidc_id_token = self._oidc_id_token
 
         self._c_verification = c_verification
@@ -666,46 +701,18 @@ class Tanker:
 
         await ffihelpers.handle_tanker_future(c_future)
 
-    async def register_identity(
-        self,
-        *,
-        verification_key: Optional[str] = None,
-        passphrase: Optional[str] = None,
-        email: Optional[str] = None,
-        verification_code: Optional[str] = None,
-        oidc_id_token: Optional[str] = None,
-    ) -> None:
+    async def register_identity(self, verification: Verification) -> None:
         """Register users' identity"""
-        c_verification = CVerification(
-            verification_key=verification_key,
-            passphrase=passphrase,
-            email=email,
-            verification_code=verification_code,
-            oidc_id_token=oidc_id_token,
-        )
+        c_verification = CVerification(verification)
 
         c_future = tankerlib.tanker_register_identity(
             self.c_tanker, c_verification.get()
         )
         await ffihelpers.handle_tanker_future(c_future)
 
-    async def verify_identity(
-        self,
-        *,
-        verification_key: Optional[str] = None,
-        passphrase: Optional[str] = None,
-        email: Optional[str] = None,
-        verification_code: Optional[str] = None,
-        oidc_id_token: Optional[str] = None,
-    ) -> None:
+    async def verify_identity(self, verification: Verification,) -> None:
         """Verify users' identity"""
-        c_verification = CVerification(
-            verification_key=verification_key,
-            passphrase=passphrase,
-            email=email,
-            verification_code=verification_code,
-            oidc_id_token=oidc_id_token,
-        )
+        c_verification = CVerification(verification)
         c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification.get())
         await ffihelpers.handle_tanker_future(c_future)
 
@@ -721,21 +728,9 @@ class Tanker:
         tankerlib.tanker_free_buffer(c_str)
         return res
 
-    async def set_verification_method(
-        self,
-        *,
-        verification_key: Optional[str] = None,
-        passphrase: Optional[str] = None,
-        email: Optional[str] = None,
-        verification_code: Optional[str] = None,
-    ) -> None:
+    async def set_verification_method(self, verification: Verification) -> None:
         """Set or update a verification method"""
-        c_verification = CVerification(
-            verification_key=verification_key,
-            passphrase=passphrase,
-            email=email,
-            verification_code=verification_code,
-        )
+        c_verification = CVerification(verification)
         c_future = tankerlib.tanker_set_verification_method(
             self.c_tanker, c_verification.get()
         )
@@ -753,7 +748,7 @@ class Tanker:
         res = list()
         for i in range(count):
             c_method = c_methods[i]
-            method = VerificationMethod.from_c(c_method)
+            method = verification_method_from_c(c_method)
             res.append(method)
         tankerlib.tanker_free_verification_method_list(c_list)
         return res
@@ -822,34 +817,15 @@ class Tanker:
         result = AttachResult(status)
         if status == Status.IDENTITY_VERIFICATION_NEEDED:
             c_method = c_attach_result.method
-            c_method_type = c_method.verification_method_type
-            method_type = VerificationMethodType(c_method_type)
-            if method_type == VerificationMethodType.EMAIL:
-                verification_method = VerificationMethod(
-                    VerificationMethodType.EMAIL,
-                    email=ffihelpers.c_string_to_str(c_method.email),
-                )
-            else:
-                verification_method = VerificationMethod(method_type)
-            result.verification_method = verification_method
+            result.verification_method = verification_method_from_c(c_method)
         tankerlib.tanker_free_attach_result(c_attach_result)
         return result
 
-    async def verify_provisional_identity(
-        self,
-        *,
-        email: Optional[str] = None,
-        verification_code: Optional[str] = None,
-        oidc_id_token: Optional[str] = None,
-    ) -> None:
+    async def verify_provisional_identity(self, verification: Verification) -> None:
         """Verify a provisional identity"""
-        verification = CVerification(
-            email=email,
-            verification_code=verification_code,
-            oidc_id_token=oidc_id_token,
-        )
+        c_verification = CVerification(verification)
         c_future = tankerlib.tanker_verify_provisional_identity(
-            self.c_tanker, verification.get()
+            self.c_tanker, c_verification.get()
         )
 
         await ffihelpers.handle_tanker_future(c_future)

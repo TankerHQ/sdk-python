@@ -7,15 +7,31 @@ from _tanker import ffi
 from _tanker import lib as tankerlib
 
 from .error import Error, ErrorCode  # noqa
+
+# fmt: off
 from .tanker import (  # noqa
     Tanker,
-    Status,
-    VerificationMethod,
-    VerificationMethodType,
-    AttachResult,
-    Stream,
+
     prehash_password,
+
+    AttachResult,
+    Status,
+    VerificationMethodType,
+    Stream,
+
+    Verification,
+    EmailVerification,
+    PassphraseVerification,
+    OidcIdTokenVerification,
+    VerificationKeyVerification,
+
+    VerificationMethod,
+    EmailVerificationMethod,
+    PassphraseVerificationMethod,
+    OidcIdTokenVerificationMethod,
+    VerificationKeyVerificationMethod,
 )
+# fmt: on
 from .version import __version__  # noqa
 
 
