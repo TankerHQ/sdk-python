@@ -639,9 +639,11 @@ class Tanker:
         c_future = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
         await ffihelpers.handle_tanker_future(c_future)
 
-    def get_resource_id(self, encrypted: bytes) -> str:
+    def get_resource_id(self, encrypted_data: bytes) -> str:
         """Get resource ID from `encrypted` data"""
-        c_expected = tankerlib.tanker_get_resource_id(encrypted, len(encrypted))
+        c_expected = tankerlib.tanker_get_resource_id(
+            encrypted_data, len(encrypted_data)
+        )
         c_id = ffihelpers.unwrap_expected(c_expected, "char*")
         return ffihelpers.c_string_to_str(c_id)
 
