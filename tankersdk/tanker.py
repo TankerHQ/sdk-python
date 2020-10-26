@@ -770,10 +770,10 @@ class Tanker:
         return ffihelpers.c_string_to_str(c_str)
 
     async def update_group_members(
-        self, group_id: str, *, add: OptionalStrList = None
+        self, group_id: str, *, users_to_add: OptionalStrList = None
     ) -> None:
         """Add some users to an existing group"""
-        add_list = CCharList(add, ffi, tankerlib)
+        add_list = CCharList(users_to_add, ffi, tankerlib)
         c_group_id = ffihelpers.str_to_c_string(group_id)
         c_future = tankerlib.tanker_update_group_members(
             self.c_tanker, c_group_id, add_list.data, add_list.size

@@ -374,7 +374,9 @@ async def test_update_group(tmp_path: Path, app: Dict[str, str]) -> None:
     group_id = await alice.session.create_group(
         [alice.public_identity, bob.public_identity]
     )
-    await alice.session.update_group_members(group_id, add=[charlie.public_identity])
+    await alice.session.update_group_members(
+        group_id, users_to_add=[charlie.public_identity]
+    )
     await check_share_with_group_works(alice, group_id, bob, charlie)
 
 
@@ -849,7 +851,7 @@ async def test_add_to_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
     group_id = await alice.session.create_group([alice.public_identity])
     encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
     await alice.session.update_group_members(
-        group_id, add=[bob.public_provisional_identity]
+        group_id, users_to_add=[bob.public_provisional_identity]
     )
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     await bob.session.verify_provisional_identity(
@@ -892,7 +894,9 @@ async def test_group_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
     group_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, app)
     with pytest.raises(TankerError) as error:
-        await alice.session.update_group_members(group_id, add=[alice.public_identity])
+        await alice.session.update_group_members(
+            group_id, users_to_add=[alice.public_identity]
+        )
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
