@@ -228,7 +228,7 @@ class CVerification:
         return self._c_verification
 
 
-class DeviceDescription:
+class Device:
     """An element of the list returned by `tanker.get_device_list()`
 
     :ivar device_id: The id of the device
@@ -241,7 +241,7 @@ class DeviceDescription:
         self.is_revoked = is_revoked
 
     @classmethod
-    def from_c(cls, c_device_list_elem: CData) -> "DeviceDescription":
+    def from_c(cls, c_device_list_elem: CData) -> "Device":
         device_id = ffihelpers.c_string_to_str(c_device_list_elem.device_id)
         is_revoked = c_device_list_elem.is_revoked
         return cls(device_id, is_revoked)
@@ -615,10 +615,10 @@ class Tanker:
         tankerlib.tanker_free_buffer(c_str)
         return res
 
-    async def get_device_list(self) -> List[DeviceDescription]:
+    async def get_device_list(self) -> List[Device]:
         """Get the list of devices owned by the current user
 
-        :returns: a list of :py:class`DeviceDescription` instances
+        :returns: a list of :py:class`Device` instances
         """
         c_future = tankerlib.tanker_get_device_list(self.c_tanker)
         c_voidp = await ffihelpers.handle_tanker_future(c_future)
@@ -628,7 +628,7 @@ class Tanker:
         res = list()
         for i in range(count):
             c_device_list_elem = c_devices[i]
-            device_description = DeviceDescription.from_c(c_device_list_elem)
+            device_description = Device.from_c(c_device_list_elem)
             res.append(device_description)
         tankerlib.tanker_free_device_list(c_list)
         return res
