@@ -1,7 +1,6 @@
 import typing_extensions
 from typing import cast, Any, Callable, List, Optional
 
-from asyncio import Future  # noqa
 import asyncio
 from enum import Enum
 import os
