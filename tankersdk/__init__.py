@@ -13,7 +13,7 @@ from .tanker import (  # noqa
     VerificationMethod,
     VerificationMethodType,
     AttachResult,
-    StreamWrapper,
+    Stream,
     prehash_password,
 )
 from .version import __version__  # noqa

@@ -247,17 +247,17 @@ class Device:
         return cls(device_id, is_revoked)
 
 
-class InputStreamProtocol(typing_extensions.Protocol):
+class InputStream(typing_extensions.Protocol):
     async def read(self, size: int) -> bytes:
         ...
 
 
-class StreamWrapper:
+class Stream:
     """Wrapper object returned by `tanker.decrypt_stream()`"""
 
-    def __init__(self, stream: InputStreamProtocol) -> None:
+    def __init__(self, input_stream: InputStream) -> None:
         """Create a new `StreamWrapper` from the underlying `stream`"""
-        self._stream = stream
+        self._stream = input_stream
         self.c_stream: Optional[CData] = None
         self.c_handle: Optional[CData] = None
         self.error: Optional[Exception] = None
@@ -265,7 +265,7 @@ class StreamWrapper:
     async def __aexit__(self, *unused: Any) -> None:
         tankerlib.tanker_future_destroy(tankerlib.tanker_stream_close(self.c_stream))
 
-    async def __aenter__(self) -> "StreamWrapper":
+    async def __aenter__(self) -> "Stream":
         return self
 
     async def read(self, size: Optional[int] = None) -> bytes:
@@ -335,13 +335,13 @@ class EncryptionSession:
         await ffihelpers.handle_tanker_future(c_future)
         return ffihelpers.c_buffer_to_bytes(c_encrypted_buffer)
 
-    async def encrypt_stream(self, clear_stream: InputStreamProtocol) -> StreamWrapper:
+    async def encrypt_stream(self, clear_stream: InputStream) -> Stream:
         """Encrypt `clear_stream` with the session
 
         :param clear_stream: Any object with an async `read` method taking a `size` parameter
         :return: A :py:class:`StreamWrapper` object
         """
-        result = StreamWrapper(clear_stream)
+        result = Stream(clear_stream)
         handle = ffi.new_handle([result, asyncio.get_event_loop()])
         result.c_handle = handle
 
@@ -353,10 +353,7 @@ class EncryptionSession:
 
 
 async def read_coroutine(
-    c_output_buffer: CData,
-    c_buffer_size: int,
-    c_op: CData,
-    stream_wrapper: StreamWrapper,
+    c_output_buffer: CData, c_buffer_size: int, c_op: CData, stream_wrapper: Stream,
 ) -> None:
     try:
         buffer: bytes = await stream_wrapper._stream.read(c_buffer_size)
@@ -552,12 +549,12 @@ class Tanker:
 
     async def encrypt_stream(
         self,
-        clear_stream: InputStreamProtocol,
+        clear_stream: InputStream,
         *,
         share_with_users: OptionalStrList = None,
         share_with_groups: OptionalStrList = None,
         share_with_self: bool = True,
-    ) -> StreamWrapper:
+    ) -> Stream:
         """Encrypt `clear_stream`
 
         :param share_with_users: An (optional) list of identities to share with
@@ -571,7 +568,7 @@ class Tanker:
             share_with_self=share_with_self,
         )
 
-        result = StreamWrapper(clear_stream)
+        result = Stream(clear_stream)
         handle = ffi.new_handle([result, asyncio.get_event_loop()])
         result.c_handle = handle
 
@@ -584,14 +581,14 @@ class Tanker:
         result.c_stream = await ffihelpers.handle_tanker_future(encryption_fut)
         return result
 
-    async def decrypt_stream(self, encrypted_stream: StreamWrapper) -> StreamWrapper:
+    async def decrypt_stream(self, encrypted_stream: Stream) -> Stream:
         """Decrypt `encrypted_stream`
 
         :param encrypted_stream: A :py:class:`StreamWrapper` object,
                                  returned by :py:meth:`encrypt_stream`
         :return: A :py:class:`StreamWrapper` object
         """
-        result = StreamWrapper(encrypted_stream)
+        result = Stream(encrypted_stream)
         handle = ffi.new_handle([result, asyncio.get_event_loop()])
         result.c_handle = handle
         decryption_fut = tankerlib.tanker_stream_decrypt(
