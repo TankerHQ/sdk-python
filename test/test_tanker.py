@@ -16,10 +16,12 @@ import tankersdk
 from tankersdk import Tanker, Error as TankerError, ErrorCode
 from tankersdk import Status as TankerStatus
 from tankersdk import (
+    EncryptionOptions,
     EmailVerification,
     EmailVerificationMethod,
     VerificationMethodType,
     PassphraseVerification,
+    SharingOptions,
     OidcIdTokenVerification,
     VerificationKeyVerification,
 )
@@ -287,7 +289,7 @@ async def test_share_during_encrypt(tmp_path: Path, app: Dict[str, str]) -> None
     bob = await create_user_session(tmp_path, app)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
-        message, share_with_users=[bob.public_identity]
+        message, EncryptionOptions(share_with_users=[bob.public_identity])
     )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
@@ -303,7 +305,10 @@ async def test_share_during_encrypt_without_self(
     bob = await create_user_session(tmp_path, app)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
-        message, share_with_users=[bob.public_identity], share_with_self=False
+        message,
+        EncryptionOptions(
+            share_with_users=[bob.public_identity], share_with_self=False
+        ),
     )
     with pytest.raises(TankerError) as error:
         await alice.session.decrypt(encrypted)
@@ -321,7 +326,9 @@ async def test_postponed_share(tmp_path: Path, app: Dict[str, str]) -> None:
     message = b"I love you"
     encrypted = await alice.session.encrypt(message)
     resource_id = alice.session.get_resource_id(encrypted)
-    await alice.session.share([resource_id], users=[bob.public_identity])
+    await alice.session.share(
+        [resource_id], SharingOptions(share_with_users=[bob.public_identity])
+    )
 
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
@@ -333,7 +340,9 @@ async def check_share_with_group_works(
     alice: User, group_id: str, bob: User, charlie: User
 ) -> None:
     message = b"Hi, guys"
-    encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
+    encrypted = await alice.session.encrypt(
+        message, EncryptionOptions(share_with_groups=[group_id])
+    )
     decrypted = await charlie.session.decrypt(encrypted)
     assert decrypted == message
     decrypted = await bob.session.decrypt(encrypted)
@@ -390,7 +399,7 @@ async def test_share_with_encryption_session(
     bob = await create_user_session(tmp_path, app)
     message = b"Ceci n'est pas un test"
     enc_session = await alice.session.create_encryption_session(
-        users=[bob.public_identity]
+        EncryptionOptions(share_with_users=[bob.public_identity])
     )
     encrypted = await enc_session.encrypt(message)
 
@@ -408,7 +417,9 @@ async def test_share_with_encryption_session_without_self(
     bob = await create_user_session(tmp_path, app)
     message = b"Ceci n'est pas un test"
     enc_session = await alice.session.create_encryption_session(
-        users=[bob.public_identity], share_with_self=False,
+        EncryptionOptions(
+            share_with_users=[bob.public_identity], share_with_self=False,
+        )
     )
     encrypted = await enc_session.encrypt(message)
 
@@ -705,7 +716,7 @@ async def test_cannot_decrypt_if_provisional_identity_not_attached(
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
-        message, share_with_users=[bob.public_provisional_identity]
+        message, EncryptionOptions(share_with_users=[bob.public_provisional_identity])
     )
     with pytest.raises(TankerError) as error:
         await bob.session.decrypt(encrypted)
@@ -718,7 +729,7 @@ async def share_and_attach_provisional_identity(
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
     encrypted = await alice.session.encrypt(
-        message, share_with_users=[bob.public_provisional_identity]
+        message, EncryptionOptions(share_with_users=[bob.public_provisional_identity])
     )
     attach_result = await bob.session.attach_provisional_identity(
         bob.private_provisional_identity
@@ -772,7 +783,7 @@ async def test_attach_provisional_identity_with_incorrect_code(
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
     await alice.session.encrypt(
-        message, share_with_users=[bob.public_provisional_identity]
+        message, EncryptionOptions(share_with_users=[bob.public_provisional_identity])
     )
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     with pytest.raises(TankerError) as error:
@@ -818,7 +829,9 @@ async def test_create_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you all, my group"
     group_id = await alice.session.create_group([bob.public_provisional_identity])
-    encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
+    encrypted = await alice.session.encrypt(
+        message, EncryptionOptions(share_with_groups=[group_id])
+    )
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
     await bob.session.verify_provisional_identity(
         EmailVerification(bob.email, bob.verification_code)
@@ -832,7 +845,9 @@ async def test_add_to_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"Hi, this is for a group"
     group_id = await alice.session.create_group([alice.public_identity])
-    encrypted = await alice.session.encrypt(message, share_with_groups=[group_id])
+    encrypted = await alice.session.encrypt(
+        message, EncryptionOptions(share_with_groups=[group_id])
+    )
     await alice.session.update_group_members(
         group_id, users_to_add=[bob.public_provisional_identity]
     )
@@ -868,7 +883,9 @@ async def test_recipient_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
     group_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, app)
     with pytest.raises(TankerError) as error:
-        await alice.session.encrypt(b"zz", share_with_groups=[group_id])
+        await alice.session.encrypt(
+            b"zz", EncryptionOptions(share_with_groups=[group_id])
+        )
     assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
@@ -995,7 +1012,7 @@ async def test_oidc_preshare(tmp_path: Path, app: Dict[str, str], admin: Admin) 
 
     message = b"hello OIDC user"
     encrypted = await alice.session.encrypt(
-        message, share_with_users=[public_provisional_identity]
+        message, EncryptionOptions(share_with_users=[public_provisional_identity])
     )
 
     martine_phone = create_tanker(app["id"], writable_path=tmp_path)

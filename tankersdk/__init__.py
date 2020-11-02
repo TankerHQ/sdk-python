@@ -12,6 +12,9 @@ from .error import Error, ErrorCode  # noqa
 from .tanker import (  # noqa
     Tanker,
 
+    EncryptionOptions,
+    SharingOptions,
+
     prehash_password,
 
     AttachResult,

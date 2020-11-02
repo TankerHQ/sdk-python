@@ -159,14 +159,30 @@ class AttachResult:
         self.verification_method: Optional[VerificationMethod] = None
 
 
+class EncryptionOptions:
+    """Represent encryption options"""
+
+    def __init__(
+        self,
+        *,
+        share_with_users: Optional[List[str]] = None,
+        share_with_groups: Optional[List[str]] = None,
+        share_with_self: bool = True,
+    ):
+        self.share_with_users = share_with_users
+        self.share_with_groups = share_with_groups
+        self.share_with_self = share_with_self
+
+
 class CEncryptionOptions:
     """Wraps the tanker_encrypt_options_t C type"""
 
     def __init__(
         self,
-        share_with_users: OptionalStrList,
-        share_with_groups: OptionalStrList,
-        share_with_self: bool,
+        *,
+        share_with_users: OptionalStrList = None,
+        share_with_groups: OptionalStrList = None,
+        share_with_self: bool = True,
     ) -> None:
         self.user_list = CCharList(share_with_users, ffi, tankerlib)
         self.group_list = CCharList(share_with_groups, ffi, tankerlib)
@@ -187,11 +203,24 @@ class CEncryptionOptions:
         return self._c_data
 
 
+class SharingOptions:
+    """Represent sharing options"""
+
+    def __init__(
+        self,
+        *,
+        share_with_users: Optional[List[str]] = None,
+        share_with_groups: Optional[List[str]] = None,
+    ):
+        self.share_with_users = share_with_users
+        self.share_with_groups = share_with_groups
+
+
 class CSharingOptions:
     """Wraps the tanker_sharing_options_t C type"""
 
     def __init__(
-        self, share_with_users: OptionalStrList, share_with_groups: OptionalStrList,
+        self, *, share_with_users: OptionalStrList, share_with_groups: OptionalStrList,
     ) -> None:
         self.user_list = CCharList(share_with_users, ffi, tankerlib)
         self.group_list = CCharList(share_with_groups, ffi, tankerlib)
@@ -539,23 +568,21 @@ class Tanker:
         await ffihelpers.handle_tanker_future(c_future)
 
     async def encrypt(
-        self,
-        clear_data: bytes,
-        *,
-        share_with_users: OptionalStrList = None,
-        share_with_groups: OptionalStrList = None,
-        share_with_self: bool = True,
+        self, clear_data: bytes, options: Optional[EncryptionOptions] = None
     ) -> bytes:
         """Encrypt `clear_data`
 
-        :param share_with_users: An (optional) list of identities to share with
-        :param share_with_groups: A list of groups to share with
+        :param options: An optional instance of :py:class:EncryptionOptions`
+        :return: Encrypted data, as `bytes`
         """
-        c_encrypt_options = CEncryptionOptions(
-            share_with_users=share_with_users,
-            share_with_groups=share_with_groups,
-            share_with_self=share_with_self,
-        )
+        if options:
+            c_encrypt_options = CEncryptionOptions(
+                share_with_users=options.share_with_users,
+                share_with_groups=options.share_with_groups,
+                share_with_self=options.share_with_self,
+            )
+        else:
+            c_encrypt_options = CEncryptionOptions()
         c_clear_buffer = ffihelpers.bytes_to_c_buffer(clear_data)  # type: CData
         clear_size = len(c_clear_buffer)
         size = tankerlib.tanker_encrypted_size(clear_size)
@@ -587,25 +614,22 @@ class Tanker:
         return ffihelpers.c_buffer_to_bytes(c_clear_buffer)
 
     async def encrypt_stream(
-        self,
-        clear_stream: InputStream,
-        *,
-        share_with_users: OptionalStrList = None,
-        share_with_groups: OptionalStrList = None,
-        share_with_self: bool = True,
+        self, clear_stream: InputStream, options: Optional[EncryptionOptions] = None
     ) -> Stream:
         """Encrypt `clear_stream`
 
-        :param share_with_users: An (optional) list of identities to share with
-        :param share_with_groups: A list of groups to share with
-        :param clear_stream: Any object with an async `read` method taking a `size` parameter
+        :param clear_stream: An object implementing the :py:class:`InputStream` protocol
+        :param options: An optional instance of :py:class:EncryptionOptions`
         :return: A :py:class:`StreamWrapper` object
         """
-        c_encrypt_options = CEncryptionOptions(
-            share_with_users=share_with_users,
-            share_with_groups=share_with_groups,
-            share_with_self=share_with_self,
-        )
+        if options:
+            c_encrypt_options = CEncryptionOptions(
+                share_with_users=options.share_with_users,
+                share_with_groups=options.share_with_groups,
+                share_with_self=options.share_with_self,
+            )
+        else:
+            c_encrypt_options = CEncryptionOptions()
 
         result = Stream(clear_stream)
         handle = ffi.new_handle([result, asyncio.get_event_loop()])
@@ -683,17 +707,15 @@ class Tanker:
         c_id = ffihelpers.unwrap_expected(c_expected, "char*")
         return ffihelpers.c_string_to_str(c_id)
 
-    async def share(
-        self,
-        resources: List[str],
-        *,
-        users: OptionalStrList = None,
-        groups: OptionalStrList = None,
-    ) -> None:
-        """Share the given list of resources to users or groups"""
+    async def share(self, resources: List[str], options: SharingOptions) -> None:
+        """Share the given list of resources to users or groups
+
+        :param options: An instance of :py:class:SharingOptions`
+        """
         resource_list = CCharList(resources, ffi, tankerlib)
         c_sharing_options = CSharingOptions(
-            share_with_users=users, share_with_groups=groups
+            share_with_users=options.share_with_users,
+            share_with_groups=options.share_with_groups,
         )
 
         c_future = tankerlib.tanker_share(
@@ -781,23 +803,21 @@ class Tanker:
         await ffihelpers.handle_tanker_future(c_future)
 
     async def create_encryption_session(
-        self,
-        *,
-        users: OptionalStrList = None,
-        groups: OptionalStrList = None,
-        share_with_self: bool = True,
+        self, options: Optional[EncryptionOptions] = None
     ) -> EncryptionSession:
         """Create an encryption session
 
-        :param users: An (optional) list of identities to share the session with
-        :param groups: An (optional) list of groups to share the session with
+        :param options: An optional instance of :py:class:EncryptionOptions`
         :return: an EncryptionSession object
         """
-        c_encrypt_options = CEncryptionOptions(
-            share_with_users=users,
-            share_with_groups=groups,
-            share_with_self=share_with_self,
-        )
+        if options:
+            c_encrypt_options = CEncryptionOptions(
+                share_with_users=options.share_with_users,
+                share_with_groups=options.share_with_groups,
+                share_with_self=options.share_with_self,
+            )
+        else:
+            c_encrypt_options = CEncryptionOptions()
 
         c_future = tankerlib.tanker_encryption_session_open(
             self.c_tanker, c_encrypt_options.get(),
