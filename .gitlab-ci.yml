@@ -116,6 +116,7 @@ build-wheel/linux/3.7:
   extends: .build-wheel/linux
   variables:
      PYENV_VERSION: 3.7.8
+     POETRY_CACHE_DIR: /tmp/pypoetry
 
 build-wheel/linux/3.8:
   extends: .build-wheel/linux
