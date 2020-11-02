@@ -288,10 +288,10 @@ class InputStream(typing_extensions.Protocol):
 
 
 class Stream:
-    """Wrapper object returned by `tanker.decrypt_stream()`"""
+    """Stream type returned by stream encryption/decryption functions"""
 
     def __init__(self, input_stream: InputStream) -> None:
-        """Create a new `StreamWrapper` from the underlying `stream`"""
+        """Create a new Stream from the underlying InputStream"""
         self._stream = input_stream
         self.c_stream: Optional[CData] = None
         self.c_handle: Optional[CData] = None
@@ -340,7 +340,7 @@ class EncryptionSession:
     """Allows doing multiple encryption operations with a reduced number of keys."""
 
     def __init__(self, c_session: CData) -> None:
-        """Create a new `StreamWrapper` from the underlying `stream`"""
+        """Create a new EncryptionSession from the C struct"""
         self.c_session = c_session
 
     async def __aexit__(self, *unused: Any) -> None:
@@ -373,8 +373,8 @@ class EncryptionSession:
     async def encrypt_stream(self, clear_stream: InputStream) -> Stream:
         """Encrypt `clear_stream` with the session
 
-        :param clear_stream: Any object with an async `read` method taking a `size` parameter
-        :return: A :py:class:`StreamWrapper` object
+        :param clear_stream: An object implementing the :py:class:`InputStream` protocol
+        :return: A :py:class:`Stream` object
         """
         result = Stream(clear_stream)
         handle = ffi.new_handle([result, asyncio.get_event_loop()])
@@ -415,6 +415,10 @@ def stream_input_source_callback(
 
 
 def prehash_password(password: str) -> str:
+    """Hash a password client-side.
+
+    Useful when using identity verification by passphrase
+    """
     c_password = ffihelpers.str_to_c_string(password)
     c_expected_hashed = tankerlib.tanker_prehash_password(c_password)
     c_hashed = ffihelpers.unwrap_expected(c_expected_hashed, "char*")
