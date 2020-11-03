@@ -4,6 +4,7 @@ __pycache__
 *.so
 build/
 dist/
+setup.py
 .venv/
 .mypy_cache
 htmlcov/
