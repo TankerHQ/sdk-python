@@ -736,7 +736,7 @@ class Tanker:
         )
         await ffihelpers.handle_tanker_future(c_future)
 
-    async def verify_identity(self, verification: Verification,) -> None:
+    async def verify_identity(self, verification: Verification) -> None:
         """Verify users' identity"""
         c_verification = CVerification(verification)
         c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification.get())
