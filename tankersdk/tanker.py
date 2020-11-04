@@ -779,11 +779,11 @@ class Tanker:
         tankerlib.tanker_free_verification_method_list(c_list)
         return res
 
-    async def create_group(self, user_ids: List[str]) -> str:
+    async def create_group(self, member_identities: List[str]) -> str:
         """Create a group containing the users in `user_ids`"""
-        user_list = CCharList(user_ids, ffi, tankerlib)
+        member_list = CCharList(member_identities, ffi, tankerlib)
         c_future = tankerlib.tanker_create_group(
-            self.c_tanker, user_list.data, user_list.size
+            self.c_tanker, member_list.data, member_list.size
         )
 
         c_voidp = await ffihelpers.handle_tanker_future(c_future)
