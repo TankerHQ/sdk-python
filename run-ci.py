@@ -12,6 +12,8 @@ from tankerci.conan import TankerSource
 import tankerci.git
 import tankerci.gitlab
 
+PUBLIC_REPOSITORY_URL = "https://gitlab.com/api/v4/projects/20920099/packages/pypi"
+
 
 def prepare(
     tanker_source: TankerSource,
@@ -93,20 +95,16 @@ def deploy() -> None:
     env = os.environ.copy()
     env["TWINE_PASSWORD"] = env["GITLAB_TOKEN"]
     env["TWINE_USERNAME"] = env["GITLAB_USERNAME"]
-    repository = env["POETRY_REPOSITORIES_GITLAB_URL"]
 
     wheels_path = Path.getcwd() / "dist"
     for wheel in wheels_path.files("tankersdk-*.whl"):
+        # fmt: off
         tankerci.run(
-            "poetry",
-            "run",
-            "twine",
-            "upload",
-            "--repository-url",
-            repository,
-            wheel,
+            "poetry", "run",
+            "twine", "upload", wheel, "--repository-url", PUBLIC_REPOSITORY_URL,
             env=env,
         )
+        # fmt: on
 
 
 def main() -> None:
