@@ -382,10 +382,10 @@ async def test_encryption_session_resource_id_matches_ciphertext(
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     message = b"Henri-Robert-Marcel"
-    enc_session = await alice.session.create_encryption_session()
-    encrypted = await enc_session.encrypt(message)
+    async with await alice.session.create_encryption_session() as enc_session:
+        encrypted = await enc_session.encrypt(message)
+        sess_id = enc_session.get_resource_id()
 
-    sess_id = enc_session.get_resource_id()
     cipher_id = alice.session.get_resource_id(encrypted)
     assert sess_id == cipher_id
     await alice.session.stop()
@@ -416,12 +416,11 @@ async def test_share_with_encryption_session_without_self(
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
     message = b"Ceci n'est pas un test"
-    enc_session = await alice.session.create_encryption_session(
-        EncryptionOptions(
-            share_with_users=[bob.public_identity], share_with_self=False,
-        )
+    options = EncryptionOptions(
+        share_with_users=[bob.public_identity], share_with_self=False,
     )
-    encrypted = await enc_session.encrypt(message)
+    async with await alice.session.create_encryption_session(options) as enc_session:
+        encrypted = await enc_session.encrypt(message)
 
     with pytest.raises(TankerError) as error:
         await alice.session.decrypt(encrypted)
@@ -439,8 +438,8 @@ async def test_encryption_session_streams(tmp_path: Path, app: Dict[str, str]) -
     chunk_size = 1024 ** 2
     message = bytearray(3 * chunk_size + 2)  # three big chunks plus a little something
     input_stream = InMemoryAsyncStream(message)
-    enc_session = await alice.session.create_encryption_session()
-    encrypted_stream = await enc_session.encrypt_stream(input_stream)
+    async with await alice.session.create_encryption_session() as enc_session:
+        encrypted_stream = await enc_session.encrypt_stream(input_stream)
     async with await alice.session.decrypt_stream(encrypted_stream) as f:
         decrypted_message = await f.read()
     assert decrypted_message == message
