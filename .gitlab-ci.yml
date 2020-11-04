@@ -18,22 +18,22 @@ lint:
 check/deployed-native/linux/3.7:
   extends: .check/deployed-native/linux
   variables:
-     PYENV_VERSION: 3.7.8
+     PYENV_VERSION: 3.7.9
 
 check/deployed-native/linux/3.8:
   extends: .check/deployed-native/linux
   variables:
-     PYENV_VERSION: 3.8.5
+     PYENV_VERSION: 3.8.6
 
 check/native-from-sources/linux/3.7:
   extends: .check/native-from-sources/linux
   variables:
-     PYENV_VERSION: 3.7.8
+     PYENV_VERSION: 3.7.9
 
 check/native-from-sources/linux/3.8:
   extends: .check/native-from-sources/linux
   variables:
-     PYENV_VERSION: 3.8.5
+     PYENV_VERSION: 3.8.6
 
 check/deployed-native/macos:
   extends:
@@ -74,12 +74,12 @@ check/native-from-sources/windows:
 check/downstream/linux/3.7:
   extends: .check/downstream/linux
   variables:
-     PYENV_VERSION: 3.7.8
+     PYENV_VERSION: 3.7.9
 
 check/downstream/linux/3.8:
   extends: .check/downstream/linux
   variables:
-     PYENV_VERSION: 3.8.5
+     PYENV_VERSION: 3.8.6
 
 check/macos/downstream:
   extends:
@@ -115,12 +115,12 @@ safety:
 build-wheel/linux/3.7:
   extends: .build-wheel/linux
   variables:
-     PYENV_VERSION: 3.7.8
+     PYENV_VERSION: 3.7.9
 
 build-wheel/linux/3.8:
   extends: .build-wheel/linux
   variables:
-     PYENV_VERSION: 3.8.5
+     PYENV_VERSION: 3.8.6
 
 build-wheel/macos:
   extends:
