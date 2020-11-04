@@ -489,7 +489,7 @@ class Tanker:
         self.on_revoked = None  # type: Optional[RevokeFunc]
 
     def __del__(self) -> None:
-        if self.c_tanker:
+        if getattr(self, "c_tanker", None):
             # We can't tanker_future_wait() this future here because this object
             # can be deleted at any time: when its refcount reaches zero, or
             # when the GC is invoked. Since these events can occur while a lock
