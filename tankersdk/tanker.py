@@ -489,7 +489,7 @@ class Tanker:
         self.on_revoked = None  # type: Optional[RevokeFunc]
 
     def __del__(self) -> None:
-        if self.c_tanker:
+        if getattr(self, "c_tanker", None):
             # We can't tanker_future_wait() this future here because this object
             # can be deleted at any time: when its refcount reaches zero, or
             # when the GC is invoked. Since these events can occur while a lock
@@ -736,7 +736,7 @@ class Tanker:
         )
         await ffihelpers.handle_tanker_future(c_future)
 
-    async def verify_identity(self, verification: Verification,) -> None:
+    async def verify_identity(self, verification: Verification) -> None:
         """Verify users' identity"""
         c_verification = CVerification(verification)
         c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification.get())
