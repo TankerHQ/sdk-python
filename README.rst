@@ -1,7 +1,11 @@
 .. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
   :target: https://opensource.org/licenses/Apache-2.0
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-  :target: https://github.com/ambv/black
+  :target: https://github.com/psf/black
+.. image:: https://img.shields.io/badge/mypy-checked-blue.svg
+   :target: https://mypy-lang.org
+.. image:: https://gitlab.com/TankerHQ/sdk-python/badges/master/pipeline.svg
+   :target: https://gitlab.com/TankerHQ/sdk-python/pipelines
 
 Tanker Python SDK
 =================
@@ -19,14 +23,14 @@ Contributing
 
 We are actively working to allow external developers to build and test this project
 from source. That being said, we welcome feedback of any kind. Feel free to
-open issues on the GitHub bug tracker.
+open issues or pull requests on the GitLab project.
 
 Documentation
 -------------
 
-See `API documentation <https://tankerhq.github.io/sdk-python>`_.
+See `API documentation <https://docs.tanker.io/latest/api/core/python>`_.
 
-A more high-level documentation is being written. In the mean time, feel free
-to read `the documentation about the JavaScript SDK
-<https://tanker.io/docs/latest/?language=javascript/>`_.
-Most of it is applicable to the Python SDK too.
+License
+-------
+
+The Tanker Python SDK is licensed under the `Apache License, version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`_.
