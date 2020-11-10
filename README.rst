@@ -1,12 +1,13 @@
 .. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
   :target: https://opensource.org/licenses/Apache-2.0
+.. image:: https://img.shields.io/badge/python-v3.7%20v3.8-blue.svg
+  :target: https://gitlab.com/TankerHQ/sdk-python
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
   :target: https://github.com/psf/black
 .. image:: https://img.shields.io/badge/mypy-checked-blue.svg
    :target: https://mypy-lang.org
 .. image:: https://gitlab.com/TankerHQ/sdk-python/badges/master/pipeline.svg
    :target: https://gitlab.com/TankerHQ/sdk-python/pipelines
-
 Tanker Python SDK
 =================
 
