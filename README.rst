@@ -8,6 +8,7 @@
    :target: https://mypy-lang.org
 .. image:: https://gitlab.com/TankerHQ/sdk-python/badges/master/pipeline.svg
    :target: https://gitlab.com/TankerHQ/sdk-python/pipelines
+
 Tanker Python SDK
 =================
 
@@ -24,7 +25,7 @@ Contributing
 
 We are actively working to allow external developers to build and test this project
 from source. That being said, we welcome feedback of any kind. Feel free to
-open issues or pull requests on the GitLab project.
+open issues or pull requests on the `GitLab project <https://gitlab.com/TankerHQ/sdk-python>`_.
 
 Documentation
 -------------
