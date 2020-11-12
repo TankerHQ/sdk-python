@@ -1,6 +1,6 @@
 .. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
   :target: https://opensource.org/licenses/Apache-2.0
-.. image:: https://img.shields.io/badge/python-v3.7%20v3.8-blue.svg
+.. image:: https://img.shields.io/badge/python-v3.7%20v3.8%20v3.9-blue.svg
   :target: https://gitlab.com/TankerHQ/sdk-python
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
   :target: https://github.com/psf/black

@@ -25,6 +25,11 @@ check/deployed-native/linux/3.8:
   variables:
      PYENV_VERSION: 3.8.6
 
+check/deployed-native/linux/3.9:
+  extends: .check/deployed-native/linux
+  variables:
+     PYENV_VERSION: 3.9.0
+
 check/native-from-sources/linux/3.7:
   extends: .check/native-from-sources/linux
   variables:
@@ -34,6 +39,11 @@ check/native-from-sources/linux/3.8:
   extends: .check/native-from-sources/linux
   variables:
      PYENV_VERSION: 3.8.6
+
+check/native-from-sources/linux/3.9:
+  extends: .check/native-from-sources/linux
+  variables:
+     PYENV_VERSION: 3.9.0
 
 check/deployed-native/macos:
   extends:
@@ -81,6 +91,11 @@ check/downstream/linux/3.8:
   variables:
      PYENV_VERSION: 3.8.6
 
+check/downstream/linux/3.9:
+  extends: .check/downstream/linux
+  variables:
+     PYENV_VERSION: 3.9.0
+
 check/macos/downstream:
   extends:
     - .check
@@ -121,6 +136,11 @@ build-wheel/linux/3.8:
   extends: .build-wheel/linux
   variables:
      PYENV_VERSION: 3.8.6
+
+build-wheel/linux/3.9:
+  extends: .build-wheel/linux
+  variables:
+     PYENV_VERSION: 3.9.0
 
 build-wheel/macos:
   extends:
