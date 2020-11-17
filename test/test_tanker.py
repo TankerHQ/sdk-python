@@ -1021,8 +1021,10 @@ async def test_oidc_preshare(tmp_path: Path, app: Dict[str, str], admin: Admin) 
     status = await martine_phone.start(identity)
     assert status == TankerStatus.IDENTITY_REGISTRATION_NEEDED
     await martine_phone.register_identity(OidcIdTokenVerification(oidc_id_token))
-    res = await martine_phone.attach_provisional_identity(provisional_identity)
-    assert res.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    attach_result = await martine_phone.attach_provisional_identity(
+        provisional_identity
+    )
+    assert attach_result.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     await martine_phone.verify_provisional_identity(
         OidcIdTokenVerification(oidc_id_token)
     )
