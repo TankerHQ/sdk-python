@@ -1,6 +1,6 @@
 include:
   project: TankerHQ/gitlab-ci-files
-  ref: 3c2982f66615f3e203589c6e8471c1a1d2de3723
+  ref:  3c5b5bab766b76e1e2bcca1666caef2cc9c843de
   file: /python.yml
 
 ###############
@@ -33,13 +33,9 @@ check/deployed-native/linux/3.9:
      PYENV_VERSION: 3.9.0
 
 check/deployed-native/macos:
-  extends:
-    - .check
-    - .tags/macos
-    - .coverage
-    - .rules/deployed-native
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE --profile macos-release
+  extends: .check/deployed-native/macos
+  variables:
+     PYENV_VERSION: 3.8.6
 
 check/deployed-native/windows:
   extends:
@@ -69,13 +65,9 @@ check/native-from-sources/linux/3.9:
      PYENV_VERSION: 3.9.0
 
 check/native-from-sources/macos:
-  extends:
-    - .check
-    - .tags/macos
-    - .coverage
-    - .rules/native-from-sources
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile macos-release
+  extends: .check/deployed-native/macos
+  variables:
+     PYENV_VERSION: 3.8.6
 
 check/native-from-sources/windows:
   extends:
@@ -104,13 +96,9 @@ check/downstream/linux/3.9:
      PYENV_VERSION: 3.9.0
 
 check/downstream/macos:
-  extends:
-    - .check
-    - .tags/macos
-    - .before-script/download-artifacts
-    - .rules/check/downstream/macos
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile macos-release
+  extends: .check/downstream/macos
+  variables:
+     PYENV_VERSION: 3.8.6
 
 check/downstream/windows:
   extends:
@@ -149,16 +137,20 @@ build-wheel/linux/3.9:
   variables:
      PYENV_VERSION: 3.9.0
 
-build-wheel/macos:
-  extends:
-    - .build-wheel
-    - .tags/macos
-    - .rules/build-wheel
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile macos-release --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
-  artifacts:
-    paths:
-      - dist
+build-wheel/macos/3.7:
+  extends: .build-wheel/macos
+  variables:
+     PYENV_VERSION: 3.7.9
+
+build-wheel/macos/3.8:
+  extends: .build-wheel/macos
+  variables:
+     PYENV_VERSION: 3.8.6
+
+build-wheel/macos/3.9:
+  extends: .build-wheel/macos
+  variables:
+     PYENV_VERSION: 3.9.0
 
 build-wheel/windows:
   extends:
