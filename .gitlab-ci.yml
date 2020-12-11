@@ -15,6 +15,8 @@ lint:
   script:
     - ./lint.sh
 
+## deployed native
+
 check/deployed-native/linux/3.7:
   extends: .check/deployed-native/linux
   variables:
@@ -29,6 +31,27 @@ check/deployed-native/linux/3.9:
   extends: .check/deployed-native/linux
   variables:
      PYENV_VERSION: 3.9.0
+
+check/deployed-native/macos:
+  extends:
+    - .check
+    - .tags/macos
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE --profile macos-release
+
+check/deployed-native/windows:
+  extends:
+    - .check
+    - .tags/windows
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile vs2019-release
+
+
+## native from sources
 
 check/native-from-sources/linux/3.7:
   extends: .check/native-from-sources/linux
@@ -45,15 +68,6 @@ check/native-from-sources/linux/3.9:
   variables:
      PYENV_VERSION: 3.9.0
 
-check/deployed-native/macos:
-  extends:
-    - .check
-    - .tags/macos
-    - .coverage
-    - .rules/deployed-native
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE --profile macos-release
-
 check/native-from-sources/macos:
   extends:
     - .check
@@ -63,15 +77,6 @@ check/native-from-sources/macos:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile macos-release
 
-check/deployed-native/windows:
-  extends:
-    - .check
-    - .tags/windows
-    - .coverage
-    - .rules/deployed-native
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile vs2019-release
-
 check/native-from-sources/windows:
   extends:
     - .check
@@ -80,6 +85,8 @@ check/native-from-sources/windows:
     - .rules/native-from-sources
   script:
     - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile vs2019-release
+
+## downstream
 
 check/downstream/linux/3.7:
   extends: .check/downstream/linux
