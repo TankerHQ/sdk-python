@@ -96,7 +96,7 @@ check/downstream/linux/3.9:
   variables:
      PYENV_VERSION: 3.9.0
 
-check/macos/downstream:
+check/downstream/macos:
   extends:
     - .check
     - .tags/macos
@@ -105,7 +105,7 @@ check/macos/downstream:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile macos-release
 
-check/windows/downstream:
+check/downstream/windows:
   extends:
     - .check
     - .tags/windows
