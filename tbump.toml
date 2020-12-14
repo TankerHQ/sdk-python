@@ -10,8 +10,6 @@ regex = '''
   (?P<patch>\d+)
   (
      (
-     post(?P<post>\d+)
-     |
      a(?P<alpha>\d+)
      |
      b(?P<beta>\d+)
