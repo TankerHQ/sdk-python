@@ -1,8 +1,8 @@
 import argparse
 import os
+from pathlib import Path
 import sys
-
-from path import Path
+import shutil
 from typing import List, Optional  # noqa
 
 import tankerci
@@ -34,13 +34,13 @@ def prepare(
 
 
 def build() -> None:
-    tankerci.run("poetry", "install", cwd=Path.getcwd())
+    tankerci.run("poetry", "install", cwd=Path.cwd())
 
 
 def test() -> None:
     env = os.environ.copy()
     env["TANKER_SDK_DEBUG"] = "1"
-    src_path = Path.getcwd()
+    src_path = Path.cwd()
     # fmt: off
     tankerci.run(
         "poetry", "run", "pytest",
@@ -54,9 +54,10 @@ def test() -> None:
     )
     # fmt: on
     coverage_dir = src_path / "htmlcov"
-    dest_dir = Path.getcwd() / "coverage"
-    dest_dir.rmtree_p()
-    coverage_dir.copytree(dest_dir)
+    dest_dir = Path.cwd() / "coverage"
+    if dest_dir.exists():
+        shutil.rmtree(dest_dir)
+    shutil.copytree(coverage_dir, dest_dir)
 
 
 def build_and_test(
@@ -70,13 +71,14 @@ def build_and_test(
 def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
     prepare(TankerSource.DEPLOYED, profile, False, tanker_ref)
     build()
-    src_path = Path.getcwd()
+    src_path = Path.cwd()
     tankerci.bump.bump_files(version)
     dist_path = src_path / "dist"
-    dist_path.rmtree_p()
+    if dist_path.exists():
+        shutil.rmtree(dist_path)
 
     env = os.environ.copy()
-    env["TANKER_PYTHON_SDK_SRC"] = src_path
+    env["TANKER_PYTHON_SDK_SRC"] = str(src_path)
     # Note: poetry generates a temporary directory,
     # change the working directory there, creates a `setup.py`
     # from scratch (calling `build.py`) and runs it.
@@ -86,7 +88,7 @@ def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
     # changes, and we make sure *all* paths used in build_tanker.py
     # are absolute
     tankerci.run("poetry", "build", env=env)
-    wheels = dist_path.files("tankersdk-*.whl")
+    wheels = list(dist_path.glob("tankersdk-*.whl"))
     if len(wheels) != 1:
         raise Exception("multiple wheels found: {}".format(wheels))
 
@@ -96,12 +98,12 @@ def deploy() -> None:
     env["TWINE_PASSWORD"] = env["GITLAB_TOKEN"]
     env["TWINE_USERNAME"] = env["GITLAB_USERNAME"]
 
-    wheels_path = Path.getcwd() / "dist"
-    for wheel in wheels_path.files("tankersdk-*.whl"):
+    wheels_path = Path.cwd() / "dist"
+    for wheel in wheels_path.glob("tankersdk-*.whl"):
         # fmt: off
         tankerci.run(
             "poetry", "run",
-            "twine", "upload", wheel, "--repository-url", PUBLIC_REPOSITORY_URL,
+            "twine", "upload", str(wheel), "--repository-url", PUBLIC_REPOSITORY_URL,
             env=env,
         )
         # fmt: on
@@ -183,9 +185,9 @@ def main() -> None:
     elif command == "reset-branch":
         fallback = os.environ["CI_COMMIT_REF_NAME"]
         ref = tankerci.git.find_ref(
-            Path.getcwd(), [f"origin/{args.branch}", f"origin/{fallback}"]
+            Path.cwd(), [f"origin/{args.branch}", f"origin/{fallback}"]
         )
-        tankerci.git.reset(Path.getcwd(), ref)
+        tankerci.git.reset(Path.cwd(), ref)
     elif command == "download-artifacts":
         tankerci.gitlab.download_artifacts(
             project_id=args.project_id,
