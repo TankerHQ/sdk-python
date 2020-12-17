@@ -22,7 +22,7 @@ typing_extensions = "^3.7.4"
 
 [tool.poetry.dev-dependencies]
 # CI/CD
-tankerci = "2020.12.dev3117"
+tankerci = ">= 2020.12.3123"
 twine = "^3.2.0"
 
 # linters
