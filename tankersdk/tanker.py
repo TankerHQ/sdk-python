@@ -460,7 +460,7 @@ _GLOBAL_TANKERS: "weakref.WeakKeyDictionary[Tanker, Any]" = weakref.WeakKeyDicti
 
 class Tanker:
     """
-    tankersdk.Tanker(app_id: str, *, writable_path: str)
+    tankersdk.Tanker(app_id, *, writable_path)
 
     :param app_id: The App ID
     :param writeable_path: A writeable path to store user data

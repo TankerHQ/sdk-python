@@ -1,29 +1,29 @@
-from typing import Iterator, List
-import os
 import json
+import os
+from pathlib import Path
+from typing import Iterator, List
 import sys
 
 import cli_ui as ui
 from cffi import FFI
-from path import Path
 
 tanker_ext = FFI()
 
 
-def get_lib_name(name):
+def get_lib_name(name: str) -> str:
     if sys.platform == "win32":
         return name + ".lib"
     else:
         return "lib" + name + ".a"
 
 
-def find_libs(names: List[str], paths: List[str]) -> Iterator[Path]:
+def find_libs(names: List[str], paths: List[str]) -> Iterator[str]:
     for name in names:
         for lib_path in paths:
             lib_name = get_lib_name(name)
             candidate = Path(lib_path) / lib_name
             if candidate.exists():
-                yield candidate
+                yield str(candidate)
 
 
 def on_import() -> None:
@@ -31,11 +31,12 @@ def on_import() -> None:
     if path_from_env:
         this_path = Path(path_from_env)
     else:
-        this_path = Path(__file__).parent.abspath()
+        this_path = Path(__file__).parent.resolve()
 
     conan_out_path = this_path / "conan" / "out"
     build_info = None
-    for d in conan_out_path.dirs():
+    dirs = (d for d in conan_out_path.iterdir() if d.is_dir())
+    for d in dirs:
         conan_info = d / "conanbuildinfo.json"
         if conan_info.exists():
             build_info = conan_info
@@ -46,8 +47,9 @@ def on_import() -> None:
             "conanbuildinfo.json not found - cannot configure compilation with tanker/native",
         )
 
-    conaninfo = json.loads(build_info.text())
-    libs = list()
+    assert build_info
+    conaninfo = json.loads(build_info.read_text())
+    libs: List[str] = list()
     for dep_info in conaninfo["dependencies"]:
         libs_for_dep = dep_info["libs"]
         lib_paths = dep_info["lib_paths"]
@@ -60,7 +62,7 @@ def on_import() -> None:
     tanker_package = tanker_packages[0]
     includes = tanker_package["include_paths"]
 
-    tanker_cffi_source = (this_path / "cffi_src.c").text()
+    tanker_cffi_source = (this_path / "cffi_src.c").read_text()
 
     if sys.platform == "win32":
         system_libs = ["crypt32"]
@@ -93,7 +95,7 @@ def on_import() -> None:
         extra_link_args=exported_symbols_flags,
     )
 
-    tanker_cffi_defs = (this_path / "cffi_defs.h").text()
+    tanker_cffi_defs = (this_path / "cffi_defs.h").read_text()
     tanker_ext.cdef(tanker_cffi_defs)
 
 
