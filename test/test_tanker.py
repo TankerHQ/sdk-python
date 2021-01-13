@@ -47,7 +47,8 @@ def read_test_config() -> Dict[str, Any]:
     res["server"] = {
         "adminUrl": assert_env("TANKER_ADMIND_URL"),
         "idToken": assert_env("TANKER_ID_TOKEN"),
-        "url": assert_env("TANKER_TRUSTCHAIND_URL"),
+        "url": assert_env("TANKER_APPD_URL"),
+        "trustchaindUrl": assert_env("TANKER_TRUSTCHAIND_URL"),
     }
     res["oidc"] = {
         "clientId": assert_env("TANKER_OIDC_CLIENT_ID"),
@@ -606,7 +607,7 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
 
 def get_verification_code(app: Dict[str, str], email: str) -> str:
     return tankeradminsdk.get_verification_code(
-        url=TEST_CONFIG["server"]["url"],
+        url=TEST_CONFIG["server"]["trustchaindUrl"],
         app_id=app["id"],
         auth_token=app["auth_token"],
         email=email,
