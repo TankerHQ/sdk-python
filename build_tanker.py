@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Iterator, List
 import sys
 
-import cli_ui as ui
 from cffi import FFI
 
 tanker_ext = FFI()
@@ -43,7 +42,7 @@ def on_import() -> None:
             break
 
     if not build_info or not build_info.exists():
-        ui.fatal(
+        sys.exit(
             "conanbuildinfo.json not found - cannot configure compilation with tanker/native",
         )
 
