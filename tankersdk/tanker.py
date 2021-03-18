@@ -69,6 +69,11 @@ class Verification:
     method_type: VerificationMethodType = None  # type: ignore
 
 
+class VerificationOptions:
+    def __init__(self, with_session_token: bool):
+        self.with_session_token = with_session_token
+
+
 class EmailVerification(Verification):
     method_type = VerificationMethodType.EMAIL
 
@@ -235,6 +240,21 @@ class CSharingOptions:
                 "share_with_groups": self.group_list.data,
                 "nb_groups": self.group_list.size,
             },
+        )
+
+    def get(self) -> CData:
+        return self._c_data
+
+
+class CVerificationOptions:
+    """Wraps the tanker_verification_options_t C type"""
+
+    def __init__(
+        self, with_session_token: bool,
+    ):
+        self._c_data = ffi.new(
+            "tanker_verification_options_t *",
+            {"version": 1, "with_session_token": with_session_token},
         )
 
     def get(self) -> CData:
@@ -732,20 +752,51 @@ class Tanker:
 
         await ffihelpers.handle_tanker_future(c_future)
 
-    async def register_identity(self, verification: Verification) -> None:
+    async def register_identity(
+        self, verification: Verification, options: Optional[VerificationOptions] = None
+    ) -> Optional[str]:
         """Register users' identity"""
         c_verification = CVerification(verification)
+        if options:
+            c_verif_opts = CVerificationOptions(
+                with_session_token=options.with_session_token,
+            ).get()
+        else:
+            c_verif_opts = ffi.NULL
 
         c_future = tankerlib.tanker_register_identity(
-            self.c_tanker, c_verification.get()
+            self.c_tanker, c_verification.get(), c_verif_opts
         )
-        await ffihelpers.handle_tanker_future(c_future)
 
-    async def verify_identity(self, verification: Verification) -> None:
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
+        if c_voidp == ffi.NULL:
+            return None
+        c_str = ffi.cast("char*", c_voidp)
+        res = ffihelpers.c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
+
+    async def verify_identity(
+        self, verification: Verification, options: Optional[VerificationOptions] = None
+    ) -> Optional[str]:
         """Verify users' identity"""
         c_verification = CVerification(verification)
-        c_future = tankerlib.tanker_verify_identity(self.c_tanker, c_verification.get())
-        await ffihelpers.handle_tanker_future(c_future)
+        if options:
+            c_verif_opts = CVerificationOptions(
+                with_session_token=options.with_session_token,
+            ).get()
+        else:
+            c_verif_opts = ffi.NULL
+        c_future = tankerlib.tanker_verify_identity(
+            self.c_tanker, c_verification.get(), c_verif_opts
+        )
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
+        if c_voidp == ffi.NULL:
+            return None
+        c_str = ffi.cast("char*", c_voidp)
+        res = ffihelpers.c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
 
     async def generate_verification_key(self) -> str:
         """Generate a private unlock key
@@ -759,14 +810,28 @@ class Tanker:
         tankerlib.tanker_free_buffer(c_str)
         return res
 
-    async def set_verification_method(self, verification: Verification) -> None:
+    async def set_verification_method(
+        self, verification: Verification, options: Optional[VerificationOptions] = None
+    ) -> Optional[str]:
         """Set or update a verification method"""
         c_verification = CVerification(verification)
+        if options:
+            c_verif_opts = CVerificationOptions(
+                with_session_token=options.with_session_token,
+            ).get()
+        else:
+            c_verif_opts = ffi.NULL
         c_future = tankerlib.tanker_set_verification_method(
-            self.c_tanker, c_verification.get()
+            self.c_tanker, c_verification.get(), c_verif_opts
         )
 
-        await ffihelpers.handle_tanker_future(c_future)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
+        if c_voidp == ffi.NULL:
+            return None
+        c_str = ffi.cast("char*", c_voidp)
+        res = ffihelpers.c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
 
     async def get_verification_methods(self) -> List[VerificationMethod]:
         """Get the list of available verification methods"""
