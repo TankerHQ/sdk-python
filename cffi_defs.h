@@ -104,6 +104,7 @@ typedef struct tanker_options tanker_options_t;
 typedef struct tanker_email_verification tanker_email_verification_t;
 typedef struct tanker_verification tanker_verification_t;
 typedef struct tanker_verification_method tanker_verification_method_t;
+typedef struct tanker_verification_options tanker_verification_options_t;
 typedef struct tanker_encrypt_options tanker_encrypt_options_t;
 typedef struct tanker_sharing_options tanker_sharing_options_t;
 typedef struct tanker_log_record tanker_log_record_t;
@@ -183,6 +184,12 @@ struct tanker_verification_method
   char const* email;
 };
 
+struct tanker_verification_options
+{
+  uint8_t version;
+  bool with_session_token;
+};
+
 struct tanker_encrypt_options
 {
   uint8_t version;
@@ -232,10 +239,14 @@ tanker_expected_t* tanker_event_disconnect(tanker_t* tanker,
 tanker_future_t* tanker_start(tanker_t* tanker, char const* identity);
 
 tanker_future_t* tanker_register_identity(
-    tanker_t* tanker, tanker_verification_t const* verification);
+    tanker_t* tanker,
+    tanker_verification_t const* verification,
+    tanker_verification_options_t const* cverif_opts);
 
 tanker_future_t* tanker_verify_identity(
-    tanker_t* tanker, tanker_verification_t const* verification);
+    tanker_t* tanker,
+    tanker_verification_t const* verification,
+    tanker_verification_options_t const* cverif_opts);
 
 tanker_future_t* tanker_stop(tanker_t* tanker);
 
@@ -248,7 +259,9 @@ tanker_future_t* tanker_get_device_list(tanker_t* session);
 tanker_future_t* tanker_generate_verification_key(tanker_t* session);
 
 tanker_future_t* tanker_set_verification_method(
-    tanker_t* session, tanker_verification_t const* verification);
+    tanker_t* session,
+    tanker_verification_t const* verification,
+    tanker_verification_options_t const* cverif_opts);
 
 tanker_future_t* tanker_get_verification_methods(tanker_t* session);
 
