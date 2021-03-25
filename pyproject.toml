@@ -39,7 +39,7 @@ pytest = "^6.0.1"
 pytest-cov = "^2.8.1"
 pytest-asyncio = "^0.14.0"
 pytest-xdist = "^1.31.0"
-tankeradminsdk = { version = "^0.2.1", source = "gitlab" }
+tankeradminsdk = { version = "^0.3.1", source = "gitlab" }
 tankersdk-identity = "^1.3.4"
 
 
