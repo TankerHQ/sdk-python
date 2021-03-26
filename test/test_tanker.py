@@ -13,7 +13,7 @@ import requests
 from typing import cast, Any, Dict, Iterator, Tuple
 
 import tankersdk
-from tankersdk import Tanker, Error as TankerError, ErrorCode
+from tankersdk import Tanker
 from tankersdk import Status as TankerStatus
 from tankersdk import (
     EncryptionOptions,
@@ -28,6 +28,7 @@ from tankersdk import (
 import tankersdk_identity
 import tankeradminsdk
 from tankeradminsdk import Admin
+from tankersdk import error
 
 import pytest
 
@@ -109,9 +110,8 @@ def test_init_tanker_ok(tmp_path: Path, app: Dict[str, str]) -> None:
 
 
 def test_init_tanker_invalid_id(tmp_path: Path) -> None:
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         create_tanker(app_id="invalid bad 64", writable_path=tmp_path)
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -120,9 +120,8 @@ async def test_tanker_start_invalid_path(app: Dict[str, str]) -> None:
     fake = Faker()
     user_id = fake.email(domain="tanker.io")
     identity = tankersdk_identity.create_identity(app["id"], app["app_secret"], user_id)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InternalError):
         await tanker.start(identity)
-    assert error.value.code == ErrorCode.INTERNAL_ERROR
 
 
 @pytest.mark.asyncio
@@ -154,9 +153,8 @@ async def test_start_identity_incorrect_format(
     tmp_path: Path, app: Dict[str, str]
 ) -> None:
     tanker = create_tanker(app["id"], writable_path=tmp_path)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await tanker.start("bad identity")
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
     await tanker.stop()
 
 
@@ -311,9 +309,8 @@ async def test_share_during_encrypt_without_self(
             share_with_users=[bob.public_identity], share_with_self=False
         ),
     )
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await alice.session.decrypt(encrypted)
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
     await alice.session.stop()
@@ -423,9 +420,8 @@ async def test_share_with_encryption_session_without_self(
     async with await alice.session.create_encryption_session(options) as enc_session:
         encrypted = await enc_session.encrypt(message)
 
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await alice.session.decrypt(encrypted)
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
@@ -493,9 +489,8 @@ async def test_revoke_device(tmp_path: Path, app: Dict[str, str]) -> None:
 
     laptop.on_revoked = on_revoked
     await phone.revoke_device(laptop_id)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.DeviceRevoked):
         await laptop.encrypt(b"will fail")
-    assert error.value.code == ErrorCode.DEVICE_REVOKED
     # Check callback is called
     await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
     assert laptop.status == TankerStatus.STOPPED
@@ -585,13 +580,11 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
     phone_tanker = create_tanker(app["id"], writable_path=phone_path)
     await phone_tanker.start(alice_identity)
 
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidVerification):
         await phone_tanker.verify_identity(VerificationKeyVerification("plop"))
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidVerification):
         await phone_tanker.verify_identity(VerificationKeyVerification(""))
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     key_json = base64.b64decode(verification_key.encode()).decode()
     key = json.loads(key_json)
@@ -601,7 +594,7 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
     key_json = json.dumps(key)
     key = base64.b64encode(key_json.encode()).decode()
 
-    with pytest.raises(TankerError):
+    with pytest.raises(error.InvalidVerification):
         await phone_tanker.verify_identity(VerificationKeyVerification(key))
 
 
@@ -659,15 +652,12 @@ async def test_bad_verification_code(tmp_path: Path, app: Dict[str, str]) -> Non
     verification_code = get_verification_code(app, email)
     await laptop_tanker.register_identity(EmailVerification(email, verification_code))
     await phone_tanker.start(alice_identity)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidVerification):
         await phone_tanker.verify_identity(EmailVerification(email, "12345678"))
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidVerification):
         await phone_tanker.verify_identity(EmailVerification(email, "azerty"))
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await phone_tanker.verify_identity(EmailVerification(email, ""))
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     await laptop_tanker.stop()
 
@@ -718,9 +708,8 @@ async def test_cannot_decrypt_if_provisional_identity_not_attached(
     encrypted = await alice.session.encrypt(
         message, EncryptionOptions(share_with_users=[bob.public_provisional_identity])
     )
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await bob.session.decrypt(encrypted)
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 async def share_and_attach_provisional_identity(
@@ -786,9 +775,8 @@ async def test_attach_provisional_identity_with_incorrect_code(
         message, EncryptionOptions(share_with_users=[bob.public_provisional_identity])
     )
     await bob.session.attach_provisional_identity(bob.private_provisional_identity)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.PreconditionFailed):
         await bob.session.verify_identity(EmailVerification(bob.email, "badCode"))
-    assert error.value.code == ErrorCode.PRECONDITION_FAILED
 
 
 @pytest.mark.asyncio
@@ -815,9 +803,8 @@ async def test_update_verification_passphrase(
     await phone_tanker.start(alice_identity)
 
     # Old passphrase should not work
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidVerification):
         await phone_tanker.verify_identity(PassphraseVerification(old_passphrase))
-    assert error.value.code == ErrorCode.INVALID_VERIFICATION
 
     # But new passphrase should
     await phone_tanker.verify_identity(PassphraseVerification(new_passphrase))
@@ -865,48 +852,43 @@ async def test_user_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
     identity_obj = {"app_id": app["id"], "target": "user", "value": user_id}
     identity = encode(json.dumps(identity_obj))
     alice = await create_user_session(tmp_path, app)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await alice.session.create_group([identity])
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
 async def test_decrypt_invalid_argument(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await alice.session.decrypt(b"zz")
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
 async def test_recipient_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
     group_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, app)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await alice.session.encrypt(
             b"zz", EncryptionOptions(share_with_groups=[group_id])
         )
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
 async def test_group_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
     group_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, app)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await alice.session.update_group_members(
             group_id, users_to_add=[alice.public_identity]
         )
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
 async def test_device_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
     device_id = encode("*" * 32)
     alice = await create_user_session(tmp_path, app)
-    with pytest.raises(TankerError) as error:
+    with pytest.raises(error.InvalidArgument):
         await alice.session.revoke_device(device_id)
-    assert error.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 @pytest.mark.asyncio
@@ -1036,9 +1018,8 @@ async def test_oidc_preshare(tmp_path: Path, app: Dict[str, str], admin: Admin) 
 
 
 def test_prehash_password_empty() -> None:
-    with pytest.raises(TankerError) as e:
+    with pytest.raises(error.InvalidArgument):
         tankersdk.prehash_password("")
-    assert e.value.code == ErrorCode.INVALID_ARGUMENT
 
 
 def test_prehash_password_vector_1() -> None:

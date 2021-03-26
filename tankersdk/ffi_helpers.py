@@ -1,7 +1,7 @@
 from typing import cast, Any, List, Optional, Callable
 from asyncio import Future
 import asyncio
-from .error import Error, ErrorCode
+from .error import Error, ErrorCode, make_error
 
 
 # mypy does not know ffi types, this is for documentation purposes only
@@ -53,7 +53,7 @@ class FFIHelpers:
             # UTF-8 sequences, so use 'latin-1' as a "lossless"
             # encoding:
             message = self.c_string_to_str(c_error.message, encoding="latin-1")
-            return Error(message, ErrorCode(c_error.code))
+            return make_error(message, ErrorCode(c_error.code))
         else:
             return None
 
