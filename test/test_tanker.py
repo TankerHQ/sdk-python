@@ -20,6 +20,7 @@ from tankersdk import (
     EmailVerification,
     EmailVerificationMethod,
     VerificationMethodType,
+    VerificationOptions,
     PassphraseVerification,
     SharingOptions,
     OidcIdTokenVerification,
@@ -1032,3 +1033,112 @@ def test_prehash_password_vector_2() -> None:
     input = "test éå 한국어 😃"
     expected = "Pkn/pjub2uwkBDpt2HUieWOXP5xLn0Zlen16ID4C7jI="
     assert tankersdk.prehash_password(input) == expected
+
+
+def check_session_token(
+    app_id: str,
+    auth_token: str,
+    public_identity: str,
+    session_token: str,
+    allowed_method: str,
+) -> str:
+    url = TEST_CONFIG["server"]["trustchaindUrl"] + "/verification/session-token"
+    response = requests.post(
+        url,
+        headers={"content-type": "application/json"},
+        json={
+            "app_id": app_id,
+            "auth_token": auth_token,
+            "public_identity": public_identity,
+            "session_token": session_token,
+            "allowed_methods": [{"type": allowed_method}],
+        },
+    )
+    response.raise_for_status()
+    return response.json()["verification_method"]  # type: ignore
+
+
+@pytest.mark.asyncio
+async def test_get_session_token_with_register_identity(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    fake = Faker()
+    admin.update_app(
+        app["id"], session_certificates=True,
+    )
+
+    passphrase = "50lbs bags of white rocks"
+    user_id = fake.email(domain="tanker.io")
+    tanker = create_tanker(app["id"], writable_path=tmp_path)
+    identity = tankersdk_identity.create_identity(app["id"], app["app_secret"], user_id)
+    await tanker.start(identity)
+
+    options = VerificationOptions(with_session_token=True)
+    token = await tanker.register_identity(PassphraseVerification(passphrase), options)
+    assert token
+
+    expected_method = "passphrase"
+    public_identity = tankersdk_identity.get_public_identity(identity)
+    actual_method = check_session_token(
+        app["id"], app["auth_token"], public_identity, token, expected_method
+    )
+    assert expected_method == actual_method
+    await tanker.stop()
+
+
+@pytest.mark.asyncio
+async def test_get_session_token_with_verify_identity(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    fake = Faker()
+    admin.update_app(
+        app["id"], session_certificates=True,
+    )
+
+    user_id = fake.email(domain="tanker.io")
+    tanker = create_tanker(app["id"], writable_path=tmp_path)
+    identity = tankersdk_identity.create_identity(app["id"], app["app_secret"], user_id)
+    await tanker.start(identity)
+
+    verif = PassphraseVerification("What the stones are for")
+    options = VerificationOptions(with_session_token=True)
+    await tanker.register_identity(verif)
+    token = await tanker.verify_identity(verif, options)
+    assert token
+
+    expected_method = "passphrase"
+    public_identity = tankersdk_identity.get_public_identity(identity)
+    actual_method = check_session_token(
+        app["id"], app["auth_token"], public_identity, token, expected_method
+    )
+    assert expected_method == actual_method
+    await tanker.stop()
+
+
+@pytest.mark.asyncio
+async def test_get_session_token_with_set_verification_method(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    fake = Faker()
+    admin.update_app(
+        app["id"], session_certificates=True,
+    )
+
+    user_id = fake.email(domain="tanker.io")
+    tanker = create_tanker(app["id"], writable_path=tmp_path)
+    identity = tankersdk_identity.create_identity(app["id"], app["app_secret"], user_id)
+    await tanker.start(identity)
+
+    verif = PassphraseVerification("Still carrying the rock")
+    options = VerificationOptions(with_session_token=True)
+    await tanker.register_identity(verif)
+    token = await tanker.set_verification_method(verif, options)
+    assert token
+
+    expected_method = "passphrase"
+    public_identity = tankersdk_identity.get_public_identity(identity)
+    actual_method = check_session_token(
+        app["id"], app["auth_token"], public_identity, token, expected_method
+    )
+    assert expected_method == actual_method
+    await tanker.stop()

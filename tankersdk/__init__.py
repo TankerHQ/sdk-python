@@ -14,6 +14,7 @@ from .tanker import (  # noqa
 
     EncryptionOptions,
     SharingOptions,
+    VerificationOptions,
 
     prehash_password,
 
