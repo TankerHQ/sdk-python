@@ -767,6 +767,32 @@ async def test_already_attached_identity(tmp_path: Path, app: Dict[str, str]) ->
 
 
 @pytest.mark.asyncio
+async def test_already_attached_identity_by_someone_else(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice, bob = await set_up_preshare(tmp_path, app)
+
+    attach_result = await bob.session.attach_provisional_identity(
+        bob.private_provisional_identity
+    )
+    assert attach_result.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    verification_code = get_verification_code(app, bob.email)
+    await bob.session.verify_provisional_identity(
+        EmailVerification(bob.email, verification_code)
+    )
+    attach_result2 = await alice.session.attach_provisional_identity(
+        bob.private_provisional_identity
+    )
+    assert attach_result2.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    verification_code2 = get_verification_code(app, bob.email)
+    with pytest.raises(error.IdentityAlreadyAttached):
+        await alice.session.verify_provisional_identity(
+            EmailVerification(bob.email, verification_code2)
+        )
+
+
+@pytest.mark.asyncio
 async def test_attach_provisional_identity_with_incorrect_code(
     tmp_path: Path, app: Dict[str, str]
 ) -> None:

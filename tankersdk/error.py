@@ -22,6 +22,7 @@ class ErrorCode(Enum):
 
     CONFLICT = 13
     UPGRADE_REQUIRED = 14
+    IDENTITY_ALREADY_ATTACHED = 15
 
 
 class Error(Exception):
@@ -95,6 +96,11 @@ class UpgradeRequired(Error):
         super().__init__(message, ErrorCode.UPGRADE_REQUIRED)
 
 
+class IdentityAlreadyAttached(Error):
+    def __init__(self, message: str):
+        super().__init__(message, ErrorCode.IDENTITY_ALREADY_ATTACHED)
+
+
 def make_error(message: str, code: ErrorCode) -> Error:
     error_map = {
         ErrorCode.INVALID_ARGUMENT: InvalidArgument,
@@ -110,6 +116,7 @@ def make_error(message: str, code: ErrorCode) -> Error:
         ErrorCode.DEVICE_REVOKED: DeviceRevoked,
         ErrorCode.CONFLICT: Conflict,
         ErrorCode.UPGRADE_REQUIRED: UpgradeRequired,
+        ErrorCode.IDENTITY_ALREADY_ATTACHED: IdentityAlreadyAttached,
     }
     constructor = error_map.get(code, None)
     if not constructor:
