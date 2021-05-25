@@ -355,11 +355,12 @@ async def test_create_group(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
     charlie = await create_user_session(tmp_path, app)
+    tom = await create_user_session(tmp_path, app)
 
     group_id = await alice.session.create_group(
-        [bob.public_identity, charlie.public_identity]
+        [bob.public_identity, charlie.public_identity, tom.public_identity]
     )
-    await check_share_with_group_works(alice, group_id, [bob, charlie])
+    await check_share_with_group_works(alice, group_id, [bob, charlie, tom])
 
 
 @pytest.mark.asyncio
@@ -367,14 +368,17 @@ async def test_update_group(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
     charlie = await create_user_session(tmp_path, app)
+    tom = await create_user_session(tmp_path, app)
 
     group_id = await alice.session.create_group(
-        [alice.public_identity, bob.public_identity]
+        [alice.public_identity, tom.public_identity, bob.public_identity]
     )
     await alice.session.update_group_members(
-        group_id, users_to_add=[charlie.public_identity]
+        group_id,
+        users_to_add=[charlie.public_identity],
+        users_to_remove=[tom.public_identity],
     )
-    await check_share_with_group_works(alice, group_id, bob, charlie)
+    await check_share_with_group_works(alice, group_id, [bob, charlie], [tom])
 
 
 @pytest.mark.asyncio
@@ -861,7 +865,9 @@ async def test_create_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
 
 
 @pytest.mark.asyncio
-async def test_add_to_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) -> None:
+async def test_add_group_members_with_prov_id(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"Hi, this is for a group"
     group_id = await alice.session.create_group([alice.public_identity])
@@ -877,6 +883,31 @@ async def test_add_to_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
     )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
+
+
+@pytest.mark.asyncio
+async def test_remove_group_members_with_prov_id(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice, bob = await set_up_preshare(tmp_path, app)
+    message = b"Hi, this is for a group"
+    group_id = await alice.session.create_group(
+        [alice.public_identity, bob.public_provisional_identity]
+    )
+
+    await bob.session.attach_provisional_identity(bob.private_provisional_identity)
+    await bob.session.verify_provisional_identity(
+        EmailVerification(bob.email, bob.verification_code)
+    )
+
+    encrypted = await alice.session.encrypt(
+        message, EncryptionOptions(share_with_groups=[group_id])
+    )
+    await alice.session.update_group_members(
+        group_id, users_to_remove=[bob.public_identity]
+    )
+    with pytest.raises(error.InvalidArgument):
+        await bob.session.decrypt(encrypted)
 
 
 @pytest.mark.asyncio

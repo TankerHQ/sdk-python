@@ -319,7 +319,9 @@ tanker_future_t* tanker_update_group_members(
     tanker_t* session,
     char const* group_id,
     char const* const* public_identities_to_add,
-    uint64_t nb_public_identities_to_add);
+    uint64_t nb_public_identities_to_add,
+    char const* const* public_identities_to_remove,
+    uint64_t nb_public_identities_to_remove);
 
 // ctanker/stream.h
 
