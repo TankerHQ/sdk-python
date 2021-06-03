@@ -28,12 +28,14 @@ from .tanker import (  # noqa
     PassphraseVerification,
     OidcIdTokenVerification,
     VerificationKeyVerification,
+    PhoneNumberVerification,
 
     VerificationMethod,
     EmailVerificationMethod,
     PassphraseVerificationMethod,
     OidcIdTokenVerificationMethod,
     VerificationKeyVerificationMethod,
+    PhoneNumberVerificationMethod,
 )
 # fmt: on
 from .version import __version__  # noqa
