@@ -154,6 +154,11 @@ struct tanker_options
   char const* writable_path; /*!< Must not be NULL. */
   char const* sdk_type;      /*!< Must not be NULL. */
   char const* sdk_version;   /*!< Must not be NULL. */
+
+  // sdk-python uses version 2 of this struct, while sdk-native supports both
+  // version 2 and 3. Tell cffi to ignore extra fields and let us handle ABI
+  // compatibility.
+  ...;
 };
 
 struct tanker_email_verification
