@@ -20,17 +20,17 @@ lint:
 check/deployed-native/linux/3.7:
   extends: .check/deployed-native/linux
   variables:
-     PYENV_VERSION: 3.7.9
+     PYENV_VERSION: 3.7.10
 
 check/deployed-native/linux/3.8:
   extends: .check/deployed-native/linux
   variables:
-     PYENV_VERSION: 3.8.6
+     PYENV_VERSION: 3.8.10
 
 check/deployed-native/linux/3.9:
   extends: .check/deployed-native/linux
   variables:
-     PYENV_VERSION: 3.9.0
+     PYENV_VERSION: 3.9.5
 
 check/deployed-native/macos/3.7:
   extends: .check/deployed-native/macos
@@ -62,17 +62,17 @@ check/deployed-native/windows:
 check/native-from-sources/linux/3.7:
   extends: .check/native-from-sources/linux
   variables:
-     PYENV_VERSION: 3.7.9
+     PYENV_VERSION: 3.7.10
 
 check/native-from-sources/linux/3.8:
   extends: .check/native-from-sources/linux
   variables:
-     PYENV_VERSION: 3.8.6
+     PYENV_VERSION: 3.8.10
 
 check/native-from-sources/linux/3.9:
   extends: .check/native-from-sources/linux
   variables:
-     PYENV_VERSION: 3.9.0
+     PYENV_VERSION: 3.9.5
 
 check/native-from-sources/macos/3.7:
   extends: .check/native-from-sources/macos
@@ -103,17 +103,17 @@ check/native-from-sources/windows:
 check/downstream/linux/3.7:
   extends: .check/downstream/linux
   variables:
-     PYENV_VERSION: 3.7.9
+     PYENV_VERSION: 3.7.10
 
 check/downstream/linux/3.8:
   extends: .check/downstream/linux
   variables:
-     PYENV_VERSION: 3.8.6
+     PYENV_VERSION: 3.8.10
 
 check/downstream/linux/3.9:
   extends: .check/downstream/linux
   variables:
-     PYENV_VERSION: 3.9.0
+     PYENV_VERSION: 3.9.5
 
 check/downstream/macos/3.7:
   extends: .check/downstream/macos
@@ -155,17 +155,17 @@ safety:
 build-wheel/linux/3.7:
   extends: .build-wheel/linux
   variables:
-     PYENV_VERSION: 3.7.9
+     PYENV_VERSION: 3.7.10
 
 build-wheel/linux/3.8:
   extends: .build-wheel/linux
   variables:
-     PYENV_VERSION: 3.8.6
+     PYENV_VERSION: 3.8.10
 
 build-wheel/linux/3.9:
   extends: .build-wheel/linux
   variables:
-     PYENV_VERSION: 3.9.0
+     PYENV_VERSION: 3.9.5
 
 build-wheel/macos/3.7:
   extends: .build-wheel/macos
