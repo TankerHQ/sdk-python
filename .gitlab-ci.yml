@@ -1,6 +1,6 @@
 include:
   project: TankerHQ/gitlab-ci-files
-  ref: 37bb68d38359db981eaec61aa6918075ff29d4e0
+  ref: ecfaa4031b36380595405ca7078f73daf08c6b1b
   file: /python.yml
 
 ###############
