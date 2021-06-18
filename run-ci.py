@@ -157,7 +157,6 @@ def main() -> None:
     build_wheel_parser.add_argument("--tanker-ref", required=True)
 
     subparsers.add_parser("deploy")
-    subparsers.add_parser("mirror")
 
     args = parser.parse_args()
     command = args.command
@@ -172,9 +171,7 @@ def main() -> None:
             # previously built (and potentially broken) release candidate to deploy a binding
             tankerci.conan.run("remove", "tanker/*", "--force")
 
-    if command == "mirror":
-        tankerci.git.mirror(github_url="git@github.com:TankerHQ/sdk-python")
-    elif command == "build-wheel":
+    if command == "build-wheel":
         build_wheel(args.profile, args.version, args.tanker_ref)
     elif command == "prepare":
         prepare(args.tanker_source, args.profile, args.update, args.tanker_ref)
