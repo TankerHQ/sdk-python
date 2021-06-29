@@ -144,7 +144,7 @@ def main() -> None:
     )
 
     reset_branch_parser = subparsers.add_parser("reset-branch")
-    reset_branch_parser.add_argument("branch")
+    reset_branch_parser.add_argument("branch", nargs="?")
 
     download_artifacts_parser = subparsers.add_parser("download-artifacts")
     download_artifacts_parser.add_argument("--project-id", required=True)
