@@ -60,6 +60,7 @@ class VerificationMethodType(Enum):
     PASSPHRASE = 2
     VERIFICATION_KEY = 3
     OIDC_ID_TOKEN = 4
+    PHONE_NUMBER = 5
 
 
 class Verification:
@@ -79,6 +80,14 @@ class EmailVerification(Verification):
 
     def __init__(self, email: str, verification_code: str):
         self.email = email
+        self.verification_code = verification_code
+
+
+class PhoneNumberVerification(Verification):
+    method_type = VerificationMethodType.PHONE_NUMBER
+
+    def __init__(self, phone_number: str, verification_code: str):
+        self.phone_number = phone_number
         self.verification_code = verification_code
 
 
@@ -117,6 +126,13 @@ class EmailVerificationMethod(VerificationMethod):
         self.email = email
 
 
+class PhoneNumberVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.PHONE_NUMBER
+
+    def __init__(self, phone_number: str):
+        self.phone_number = phone_number
+
+
 class OidcIdTokenVerificationMethod(VerificationMethod):
     method_type = VerificationMethodType.OIDC_ID_TOKEN
 
@@ -133,7 +149,7 @@ def verification_method_from_c(c_verification_method: CData) -> VerificationMeth
     method_type = VerificationMethodType(c_verification_method.verification_method_type)
     res: Optional[VerificationMethod] = None
     if method_type == VerificationMethodType.EMAIL:
-        c_email = c_verification_method.email
+        c_email = c_verification_method.value
         res = EmailVerificationMethod(ffihelpers.c_string_to_str(c_email))
     elif method_type == VerificationMethodType.PASSPHRASE:
         res = PassphraseVerificationMethod()
@@ -141,6 +157,9 @@ def verification_method_from_c(c_verification_method: CData) -> VerificationMeth
         res = VerificationKeyVerificationMethod()
     elif method_type == VerificationMethodType.OIDC_ID_TOKEN:
         res = OidcIdTokenVerificationMethod()
+    elif method_type == VerificationMethodType.PHONE_NUMBER:
+        c_phone_number = c_verification_method.value
+        res = PhoneNumberVerificationMethod(ffihelpers.c_string_to_str(c_phone_number))
     assert (
         res
     ), f"Could not convert C verification method to python: unknown type: {type}"
@@ -270,7 +289,7 @@ class CVerification:
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
-        c_verification = ffi.new("tanker_verification_t *", {"version": 3})
+        c_verification = ffi.new("tanker_verification_t *", {"version": 4})
         if isinstance(verification, VerificationKeyVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
@@ -306,6 +325,19 @@ class CVerification:
             )
             self._oidc_id_token = ffihelpers.str_to_c_string(verification.oidc_id_token)
             c_verification.oidc_id_token = self._oidc_id_token
+
+        elif isinstance(verification, PhoneNumberVerification):
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_PHONE_NUMBER
+            )
+            self._phone_number_verification = {
+                "version": 1,
+                "phone_number": ffihelpers.str_to_c_string(verification.phone_number),
+                "verification_code": ffihelpers.str_to_c_string(
+                    verification.verification_code
+                ),
+            }
+            c_verification.phone_number_verification = self._phone_number_verification
 
         self._c_verification = c_verification
 

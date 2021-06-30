@@ -87,8 +87,9 @@ enum tanker_verification_method_type
   TANKER_VERIFICATION_METHOD_PASSPHRASE,
   TANKER_VERIFICATION_METHOD_VERIFICATION_KEY,
   TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN,
+  TANKER_VERIFICATION_METHOD_PHONE_NUMBER,
 
-  TANKER_VERIFICATION_METHOD_LAST = TANKER_VERIFICATION_METHOD_OIDC_ID_TOKEN
+  TANKER_VERIFICATION_METHOD_LAST
 };
 
 enum tanker_log_level
@@ -102,6 +103,8 @@ enum tanker_log_level
 typedef struct tanker tanker_t;
 typedef struct tanker_options tanker_options_t;
 typedef struct tanker_email_verification tanker_email_verification_t;
+typedef struct tanker_phone_number_verification
+    tanker_phone_number_verification_t;
 typedef struct tanker_verification tanker_verification_t;
 typedef struct tanker_verification_method tanker_verification_method_t;
 typedef struct tanker_verification_options tanker_verification_options_t;
@@ -168,6 +171,13 @@ struct tanker_email_verification
   char const* verification_code;
 };
 
+struct tanker_phone_number_verification
+{
+  uint8_t version;
+  char const* phone_number;
+  char const* verification_code;
+};
+
 struct tanker_verification
 {
   uint8_t version;
@@ -178,6 +188,7 @@ struct tanker_verification
   tanker_email_verification_t email_verification;
   char const* passphrase;
   char const* oidc_id_token;
+  tanker_phone_number_verification_t phone_number_verification;
 };
 
 struct tanker_verification_method
@@ -186,7 +197,7 @@ struct tanker_verification_method
   // enum cannot be binded to java as they do not have a fixed size.
   // It takes a value from tanker_verification_method_type:
   uint8_t verification_method_type;
-  char const* email;
+  char const* value;
 };
 
 struct tanker_verification_options
