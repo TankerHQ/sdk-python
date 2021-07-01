@@ -654,7 +654,7 @@ async def test_sms_verification(tmp_path: Path, app: Dict[str, str]) -> None:
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
     laptop_tanker = create_tanker(app["id"], writable_path=laptop_path)
-    phone_number = fake.phone_number()
+    phone_number = "+33639982233"
     alice_identity = tankersdk_identity.create_identity(
         app["id"], app["app_secret"], fake.name(),
     )
@@ -967,7 +967,7 @@ async def test_get_verification_methods(tmp_path: Path, app: Dict[str, str]) -> 
     tanker = create_tanker(app["id"], writable_path=tmp_path)
     fake = Faker()
     email = fake.email(domain="tanker.io")
-    phone_number = fake.phone_number()
+    phone_number = "+33639982233"
     identity = tankersdk_identity.create_identity(
         app["id"], app["app_secret"], fake.name()
     )
