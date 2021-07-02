@@ -1,6 +1,6 @@
 include:
   project: TankerHQ/gitlab-ci-files
-  ref: 874483a45e99037b888688c0c3d0fb6a186da6b0
+  ref: a247a7f1fd9d33f89f95cce4f7c0105b1cc5d6b0
   file: /python.yml
 
 ###############
@@ -203,6 +203,7 @@ deploy:
     - .tags/linux
     - .rules/deploy/python
   script:
+    - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
     - poetry run python run-ci.py deploy
   release:
     description: sdk-python v$SDK_PYTHON_RELEASE_VERSION
