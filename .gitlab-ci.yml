@@ -1,6 +1,6 @@
 include:
   project: TankerHQ/gitlab-ci-files
-  ref: a247a7f1fd9d33f89f95cce4f7c0105b1cc5d6b0
+  ref: 2021-07-07-1
   file: /python.yml
 
 ###############
@@ -32,20 +32,25 @@ check/deployed-native/linux/3.9:
   variables:
      PYENV_VERSION: 3.9.5
 
-check/deployed-native/macos/3.7:
-  extends: .check/deployed-native/macos
+check/deployed-native/macos/x86_64/3.7:
+  extends: .check/deployed-native/macos/x86_64
   variables:
      PYENV_VERSION: 3.7.9
 
-check/deployed-native/macos/3.8:
-  extends: .check/deployed-native/macos
+check/deployed-native/macos/x86_64/3.8:
+  extends: .check/deployed-native/macos/x86_64
   variables:
      PYENV_VERSION: 3.8.6
 
-check/deployed-native/macos/3.9:
-  extends: .check/deployed-native/macos
+check/deployed-native/macos/x86_64/3.9:
+  extends: .check/deployed-native/macos/x86_64
   variables:
      PYENV_VERSION: 3.9.0
+
+check/deployed-native/macos/arm/3.9:
+  extends: .check/deployed-native/macos/arm
+  variables:
+     PYENV_VERSION: 3.9.5
 
 check/deployed-native/windows:
   extends:
@@ -74,20 +79,25 @@ check/native-from-sources/linux/3.9:
   variables:
      PYENV_VERSION: 3.9.5
 
-check/native-from-sources/macos/3.7:
-  extends: .check/native-from-sources/macos
+check/native-from-sources/macos/x86_64/3.7:
+  extends: .check/native-from-sources/macos/x86_64
   variables:
      PYENV_VERSION: 3.7.9
 
-check/native-from-sources/macos/3.8:
-  extends: .check/native-from-sources/macos
+check/native-from-sources/macos/x86_64/3.8:
+  extends: .check/native-from-sources/macos/x86_64
   variables:
      PYENV_VERSION: 3.8.6
 
-check/native-from-sources/macos/3.9:
-  extends: .check/native-from-sources/macos
+check/native-from-sources/macos/x86_64/3.9:
+  extends: .check/native-from-sources/macos/x86_64
   variables:
      PYENV_VERSION: 3.9.0
+
+check/native-from-sources/macos/arm/3.9:
+  extends: .check/native-from-sources/macos/arm
+  variables:
+     PYENV_VERSION: 3.9.5
 
 check/native-from-sources/windows:
   extends:
@@ -115,20 +125,25 @@ check/downstream/linux/3.9:
   variables:
      PYENV_VERSION: 3.9.5
 
-check/downstream/macos/3.7:
-  extends: .check/downstream/macos
+check/downstream/macos/x86_64/3.7:
+  extends: .check/downstream/macos/x86_64
   variables:
      PYENV_VERSION: 3.7.9
 
-check/downstream/macos/3.8:
-  extends: .check/downstream/macos
+check/downstream/macos/x86_64/3.8:
+  extends: .check/downstream/macos/x86_64
   variables:
      PYENV_VERSION: 3.8.6
 
-check/downstream/macos/3.9:
-  extends: .check/downstream/macos
+check/downstream/macos/x86_64/3.9:
+  extends: .check/downstream/macos/x86_64
   variables:
      PYENV_VERSION: 3.9.0
+
+check/downstream/macos/arm/3.9:
+  extends: .check/downstream/macos/arm
+  variables:
+     PYENV_VERSION: 3.9.5
 
 check/downstream/windows:
   extends:
@@ -167,20 +182,25 @@ build-wheel/linux/3.9:
   variables:
      PYENV_VERSION: 3.9.5
 
-build-wheel/macos/3.7:
-  extends: .build-wheel/macos
+build-wheel/macos/x86_64/3.7:
+  extends: .build-wheel/macos/x86_64
   variables:
      PYENV_VERSION: 3.7.9
 
-build-wheel/macos/3.8:
-  extends: .build-wheel/macos
+build-wheel/macos/x86_64/3.8:
+  extends: .build-wheel/macos/x86_64
   variables:
      PYENV_VERSION: 3.8.6
 
-build-wheel/macos/3.9:
-  extends: .build-wheel/macos
+build-wheel/macos/x86_64/3.9:
+  extends: .build-wheel/macos/x86_64
   variables:
      PYENV_VERSION: 3.9.0
+
+build-wheel/macos/arm/3.9:
+  extends: .build-wheel/macos/arm
+  variables:
+     PYENV_VERSION: 3.9.5
 
 build-wheel/windows:
   extends:
