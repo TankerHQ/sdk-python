@@ -8,7 +8,7 @@ from pathlib import Path
 
 from faker import Faker
 import requests
-from typing import cast, Any, Dict, Iterator, Tuple
+from typing import cast, Any, List, Dict, Iterator, Tuple
 
 import tankersdk
 from tankersdk import Tanker
@@ -339,16 +339,18 @@ async def test_postponed_share(tmp_path: Path, app: Dict[str, str]) -> None:
 
 
 async def check_share_with_group_works(
-    alice: User, group_id: str, bob: User, charlie: User
+    alice: User, group_id: str, members: List[User], non_members: List[User] = []
 ) -> None:
     message = b"Hi, guys"
     encrypted = await alice.session.encrypt(
         message, EncryptionOptions(share_with_groups=[group_id])
     )
-    decrypted = await charlie.session.decrypt(encrypted)
-    assert decrypted == message
-    decrypted = await bob.session.decrypt(encrypted)
-    assert decrypted == message
+    for m in members:
+        decrypted = await m.session.decrypt(encrypted)
+        assert decrypted == message
+    for n in non_members:
+        with pytest.raises(error.InvalidArgument):
+            await n.session.decrypt(encrypted)
 
 
 @pytest.mark.asyncio
@@ -356,11 +358,12 @@ async def test_create_group(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
     charlie = await create_user_session(tmp_path, app)
+    tom = await create_user_session(tmp_path, app)
 
     group_id = await alice.session.create_group(
-        [bob.public_identity, charlie.public_identity]
+        [bob.public_identity, charlie.public_identity, tom.public_identity]
     )
-    await check_share_with_group_works(alice, group_id, bob, charlie)
+    await check_share_with_group_works(alice, group_id, [bob, charlie, tom])
 
 
 @pytest.mark.asyncio
@@ -368,14 +371,28 @@ async def test_update_group(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
     charlie = await create_user_session(tmp_path, app)
+    tom = await create_user_session(tmp_path, app)
 
     group_id = await alice.session.create_group(
-        [alice.public_identity, bob.public_identity]
+        [alice.public_identity, tom.public_identity, bob.public_identity]
     )
     await alice.session.update_group_members(
-        group_id, users_to_add=[charlie.public_identity]
+        group_id,
+        users_to_add=[charlie.public_identity],
+        users_to_remove=[tom.public_identity],
     )
-    await check_share_with_group_works(alice, group_id, bob, charlie)
+    await check_share_with_group_works(alice, group_id, [bob, charlie], [tom])
+
+
+@pytest.mark.asyncio
+async def test_update_group_empty(tmp_path: Path, app: Dict[str, str]) -> None:
+    alice = await create_user_session(tmp_path, app)
+
+    group_id = await alice.session.create_group([alice.public_identity])
+    with pytest.raises(error.InvalidArgument):
+        await alice.session.update_group_members(
+            group_id, users_to_add=[], users_to_remove=[],
+        )
 
 
 @pytest.mark.asyncio
@@ -721,7 +738,7 @@ PreUser = namedtuple(
 )
 
 
-async def set_up_preshare(tmp_path: Path, app: Dict[str, str]) -> Tuple[User, PreUser]:
+async def create_pre_user(tmp_path: Path, app: Dict[str, str]) -> PreUser:
     fake = Faker()
     bob_email = fake.email(domain="tanker.io")
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
@@ -730,7 +747,6 @@ async def set_up_preshare(tmp_path: Path, app: Dict[str, str]) -> Tuple[User, Pr
     bob_public_provisional_identity = tankersdk_identity.get_public_identity(
         bob_provisional_identity
     )
-    alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
     pre_bob = PreUser(
         session=bob.session,
@@ -741,7 +757,12 @@ async def set_up_preshare(tmp_path: Path, app: Dict[str, str]) -> Tuple[User, Pr
         email=bob_email,
         verification_code=get_verification_code_email(app, bob_email),
     )
-    return alice, pre_bob
+    return pre_bob
+
+
+async def set_up_preshare(tmp_path: Path, app: Dict[str, str]) -> Tuple[User, PreUser]:
+    alice = await create_user_session(tmp_path, app)
+    return alice, await create_pre_user(tmp_path, app)
 
 
 @pytest.mark.asyncio
@@ -899,7 +920,9 @@ async def test_create_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
 
 
 @pytest.mark.asyncio
-async def test_add_to_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) -> None:
+async def test_add_group_members_with_prov_id(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"Hi, this is for a group"
     group_id = await alice.session.create_group([alice.public_identity])
@@ -915,6 +938,31 @@ async def test_add_to_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
     )
     decrypted = await bob.session.decrypt(encrypted)
     assert decrypted == message
+
+
+@pytest.mark.asyncio
+async def test_remove_group_members_with_prov_id(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice, bob = await set_up_preshare(tmp_path, app)
+    message = b"Hi, this is for a group"
+    group_id = await alice.session.create_group(
+        [alice.public_identity, bob.public_provisional_identity]
+    )
+
+    await bob.session.attach_provisional_identity(bob.private_provisional_identity)
+    await bob.session.verify_provisional_identity(
+        EmailVerification(bob.email, bob.verification_code)
+    )
+
+    encrypted = await alice.session.encrypt(
+        message, EncryptionOptions(share_with_groups=[group_id])
+    )
+    await alice.session.update_group_members(
+        group_id, users_to_remove=[bob.public_identity]
+    )
+    with pytest.raises(error.InvalidArgument):
+        await bob.session.decrypt(encrypted)
 
 
 @pytest.mark.asyncio
