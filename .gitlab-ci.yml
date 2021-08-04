@@ -161,7 +161,8 @@ safety:
     - .tags/linux
     - .rules/nightly
   script:
-    - poetry run safety check --full-report
+    # ignore coverage package beta release recommendation
+    - poetry run safety check -i 41002 --full-report
 
 #####################
 # build-wheel stage #
