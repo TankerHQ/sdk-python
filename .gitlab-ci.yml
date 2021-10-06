@@ -174,41 +174,44 @@ safety:
     - !reference [.rules/web/auto, rules]
     - !reference [.rules/deploy-pipeline, rules]
 
-.build-wheel/linux:
+.job/build-wheel:
   extends:
     - .build-wheel
-    - .tags/linux
     - .rules/build-wheel
   script:
     - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile linux-release --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile $CONAN_PROFILE --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
   artifacts:
     paths:
       - dist
+
+.build-wheel/linux:
+  extends:
+    - .job/build-wheel
+    - .tags/linux
+  variables:
+    CONAN_PROFILE: linux-release
 
 .build-wheel/macos/x86_64:
   extends:
-    - .build-wheel
+    - .job/build-wheel
     - .tags/macos/x86_64
-    - .rules/build-wheel
-  script:
-    - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile macos-x86_64-release --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
-  artifacts:
-    paths:
-      - dist
+  variables:
+    CONAN_PROFILE: macos-x86_64-release
 
 .build-wheel/macos/arm:
   extends:
-    - .build-wheel
+    - .job/build-wheel
     - .tags/macos/arm
-    - .rules/build-wheel
-  script:
-    - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile macos-armv8-release --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
-  artifacts:
-    paths:
-      - dist
+  variables:
+    CONAN_PROFILE: macos-armv8-release
+
+build-wheel/windows:
+  extends:
+    - .job/build-wheel
+    - .tags/windows
+  variables:
+    CONAN_PROFILE: vs2019-release
 
 build-wheel/linux/3.7:
   extends: .build-wheel/linux
@@ -244,17 +247,6 @@ build-wheel/macos/arm/3.9:
   extends: .build-wheel/macos/arm
   variables:
      PYENV_VERSION: 3.9.5
-
-build-wheel/windows:
-  extends:
-    - .build-wheel
-    - .tags/windows
-    - .rules/build-wheel
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile vs2019-release --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
-  artifacts:
-    paths:
-      - dist
 
 ################
 # deploy stage #
