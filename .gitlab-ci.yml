@@ -1,6 +1,6 @@
 include:
   project: TankerHQ/gitlab-ci-files
-  ref: 2021-10-07-194
+  ref: 2021-10-08-203
   file: /python.yml
 
 ###############
@@ -11,7 +11,10 @@ lint:
   extends:
     - .check
     - .tags/linux
-    - .rules/mr/auto
+  rules:
+    - !reference [.rules/mr/auto, rules]
+    - !reference [.rules/web/auto, rules]
+    - !reference [.rules/push-master-or-feat, rules]
   script:
     - ./lint.sh
 
