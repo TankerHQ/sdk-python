@@ -1,6 +1,6 @@
 include:
   project: TankerHQ/gitlab-ci-files
-  ref: 2021-10-06-184
+  ref: 2021-10-07-194
   file: /python.yml
 
 ###############
@@ -268,7 +268,7 @@ pages:
   extends:
     - .deploy
     - .tags/linux
-    - .rules/pages
+    - .rules/push-master-or-feat
   needs:
     - check/native-from-sources/linux/3.7
   script:
