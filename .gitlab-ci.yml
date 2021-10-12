@@ -1,15 +1,76 @@
 include:
   project: TankerHQ/gitlab-ci-files
   ref: 2021-10-08-203
-  file: /python.yml
+  file: /common.yml
+
+############
+# Workflow #
+############
+
+workflow:
+  rules:
+    # web pipelines for releases only
+    - if: $CI_PIPELINE_SOURCE == "web" && $SDK_PYTHON_RELEASE_VERSION !~ /\A\d+\.\d+\.\d+((a|b)\d+)?\z/
+      when: never
+    - if: !reference [.if-invalid-native-conan-reference, if]
+      when: never
+    # allow everything else
+    - when: always
+
+###########
+# Default #
+###########
+
+default:
+  before_script:
+    - poetry run python -m pip install --upgrade pip
+    - poetry install --no-root
+  image: registry.gitlab.com/tankerhq/docker/sdk-python:latest
+
+##########
+# Stages #
+##########
+
+stages:
+  - check
+  - build-wheel
+  - deploy
+
+#################
+# Extend blocks #
+#################
+
+.coverage:
+  artifacts:
+    paths:
+      - coverage
+    expire_in: 7 days
+
+.rules/deployed-native:
+  rules:
+    - !reference [.rules/web/auto, rules]
+    - !reference [.rules/mr/manual, rules]
+
+#############################
+# Default settings override #
+#############################
+
+.before-script/download-artifacts:
+  before_script:
+    - poetry run python -m pip install --upgrade pip
+    - poetry install --no-root
+    - poetry run python run-ci.py download-artifacts --project-id=$UPSTREAM_PROJECT_ID --pipeline-id=$UPSTREAM_PIPELINE_ID --job-name=$UPSTREAM_JOB_NAME
+    - poetry run python run-ci.py reset-branch $(cat branch_name.txt)
+    - poetry run python -m pip install --upgrade pip
+    - poetry install --no-root
 
 ###############
 # check stage #
 ###############
 
 lint:
+  stage: check
   extends:
-    - .check
     - .tags/linux
   rules:
     - !reference [.rules/mr/auto, rules]
@@ -19,6 +80,34 @@ lint:
     - ./lint.sh
 
 ## deployed native
+
+.check/deployed-native/linux:
+  stage: check
+  extends:
+    - .tags/linux
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile linux-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+
+.check/deployed-native/macos/x86_64:
+  stage: check
+  extends:
+    - .tags/macos/x86_64
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile macos-x86_64-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+
+.check/deployed-native/macos/arm:
+  stage: check
+  extends:
+    - .tags/macos/arm
+    - .coverage
+    - .rules/deployed-native
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile macos-armv8-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+
 
 check/deployed-native/linux/3.7:
   extends: .check/deployed-native/linux
@@ -56,8 +145,8 @@ check/deployed-native/macos/arm/3.9:
      PYENV_VERSION: 3.9.5
 
 check/deployed-native/windows:
+  stage: check
   extends:
-    - .check
     - .tags/windows
     - .coverage
     - .rules/deployed-native
@@ -66,6 +155,33 @@ check/deployed-native/windows:
 
 
 ## native from sources
+
+.check/native-from-sources/linux:
+  stage: check
+  extends:
+    - .tags/linux
+    - .coverage
+    - .rules/native-from-sources
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile linux-release
+
+.check/native-from-sources/macos/x86_64:
+  stage: check
+  extends:
+    - .tags/macos/x86_64
+    - .coverage
+    - .rules/native-from-sources
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile macos-x86_64-release
+
+.check/native-from-sources/macos/arm:
+  stage: check
+  extends:
+    - .tags/macos/arm
+    - .coverage
+    - .rules/native-from-sources
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile macos-armv8-release
 
 check/native-from-sources/linux/3.7:
   extends: .check/native-from-sources/linux
@@ -103,8 +219,8 @@ check/native-from-sources/macos/arm/3.9:
      PYENV_VERSION: 3.9.5
 
 check/native-from-sources/windows:
+  stage: check
   extends:
-    - .check
     - .tags/windows
     - .coverage
     - .rules/native-from-sources
@@ -112,6 +228,33 @@ check/native-from-sources/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile vs2019-release
 
 ## downstream
+
+.check/downstream/linux:
+  stage: check
+  extends:
+    - .tags/linux
+    - .before-script/download-artifacts
+    - .rules/check/downstream/linux
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile linux-release
+
+.check/downstream/macos/x86_64:
+  stage: check
+  extends:
+    - .tags/macos/x86_64
+    - .before-script/download-artifacts
+    - .rules/check/downstream/macos/x86_64
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile macos-x86_64-release
+
+.check/downstream/macos/arm:
+  stage: check
+  extends:
+    - .tags/macos/arm
+    - .before-script/download-artifacts
+    - .rules/check/downstream/macos/arm
+  script:
+    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile macos-armv8-release
 
 check/downstream/linux/3.7:
   extends: .check/downstream/linux
@@ -149,8 +292,8 @@ check/downstream/macos/arm/3.9:
      PYENV_VERSION: 3.9.5
 
 check/downstream/windows:
+  stage: check
   extends:
-    - .check
     - .tags/windows
     - .before-script/download-artifacts
     - .rules/check/downstream/windows
@@ -160,7 +303,6 @@ check/downstream/windows:
 safety:
   stage: check
   extends:
-    - .check
     - .tags/linux
     - .rules/nightly
   script:
@@ -178,8 +320,8 @@ safety:
     - !reference [.rules/deploy-pipeline, rules]
 
 .job/build-wheel:
+  stage: build-wheel
   extends:
-    - .build-wheel
     - .rules/build-wheel
   script:
     - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
@@ -256,8 +398,8 @@ build-wheel/macos/arm/3.9:
 ################
 
 deploy:
+  stage: deploy
   extends:
-    - .deploy
     - .tags/linux
     - .rules/deploy/python
   script:
@@ -268,8 +410,8 @@ deploy:
     tag_name: v$SDK_PYTHON_RELEASE_VERSION
 
 pages:
+  stage: deploy
   extends:
-    - .deploy
     - .tags/linux
     - .rules/push-master-or-feat
   needs:
