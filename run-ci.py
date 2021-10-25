@@ -33,11 +33,30 @@ def prepare(
     )
 
 
-def build() -> None:
-    tankerci.run("poetry", "install", cwd=Path.cwd())
+def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
+    src_path = Path.cwd()
+    tankerci.bump.bump_files(version)
+    dist_path = src_path / "dist"
+    if dist_path.exists():
+        shutil.rmtree(dist_path)
+
+    env = os.environ.copy()
+    env["TANKER_PYTHON_SDK_SRC"] = str(src_path)
+    # Note: poetry generates a temporary directory,
+    # change the working directory there, creates a `setup.py`
+    # from scratch (calling `build.py`) and runs it.
+    # In the process, all the conan files generated in the
+    # sources gets lost. We set this environment variable
+    # so that they can be found even when the working directory
+    # changes, and we make sure *all* paths used in build_tanker.py
+    # are absolute
+    tankerci.run("poetry", "build", env=env)
+    wheels = list(dist_path.glob("tankersdk-*.whl"))
+    if len(wheels) != 1:
+        raise Exception("multiple wheels found: {}".format(wheels))
 
 
-def test() -> None:
+def run_test() -> None:
     env = os.environ.copy()
     env["TANKER_SDK_DEBUG"] = "1"
     src_path = Path.cwd()
@@ -60,37 +79,14 @@ def test() -> None:
     shutil.copytree(coverage_dir, dest_dir)
 
 
-def build_and_test(
-    tanker_source: TankerSource, profile: str, tanker_ref: Optional[str] = None
+def build(
+    profile: str, release_version: Optional[str], tanker_ref: str, test: bool
 ) -> None:
-    prepare(tanker_source, profile, False, tanker_ref)
-    build()
-    test()
-
-
-def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
-    prepare(TankerSource.DEPLOYED, profile, False, tanker_ref)
-    build()
-    src_path = Path.cwd()
-    tankerci.bump.bump_files(version)
-    dist_path = src_path / "dist"
-    if dist_path.exists():
-        shutil.rmtree(dist_path)
-
-    env = os.environ.copy()
-    env["TANKER_PYTHON_SDK_SRC"] = str(src_path)
-    # Note: poetry generates a temporary directory,
-    # change the working directory there, creates a `setup.py`
-    # from scratch (calling `build.py`) and runs it.
-    # In the process, all the conan files generated in the
-    # sources gets lost. We set this environment variable
-    # so that they can be found even when the working directory
-    # changes, and we make sure *all* paths used in build_tanker.py
-    # are absolute
-    tankerci.run("poetry", "build", env=env)
-    wheels = list(dist_path.glob("tankersdk-*.whl"))
-    if len(wheels) != 1:
-        raise Exception("multiple wheels found: {}".format(wheels))
+    tankerci.run("poetry", "install", cwd=Path.cwd())
+    if release_version:
+        build_wheel(profile, release_version, tanker_ref)
+    if test:
+        run_test()
 
 
 def deploy() -> None:
@@ -120,15 +116,11 @@ def main() -> None:
 
     subparsers = parser.add_subparsers(title="subcommands", dest="command")
 
-    build_and_test_parser = subparsers.add_parser("build-and-test")
-    build_and_test_parser.add_argument(
-        "--use-tanker",
-        type=TankerSource,
-        default=TankerSource.EDITABLE,
-        dest="tanker_source",
-    )
-    build_and_test_parser.add_argument("--profile", default="default")
-    build_and_test_parser.add_argument("--tanker-ref")
+    build_parser = subparsers.add_parser("build")
+    build_parser.add_argument("--profile", default="default")
+    build_parser.add_argument("--tanker-ref")
+    build_parser.add_argument("--test", action="store_true")
+    build_parser.add_argument("--release")
 
     prepare_parser = subparsers.add_parser("prepare")
     prepare_parser.add_argument(
@@ -151,11 +143,6 @@ def main() -> None:
     download_artifacts_parser.add_argument("--pipeline-id", required=True)
     download_artifacts_parser.add_argument("--job-name", required=True)
 
-    build_wheel_parser = subparsers.add_parser("build-wheel")
-    build_wheel_parser.add_argument("--profile", required=True)
-    build_wheel_parser.add_argument("--version", required=True)
-    build_wheel_parser.add_argument("--tanker-ref", required=True)
-
     subparsers.add_parser("deploy")
 
     args = parser.parse_args()
@@ -164,19 +151,17 @@ def main() -> None:
     if args.home_isolation:
         tankerci.conan.set_home_isolation()
         tankerci.conan.update_config()
-        if command in ("build-wheel", "build-and-test"):
+        if command in "prepare":
             # Because of GitLab issue https://gitlab.com/gitlab-org/gitlab/-/issues/254323
             # the downstream deploy jobs will be triggered even if upstream has failed
             # By removing the cache we ensure that we do not use a
             # previously built (and potentially broken) release candidate to deploy a binding
             tankerci.conan.run("remove", "tanker/*", "--force")
 
-    if command == "build-wheel":
-        build_wheel(args.profile, args.version, args.tanker_ref)
+    if command == "build":
+        build(args.profile, args.release, args.tanker_ref, args.test)
     elif command == "prepare":
         prepare(args.tanker_source, args.profile, args.update, args.tanker_ref)
-    elif command == "build-and-test":
-        build_and_test(args.tanker_source, args.profile, args.tanker_ref)
     elif command == "deploy":
         deploy()
     elif command == "reset-branch":
