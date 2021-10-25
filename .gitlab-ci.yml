@@ -413,6 +413,15 @@ deploy:
   script:
     - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
     - poetry run python run-ci.py deploy
+  needs:
+    - build-wheel/windows
+    - build-wheel/linux/3.7
+    - build-wheel/linux/3.8
+    - build-wheel/linux/3.9
+    - build-wheel/macos/x86_64/3.7
+    - build-wheel/macos/x86_64/3.8
+    - build-wheel/macos/x86_64/3.9
+    - build-wheel/macos/arm/3.9
   release:
     description: sdk-python v$SDK_PYTHON_RELEASE_VERSION
     tag_name: v$SDK_PYTHON_RELEASE_VERSION
