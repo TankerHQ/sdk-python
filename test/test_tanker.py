@@ -21,6 +21,7 @@ from tankersdk import (
     EmailVerificationMethod,
     EncryptionOptions,
     OidcIdTokenVerification,
+    Padding,
     PassphraseVerification,
     PhoneNumberVerification,
     PhoneNumberVerificationMethod,
@@ -424,6 +425,73 @@ async def test_encrypt_decrypt_empty(tmp_path: Path, app: Dict[str, str]) -> Non
     clear_data = await alice.session.decrypt(encrypted_data)
     assert clear_data == message
     await alice.session.stop()
+
+
+SIMPLE_ENCRYPTION_OVERHEAD = 17
+
+
+@pytest.mark.asyncio
+async def test_auto_padding_is_default(tmp_path: Path, app: Dict[str, str]) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"my clear data is clear"
+    length_with_padme = 24
+    encrypted_data = await alice.session.encrypt(message)
+    assert len(encrypted_data) - SIMPLE_ENCRYPTION_OVERHEAD == length_with_padme
+    clear_data = await alice.session.decrypt(encrypted_data)
+    assert clear_data == message
+    await alice.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_padding_opt_auto(tmp_path: Path, app: Dict[str, str]) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"my clear data is clear"
+    length_with_padme = 24
+    encrypted_data = await alice.session.encrypt(
+        message, EncryptionOptions(padding_step=Padding.AUTO)
+    )
+    assert len(encrypted_data) - SIMPLE_ENCRYPTION_OVERHEAD == length_with_padme
+    clear_data = await alice.session.decrypt(encrypted_data)
+    assert clear_data == message
+    await alice.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_padding_opt_disable(tmp_path: Path, app: Dict[str, str]) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"I love you"
+    encrypted_data = await alice.session.encrypt(
+        message, EncryptionOptions(padding_step=Padding.OFF)
+    )
+    assert len(encrypted_data) == len(message) + SIMPLE_ENCRYPTION_OVERHEAD
+    clear_data = await alice.session.decrypt(encrypted_data)
+    assert clear_data == message
+    await alice.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_padding_opt_enable(tmp_path: Path, app: Dict[str, str]) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"I love you"
+    step = 13
+    encrypted_data = await alice.session.encrypt(
+        message, EncryptionOptions(padding_step=step)
+    )
+    assert (len(encrypted_data) - SIMPLE_ENCRYPTION_OVERHEAD) % step == 0
+    clear_data = await alice.session.decrypt(encrypted_data)
+    assert clear_data == message
+    await alice.session.stop()
+
+
+def test_padding_opt_error(tmp_path: Path, app: Dict[str, str]) -> None:
+    with pytest.raises(error.InvalidArgument):
+        EncryptionOptions(padding_step=0)
+
+    with pytest.raises(error.InvalidArgument):
+        EncryptionOptions(padding_step=1)
+
+    with pytest.raises(error.InvalidArgument):
+        EncryptionOptions(padding_step=-1)
 
 
 @pytest.mark.asyncio
