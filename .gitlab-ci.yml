@@ -88,7 +88,8 @@ lint:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile linux-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile linux-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
 
 .check/deployed-native/macos/x86_64:
   stage: check
@@ -97,7 +98,8 @@ lint:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile macos-x86_64-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-x86_64-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
 
 .check/deployed-native/macos/arm:
   stage: check
@@ -106,7 +108,8 @@ lint:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --profile macos-armv8-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-armv8-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8-release --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
 
 
 check/deployed-native/linux/3.7:
@@ -151,7 +154,8 @@ check/deployed-native/windows:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile vs2019-release
 
 
 ## native from sources
@@ -163,7 +167,8 @@ check/deployed-native/windows:
     - .coverage
     - .rules/native-from-sources
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile linux-release
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=same-as-branch --profile linux-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-release
 
 .check/native-from-sources/macos/x86_64:
   stage: check
@@ -172,7 +177,8 @@ check/deployed-native/windows:
     - .coverage
     - .rules/native-from-sources
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile macos-x86_64-release
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=same-as-branch --profile macos-x86_64-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64-release
 
 .check/native-from-sources/macos/arm:
   stage: check
@@ -181,7 +187,8 @@ check/deployed-native/windows:
     - .coverage
     - .rules/native-from-sources
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile macos-armv8-release
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=same-as-branch --profile macos-armv8-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8-release
 
 check/native-from-sources/linux/3.7:
   extends: .check/native-from-sources/linux
@@ -225,7 +232,8 @@ check/native-from-sources/windows:
     - .coverage
     - .rules/native-from-sources
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=same-as-branch --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=same-as-branch --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile vs2019-release
 
 ## downstream
 
@@ -236,7 +244,7 @@ check/native-from-sources/windows:
     - .before-script/download-artifacts
     - .rules/check/downstream/linux
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile linux-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-release
 
 .check/downstream/macos/x86_64:
   stage: check
@@ -245,7 +253,7 @@ check/native-from-sources/windows:
     - .before-script/download-artifacts
     - .rules/check/downstream/macos/x86_64
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile macos-x86_64-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64-release
 
 .check/downstream/macos/arm:
   stage: check
@@ -254,7 +262,7 @@ check/native-from-sources/windows:
     - .before-script/download-artifacts
     - .rules/check/downstream/macos/arm
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile macos-armv8-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8-release
 
 check/downstream/linux/3.7:
   extends: .check/downstream/linux
@@ -298,7 +306,7 @@ check/downstream/windows:
     - .before-script/download-artifacts
     - .rules/check/downstream/windows
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home build-and-test --use-tanker=upstream --profile vs2019-release
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile vs2019-release
 
 safety:
   stage: check
@@ -325,7 +333,7 @@ safety:
     - .rules/build-wheel
   script:
     - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
-    - poetry run python run-ci.py --isolate-conan-user-home build-wheel --profile $CONAN_PROFILE --version $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --profile $CONAN_PROFILE --release $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
   artifacts:
     paths:
       - dist
