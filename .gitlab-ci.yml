@@ -51,6 +51,22 @@ stages:
     - !reference [.rules/web/auto, rules]
     - !reference [.rules/mr/manual, rules]
 
+.python3.7:
+  variables:
+    PYENV_VERSION: 3.7.12
+
+.python3.8:
+  variables:
+    PYENV_VERSION: 3.8.12
+
+.python3.9:
+  variables:
+    PYENV_VERSION: 3.9.7
+
+.python3.10:
+  variables:
+    PYENV_VERSION: 3.10.0
+
 #############################
 # Default settings override #
 #############################
@@ -113,39 +129,54 @@ lint:
 
 
 check/deployed-native/linux/3.7:
-  extends: .check/deployed-native/linux
-  variables:
-     PYENV_VERSION: 3.7.10
+  extends:
+    - .check/deployed-native/linux
+    - .python3.7
 
 check/deployed-native/linux/3.8:
-  extends: .check/deployed-native/linux
-  variables:
-     PYENV_VERSION: 3.8.10
+  extends:
+    - .check/deployed-native/linux
+    - .python3.8
 
 check/deployed-native/linux/3.9:
-  extends: .check/deployed-native/linux
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .check/deployed-native/linux
+    - .python3.9
+
+check/deployed-native/linux/3.10:
+  extends:
+    - .check/deployed-native/linux
+    - .python3.10
 
 check/deployed-native/macos/x86_64/3.7:
-  extends: .check/deployed-native/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.7.9
+  extends:
+    - .check/deployed-native/macos/x86_64
+    - .python3.7
 
 check/deployed-native/macos/x86_64/3.8:
-  extends: .check/deployed-native/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.8.6
+  extends:
+    - .check/deployed-native/macos/x86_64
+    - .python3.8
 
 check/deployed-native/macos/x86_64/3.9:
-  extends: .check/deployed-native/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.9.0
+  extends:
+    - .check/deployed-native/macos/x86_64
+    - .python3.9
+
+check/deployed-native/macos/x86_64/3.10:
+  extends:
+    - .check/deployed-native/macos/x86_64
+    - .python3.10
 
 check/deployed-native/macos/arm/3.9:
-  extends: .check/deployed-native/macos/arm
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .check/deployed-native/macos/arm
+    - .python3.9
+
+check/deployed-native/macos/arm/3.10:
+  extends:
+    - .check/deployed-native/macos/arm
+    - .python3.10
 
 check/deployed-native/windows:
   stage: check
@@ -191,39 +222,54 @@ check/deployed-native/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8-release
 
 check/native-from-sources/linux/3.7:
-  extends: .check/native-from-sources/linux
-  variables:
-     PYENV_VERSION: 3.7.10
+  extends:
+    - .check/native-from-sources/linux
+    - .python3.7
 
 check/native-from-sources/linux/3.8:
-  extends: .check/native-from-sources/linux
-  variables:
-     PYENV_VERSION: 3.8.10
+  extends:
+    - .check/native-from-sources/linux
+    - .python3.8
 
 check/native-from-sources/linux/3.9:
-  extends: .check/native-from-sources/linux
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .check/native-from-sources/linux
+    - .python3.9
+
+check/native-from-sources/linux/3.10:
+  extends:
+    - .check/native-from-sources/linux
+    - .python3.10
 
 check/native-from-sources/macos/x86_64/3.7:
-  extends: .check/native-from-sources/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.7.9
+  extends:
+    - .check/native-from-sources/macos/x86_64
+    - .python3.7
 
 check/native-from-sources/macos/x86_64/3.8:
-  extends: .check/native-from-sources/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.8.6
+  extends:
+    - .check/native-from-sources/macos/x86_64
+    - .python3.8
 
 check/native-from-sources/macos/x86_64/3.9:
-  extends: .check/native-from-sources/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.9.0
+  extends:
+    - .check/native-from-sources/macos/x86_64
+    - .python3.9
+
+check/native-from-sources/macos/x86_64/3.10:
+  extends:
+    - .check/native-from-sources/macos/x86_64
+    - .python3.10
 
 check/native-from-sources/macos/arm/3.9:
-  extends: .check/native-from-sources/macos/arm
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .check/native-from-sources/macos/arm
+    - .python3.9
+
+check/native-from-sources/macos/arm/3.10:
+  extends:
+    - .check/native-from-sources/macos/arm
+    - .python3.10
 
 check/native-from-sources/windows:
   stage: check
@@ -265,39 +311,54 @@ check/native-from-sources/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8-release
 
 check/downstream/linux/3.7:
-  extends: .check/downstream/linux
-  variables:
-     PYENV_VERSION: 3.7.10
+  extends:
+    - .check/downstream/linux
+    - .python3.7
 
 check/downstream/linux/3.8:
-  extends: .check/downstream/linux
-  variables:
-     PYENV_VERSION: 3.8.10
+  extends:
+    - .check/downstream/linux
+    - .python3.8
 
 check/downstream/linux/3.9:
-  extends: .check/downstream/linux
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .check/downstream/linux
+    - .python3.9
+
+check/downstream/linux/3.10:
+  extends:
+    - .check/downstream/linux
+    - .python3.10
 
 check/downstream/macos/x86_64/3.7:
-  extends: .check/downstream/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.7.9
+  extends:
+    - .check/downstream/macos/x86_64
+    - .python3.7
 
 check/downstream/macos/x86_64/3.8:
-  extends: .check/downstream/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.8.6
+  extends:
+    - .check/downstream/macos/x86_64
+    - .python3.8
 
 check/downstream/macos/x86_64/3.9:
-  extends: .check/downstream/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.9.0
+  extends:
+    - .check/downstream/macos/x86_64
+    - .python3.9
+
+check/downstream/macos/x86_64/3.10:
+  extends:
+    - .check/downstream/macos/x86_64
+    - .python3.10
 
 check/downstream/macos/arm/3.9:
-  extends: .check/downstream/macos/arm
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .check/downstream/macos/arm
+    - .python3.9
+
+check/downstream/macos/arm/3.10:
+  extends:
+    - .check/downstream/macos/arm
+    - .python3.10
 
 check/downstream/windows:
   stage: check
@@ -367,39 +428,54 @@ build-wheel/windows:
     CONAN_PROFILE: vs2019-release
 
 build-wheel/linux/3.7:
-  extends: .build-wheel/linux
-  variables:
-     PYENV_VERSION: 3.7.10
+  extends:
+    - .build-wheel/linux
+    - .python3.7
 
 build-wheel/linux/3.8:
-  extends: .build-wheel/linux
-  variables:
-     PYENV_VERSION: 3.8.10
+  extends:
+    - .build-wheel/linux
+    - .python3.8
 
 build-wheel/linux/3.9:
-  extends: .build-wheel/linux
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .build-wheel/linux
+    - .python3.9
+
+build-wheel/linux/3.10:
+  extends:
+    - .build-wheel/linux
+    - .python3.10
 
 build-wheel/macos/x86_64/3.7:
-  extends: .build-wheel/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.7.9
+  extends:
+    - .build-wheel/macos/x86_64
+    - .python3.7
 
 build-wheel/macos/x86_64/3.8:
-  extends: .build-wheel/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.8.6
+  extends:
+    - .build-wheel/macos/x86_64
+    - .python3.8
 
 build-wheel/macos/x86_64/3.9:
-  extends: .build-wheel/macos/x86_64
-  variables:
-     PYENV_VERSION: 3.9.0
+  extends:
+    - .build-wheel/macos/x86_64
+    - .python3.9
+
+build-wheel/macos/x86_64/3.10:
+  extends:
+    - .build-wheel/macos/x86_64
+    - .python3.10
 
 build-wheel/macos/arm/3.9:
-  extends: .build-wheel/macos/arm
-  variables:
-     PYENV_VERSION: 3.9.5
+  extends:
+    - .build-wheel/macos/arm
+    - .python3.9
+
+build-wheel/macos/arm/3.10:
+  extends:
+    - .build-wheel/macos/arm
+    - .python3.10
 
 ################
 # deploy stage #
@@ -418,10 +494,13 @@ deploy:
     - build-wheel/linux/3.7
     - build-wheel/linux/3.8
     - build-wheel/linux/3.9
+    - build-wheel/linux/3.10
     - build-wheel/macos/x86_64/3.7
     - build-wheel/macos/x86_64/3.8
     - build-wheel/macos/x86_64/3.9
+    - build-wheel/macos/x86_64/3.10
     - build-wheel/macos/arm/3.9
+    - build-wheel/macos/arm/3.10
   release:
     description: sdk-python v$SDK_PYTHON_RELEASE_VERSION
     tag_name: v$SDK_PYTHON_RELEASE_VERSION
