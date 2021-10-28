@@ -290,6 +290,7 @@ check/native-from-sources/windows:
     - .before-script/download-artifacts
     - .rules/check/downstream/linux
   script:
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=upstream --profile linux-release
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-release
 
 .check/downstream/macos/x86_64:
@@ -298,7 +299,9 @@ check/native-from-sources/windows:
     - .tags/macos/x86_64
     - .before-script/download-artifacts
     - .rules/check/downstream/macos/x86_64
+  dependencies: []
   script:
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=upstream --profile macos-x86_64-release
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64-release
 
 .check/downstream/macos/arm:
@@ -307,7 +310,9 @@ check/native-from-sources/windows:
     - .tags/macos/arm
     - .before-script/download-artifacts
     - .rules/check/downstream/macos/arm
+  dependencies: []
   script:
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=upstream --profile macos-armv8-release
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8-release
 
 check/downstream/linux/3.7:
@@ -366,7 +371,9 @@ check/downstream/windows:
     - .tags/windows
     - .before-script/download-artifacts
     - .rules/check/downstream/windows
+  dependencies: []
   script:
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=upstream --profile vs2019-release
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile vs2019-release
 
 safety:
