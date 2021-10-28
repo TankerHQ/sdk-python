@@ -143,6 +143,11 @@ check/deployed-native/linux/3.9:
     - .check/deployed-native/linux
     - .python3.9
 
+check/deployed-native/linux/3.10:
+  extends:
+    - .check/deployed-native/linux
+    - .python3.10
+
 check/deployed-native/macos/x86_64/3.7:
   extends:
     - .check/deployed-native/macos/x86_64
@@ -158,10 +163,20 @@ check/deployed-native/macos/x86_64/3.9:
     - .check/deployed-native/macos/x86_64
     - .python3.9
 
+check/deployed-native/macos/x86_64/3.10:
+  extends:
+    - .check/deployed-native/macos/x86_64
+    - .python3.10
+
 check/deployed-native/macos/arm/3.9:
   extends:
     - .check/deployed-native/macos/arm
     - .python3.9
+
+check/deployed-native/macos/arm/3.10:
+  extends:
+    - .check/deployed-native/macos/arm
+    - .python3.10
 
 check/deployed-native/windows:
   stage: check
@@ -221,6 +236,11 @@ check/native-from-sources/linux/3.9:
     - .check/native-from-sources/linux
     - .python3.9
 
+check/native-from-sources/linux/3.10:
+  extends:
+    - .check/native-from-sources/linux
+    - .python3.10
+
 check/native-from-sources/macos/x86_64/3.7:
   extends:
     - .check/native-from-sources/macos/x86_64
@@ -236,10 +256,20 @@ check/native-from-sources/macos/x86_64/3.9:
     - .check/native-from-sources/macos/x86_64
     - .python3.9
 
+check/native-from-sources/macos/x86_64/3.10:
+  extends:
+    - .check/native-from-sources/macos/x86_64
+    - .python3.10
+
 check/native-from-sources/macos/arm/3.9:
   extends:
     - .check/native-from-sources/macos/arm
     - .python3.9
+
+check/native-from-sources/macos/arm/3.10:
+  extends:
+    - .check/native-from-sources/macos/arm
+    - .python3.10
 
 check/native-from-sources/windows:
   stage: check
@@ -295,6 +325,11 @@ check/downstream/linux/3.9:
     - .check/downstream/linux
     - .python3.9
 
+check/downstream/linux/3.10:
+  extends:
+    - .check/downstream/linux
+    - .python3.10
+
 check/downstream/macos/x86_64/3.7:
   extends:
     - .check/downstream/macos/x86_64
@@ -310,10 +345,20 @@ check/downstream/macos/x86_64/3.9:
     - .check/downstream/macos/x86_64
     - .python3.9
 
+check/downstream/macos/x86_64/3.10:
+  extends:
+    - .check/downstream/macos/x86_64
+    - .python3.10
+
 check/downstream/macos/arm/3.9:
   extends:
     - .check/downstream/macos/arm
     - .python3.9
+
+check/downstream/macos/arm/3.10:
+  extends:
+    - .check/downstream/macos/arm
+    - .python3.10
 
 check/downstream/windows:
   stage: check
@@ -397,6 +442,11 @@ build-wheel/linux/3.9:
     - .build-wheel/linux
     - .python3.9
 
+build-wheel/linux/3.10:
+  extends:
+    - .build-wheel/linux
+    - .python3.10
+
 build-wheel/macos/x86_64/3.7:
   extends:
     - .build-wheel/macos/x86_64
@@ -412,10 +462,20 @@ build-wheel/macos/x86_64/3.9:
     - .build-wheel/macos/x86_64
     - .python3.9
 
+build-wheel/macos/x86_64/3.10:
+  extends:
+    - .build-wheel/macos/x86_64
+    - .python3.10
+
 build-wheel/macos/arm/3.9:
   extends:
     - .build-wheel/macos/arm
     - .python3.9
+
+build-wheel/macos/arm/3.10:
+  extends:
+    - .build-wheel/macos/arm
+    - .python3.10
 
 ################
 # deploy stage #
@@ -434,10 +494,13 @@ deploy:
     - build-wheel/linux/3.7
     - build-wheel/linux/3.8
     - build-wheel/linux/3.9
+    - build-wheel/linux/3.10
     - build-wheel/macos/x86_64/3.7
     - build-wheel/macos/x86_64/3.8
     - build-wheel/macos/x86_64/3.9
+    - build-wheel/macos/x86_64/3.10
     - build-wheel/macos/arm/3.9
+    - build-wheel/macos/arm/3.10
   release:
     description: sdk-python v$SDK_PYTHON_RELEASE_VERSION
     tag_name: v$SDK_PYTHON_RELEASE_VERSION
