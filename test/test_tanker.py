@@ -24,6 +24,10 @@ from tankersdk import (
     PassphraseVerification,
     PhoneNumberVerification,
     PhoneNumberVerificationMethod,
+    PreverifiedEmailVerification,
+    PreverifiedEmailVerificationMethod,
+    PreverifiedPhoneNumberVerification,
+    PreverifiedPhoneNumberVerificationMethod,
     SharingOptions,
 )
 from tankersdk import Status as TankerStatus
@@ -1146,6 +1150,221 @@ async def test_oidc_preshare(tmp_path: Path, app: Dict[str, str], admin: Admin) 
     assert clear_data == message
     await martine_phone.stop()
     await alice.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_register_fails_with_preverified_email(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"], preverified_verification=True,
+    )
+
+    fake = Faker()
+    email = fake.email(domain="tanker.io")
+
+    tanker = create_tanker(app["id"], writable_path=tmp_path)
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4())
+    )
+    await tanker.start(identity)
+
+    with pytest.raises(error.InvalidArgument):
+        await tanker.register_identity(
+            PreverifiedEmailVerification(preverified_email=email)
+        )
+
+
+@pytest.mark.asyncio
+async def test_register_fails_with_preverified_phone_number(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"], preverified_verification=True,
+    )
+
+    phone_number = "+33639982233"
+
+    tanker = create_tanker(app["id"], writable_path=tmp_path)
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4())
+    )
+    await tanker.start(identity)
+
+    with pytest.raises(error.InvalidArgument):
+        await tanker.register_identity(
+            PreverifiedPhoneNumberVerification(preverified_phone_number=phone_number)
+        )
+
+
+@pytest.mark.asyncio
+async def test_verify_fails_with_preverified_email(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"], preverified_verification=True,
+    )
+
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], writable_path=laptop_path)
+    email = fake.email(domain="tanker.io")
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    verification_code = get_verification_code_email(app, email)
+    await laptop_tanker.register_identity(EmailVerification(email, verification_code))
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], writable_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    with pytest.raises(error.InvalidArgument):
+        await phone_tanker.verify_identity(
+            PreverifiedEmailVerification(preverified_email=email)
+        )
+
+
+@pytest.mark.asyncio
+async def test_verify_fails_with_preverified_phone_number(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"], preverified_verification=True,
+    )
+
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], writable_path=laptop_path)
+    phone_number = "+33639982233"
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    verification_code = get_verification_code_sms(app, phone_number)
+    await laptop_tanker.register_identity(
+        PhoneNumberVerification(phone_number, verification_code)
+    )
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], writable_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    with pytest.raises(error.InvalidArgument):
+        await phone_tanker.verify_identity(
+            PreverifiedPhoneNumberVerification(preverified_phone_number=phone_number)
+        )
+
+
+@pytest.mark.asyncio
+async def test_set_verification_method_with_preverified_email(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"], preverified_verification=True,
+    )
+
+    fake = Faker()
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], writable_path=laptop_path)
+    passphrase = "The cake is not a lie"
+    email = fake.email(domain="tanker.io")
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
+
+    await laptop_tanker.set_verification_method(PreverifiedEmailVerification(email))
+
+    methods = set(await laptop_tanker.get_verification_methods())
+    assert len(methods) == 2
+    preverified_email_methods = [
+        x for x in methods if isinstance(x, PreverifiedEmailVerificationMethod)
+    ]
+    (preverified_email_method,) = preverified_email_methods
+    assert preverified_email_method.preverified_email == email
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], writable_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    verification_code = get_verification_code_email(app, email)
+    await phone_tanker.verify_identity(EmailVerification(email, verification_code))
+    assert phone_tanker.status == TankerStatus.READY
+
+    methods = set(await laptop_tanker.get_verification_methods())
+    email_methods = [x for x in methods if isinstance(x, EmailVerificationMethod)]
+    (email_method,) = email_methods
+    assert email_method.email == email
+
+    await laptop_tanker.stop()
+    await phone_tanker.stop()
+
+
+@pytest.mark.asyncio
+async def test_set_verification_method_with_preverified_phone_number(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"], preverified_verification=True,
+    )
+
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], writable_path=laptop_path)
+    passphrase = "The chocolate is in the kitchen"
+    phone_number = "+33639982233"
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
+
+    await laptop_tanker.set_verification_method(
+        PreverifiedPhoneNumberVerification(phone_number)
+    )
+
+    methods = set(await laptop_tanker.get_verification_methods())
+    assert len(methods) == 2
+    preverified_phone_number_methods = [
+        x for x in methods if isinstance(x, PreverifiedPhoneNumberVerificationMethod)
+    ]
+    (preverified_phone_number_method,) = preverified_phone_number_methods
+    assert preverified_phone_number_method.preverified_phone_number == phone_number
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], writable_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    verification_code = get_verification_code_sms(app, phone_number)
+    await phone_tanker.verify_identity(
+        PhoneNumberVerification(phone_number, verification_code)
+    )
+    assert phone_tanker.status == TankerStatus.READY
+
+    methods = set(await laptop_tanker.get_verification_methods())
+    phone_number_methods = [
+        x for x in methods if isinstance(x, PhoneNumberVerificationMethod)
+    ]
+    (phone_number_method,) = phone_number_methods
+    assert phone_number_method.phone_number == phone_number
+
+    await laptop_tanker.stop()
+    await phone_tanker.stop()
 
 
 def test_prehash_password_empty() -> None:
