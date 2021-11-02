@@ -1,16 +1,16 @@
 import argparse
 import os
-from pathlib import Path
-import sys
 import shutil
+import sys
+from pathlib import Path
 from typing import List, Optional  # noqa
 
 import tankerci
 import tankerci.bump
 import tankerci.conan
-from tankerci.conan import TankerSource
 import tankerci.git
 import tankerci.gitlab
+from tankerci.conan import TankerSource
 
 PUBLIC_REPOSITORY_URL = "https://gitlab.com/api/v4/projects/20920099/packages/pypi"
 

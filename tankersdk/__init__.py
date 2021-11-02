@@ -10,36 +10,31 @@ from .error import Error, ErrorCode  # noqa
 
 # fmt: off
 from .tanker import (  # noqa
-    Tanker,
-
-    EncryptionOptions,
-    SharingOptions,
-    VerificationOptions,
-
-    prehash_password,
-
     AttachResult,
-    Status,
-    VerificationMethodType,
-    Stream,
-
-    Verification,
     EmailVerification,
-    PassphraseVerification,
-    OidcIdTokenVerification,
-    VerificationKeyVerification,
-    PhoneNumberVerification,
-
-    VerificationMethod,
     EmailVerificationMethod,
-    PassphraseVerificationMethod,
+    EncryptionOptions,
+    OidcIdTokenVerification,
     OidcIdTokenVerificationMethod,
-    VerificationKeyVerificationMethod,
+    PassphraseVerification,
+    PassphraseVerificationMethod,
+    PhoneNumberVerification,
     PhoneNumberVerificationMethod,
+    SharingOptions,
+    Status,
+    Stream,
+    Tanker,
+    Verification,
+    VerificationKeyVerification,
+    VerificationKeyVerificationMethod,
+    VerificationMethod,
+    VerificationMethodType,
+    VerificationOptions,
+    prehash_password,
 )
+
 # fmt: on
 from .version import __version__  # noqa
-
 
 tankerlib.tanker_init()
 
