@@ -6,3 +6,4 @@ set -e
 poetry run black --check . --diff
 poetry run flake8 .
 poetry run mypy --no-incremental
+poetry run isort --check --diff --profile black .

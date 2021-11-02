@@ -1,38 +1,39 @@
 import asyncio
 import base64
-from collections import namedtuple
 import io
 import json
 import os
 import uuid
+from collections import namedtuple
 from pathlib import Path
-
-from faker import Faker
-import requests
-from typing import cast, Any, List, Dict, Iterator, Tuple
-
-import tankersdk
-from tankersdk import Tanker
-from tankersdk import Status as TankerStatus
-from tankersdk import (
-    EncryptionOptions,
-    EmailVerification,
-    EmailVerificationMethod,
-    PhoneNumberVerification,
-    PhoneNumberVerificationMethod,
-    VerificationMethodType,
-    VerificationOptions,
-    PassphraseVerification,
-    SharingOptions,
-    OidcIdTokenVerification,
-    VerificationKeyVerification,
-)
-import tankersdk_identity
-import tankeradminsdk
-from tankeradminsdk import Admin
-from tankersdk import error
+from typing import Any, Dict, Iterator, List, Tuple, cast
 
 import pytest
+import requests
+import tankeradminsdk
+import tankersdk_identity
+from faker import Faker
+from tankeradminsdk import Admin
+
+import tankersdk
+from tankersdk import (
+    EmailVerification,
+    EmailVerificationMethod,
+    EncryptionOptions,
+    OidcIdTokenVerification,
+    PassphraseVerification,
+    PhoneNumberVerification,
+    PhoneNumberVerificationMethod,
+    SharingOptions,
+)
+from tankersdk import Status as TankerStatus
+from tankersdk import (
+    Tanker,
+    VerificationKeyVerification,
+    VerificationMethodType,
+    VerificationOptions,
+    error,
+)
 
 
 def encode(string: str) -> str:

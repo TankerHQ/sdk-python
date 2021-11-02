@@ -1,8 +1,8 @@
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Iterator, List
-import sys
 
 from cffi import FFI
 

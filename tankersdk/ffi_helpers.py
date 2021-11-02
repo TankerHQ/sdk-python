@@ -1,8 +1,8 @@
-from typing import cast, Any, List, Optional, Callable
-from asyncio import Future
 import asyncio
-from .error import Error, ErrorCode, make_error
+from asyncio import Future
+from typing import Any, Callable, List, Optional, cast
 
+from .error import Error, ErrorCode, make_error
 
 # mypy does not know ffi types, this is for documentation purposes only
 CData = Any

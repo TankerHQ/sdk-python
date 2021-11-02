@@ -1,19 +1,17 @@
-import typing_extensions
-from typing import cast, Any, Callable, List, Optional
-
 import asyncio
-from enum import Enum
 import os
-import weakref
 import warnings
+import weakref
+from enum import Enum
+from typing import Any, Callable, List, Optional, cast
 
-
+import typing_extensions
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
 from .error import Error as TankerError
+from .ffi_helpers import CCharList, CData, FFIHelpers, OptionalStrList
 from .version import __version__
-from .ffi_helpers import CCharList, CData, OptionalStrList, FFIHelpers
 
 ffihelpers = FFIHelpers(ffi, tankerlib)
 
