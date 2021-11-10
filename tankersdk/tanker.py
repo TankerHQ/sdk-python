@@ -59,6 +59,8 @@ class VerificationMethodType(Enum):
     VERIFICATION_KEY = 3
     OIDC_ID_TOKEN = 4
     PHONE_NUMBER = 5
+    PREVERIFIED_EMAIL = 6
+    PREVERIFIED_PHONE_NUMBER = 7
 
 
 class Verification:
@@ -110,6 +112,20 @@ class VerificationKeyVerification(Verification):
         self.verification_key = verification_key
 
 
+class PreverifiedEmailVerification(Verification):
+    method_type = VerificationMethodType.PREVERIFIED_EMAIL
+
+    def __init__(self, preverified_email: str):
+        self.preverified_email = preverified_email
+
+
+class PreverifiedPhoneNumberVerification(Verification):
+    method_type = VerificationMethodType.PREVERIFIED_PHONE_NUMBER
+
+    def __init__(self, preverified_phone_number: str):
+        self.preverified_phone_number = preverified_phone_number
+
+
 class VerificationMethod:
     # Note: we want every subclass to have a 'mehod_type' attribute
     # of type VerificationMethodType, but there's no "good"
@@ -143,6 +159,20 @@ class VerificationKeyVerificationMethod(VerificationMethod):
     method_type = VerificationMethodType.VERIFICATION_KEY
 
 
+class PreverifiedEmailVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.PREVERIFIED_EMAIL
+
+    def __init__(self, preverified_email: str):
+        self.preverified_email = preverified_email
+
+
+class PreverifiedPhoneNumberVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.PREVERIFIED_PHONE_NUMBER
+
+    def __init__(self, preverified_phone_number: str):
+        self.preverified_phone_number = preverified_phone_number
+
+
 def verification_method_from_c(c_verification_method: CData) -> VerificationMethod:
     method_type = VerificationMethodType(c_verification_method.verification_method_type)
     res: Optional[VerificationMethod] = None
@@ -158,6 +188,16 @@ def verification_method_from_c(c_verification_method: CData) -> VerificationMeth
     elif method_type == VerificationMethodType.PHONE_NUMBER:
         c_phone_number = c_verification_method.value
         res = PhoneNumberVerificationMethod(ffihelpers.c_string_to_str(c_phone_number))
+    elif method_type == VerificationMethodType.PREVERIFIED_EMAIL:
+        c_preverified_email = c_verification_method.value
+        res = PreverifiedEmailVerificationMethod(
+            ffihelpers.c_string_to_str(c_preverified_email)
+        )
+    elif method_type == VerificationMethodType.PREVERIFIED_PHONE_NUMBER:
+        c_preverified_phone_number = c_verification_method.value
+        res = PreverifiedPhoneNumberVerificationMethod(
+            ffihelpers.c_string_to_str(c_preverified_phone_number)
+        )
     assert (
         res
     ), f"Could not convert C verification method to python: unknown type: {type}"
@@ -287,7 +327,7 @@ class CVerification:
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
-        c_verification = ffi.new("tanker_verification_t *", {"version": 4})
+        c_verification = ffi.new("tanker_verification_t *", {"version": 5})
         if isinstance(verification, VerificationKeyVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
@@ -336,6 +376,24 @@ class CVerification:
                 ),
             }
             c_verification.phone_number_verification = self._phone_number_verification
+
+        elif isinstance(verification, PreverifiedEmailVerification):
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_PREVERIFIED_EMAIL
+            )
+            self._preverified_email = ffihelpers.str_to_c_string(
+                verification.preverified_email
+            )
+            c_verification.preverified_email = self._preverified_email
+
+        elif isinstance(verification, PreverifiedPhoneNumberVerification):
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_PREVERIFIED_PHONE_NUMBER
+            )
+            self._preverified_phone_number = ffihelpers.str_to_c_string(
+                verification.preverified_phone_number
+            )
+            c_verification.preverified_phone_number = self._preverified_phone_number
 
         self._c_verification = c_verification
 
