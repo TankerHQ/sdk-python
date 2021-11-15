@@ -151,7 +151,7 @@ def main() -> None:
     if args.home_isolation:
         tankerci.conan.set_home_isolation()
         tankerci.conan.update_config()
-        if command in "prepare":
+        if command == "prepare":
             # Because of GitLab issue https://gitlab.com/gitlab-org/gitlab/-/issues/254323
             # the downstream deploy jobs will be triggered even if upstream has failed
             # By removing the cache we ensure that we do not use a
