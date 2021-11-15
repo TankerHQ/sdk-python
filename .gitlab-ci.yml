@@ -401,6 +401,7 @@ safety:
     - .rules/build-wheel
   script:
     - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile $CONAN_PROFILE
     - poetry run python run-ci.py --isolate-conan-user-home build --profile $CONAN_PROFILE --release $SDK_PYTHON_RELEASE_VERSION --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
   artifacts:
     paths:
