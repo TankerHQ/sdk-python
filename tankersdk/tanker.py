@@ -283,7 +283,10 @@ class CSharingOptions:
     """Wraps the tanker_sharing_options_t C type"""
 
     def __init__(
-        self, *, share_with_users: OptionalStrList, share_with_groups: OptionalStrList,
+        self,
+        *,
+        share_with_users: OptionalStrList,
+        share_with_groups: OptionalStrList,
     ) -> None:
         self.user_list = CCharList(share_with_users, ffi, tankerlib)
         self.group_list = CCharList(share_with_groups, ffi, tankerlib)
@@ -307,7 +310,8 @@ class CVerificationOptions:
     """Wraps the tanker_verification_options_t C type"""
 
     def __init__(
-        self, with_session_token: bool,
+        self,
+        with_session_token: bool,
     ):
         self._c_data = ffi.new(
             "tanker_verification_options_t *",
@@ -322,7 +326,8 @@ class CVerification:
     """Wraps the tanker_verification_t C type"""
 
     def __init__(
-        self, verification: Verification,
+        self,
+        verification: Verification,
     ):
 
         # Note: we store things in `self` so they don't get
@@ -526,7 +531,10 @@ class EncryptionSession:
 
 
 async def read_coroutine(
-    c_output_buffer: CData, c_buffer_size: int, c_op: CData, stream_wrapper: Stream,
+    c_output_buffer: CData,
+    c_buffer_size: int,
+    c_op: CData,
+    stream_wrapper: Stream,
 ) -> None:
     try:
         buffer: bytes = await stream_wrapper._stream.read(c_buffer_size)
@@ -988,7 +996,8 @@ class Tanker:
             c_encrypt_options = CEncryptionOptions()
 
         c_future = tankerlib.tanker_encryption_session_open(
-            self.c_tanker, c_encrypt_options.get(),
+            self.c_tanker,
+            c_encrypt_options.get(),
         )
         c_session = await ffihelpers.handle_tanker_future(c_future)
         return EncryptionSession(c_session)
