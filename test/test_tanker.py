@@ -81,6 +81,7 @@ def create_tanker(app_id: str, *, writable_path: Path) -> Tanker:
         url=cast(str, TEST_CONFIG["server"]["url"]),
         sdk_type="sdk-python-test",
         writable_path=str(writable_path),
+        cache_path=str(writable_path),
     )
 
 

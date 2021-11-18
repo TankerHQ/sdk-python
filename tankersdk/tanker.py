@@ -577,7 +577,7 @@ _GLOBAL_TANKERS: "weakref.WeakKeyDictionary[Tanker, Any]" = weakref.WeakKeyDicti
 
 class Tanker:
     """
-    tankersdk.Tanker(app_id, *, writable_path)
+    tankersdk.Tanker(app_id, *, writable_path, cache_path)
 
     :param app_id: The App ID
     :param writeable_path: A writeable path to store user data
@@ -593,12 +593,14 @@ class Tanker:
         # if you are not a Tanker customer (for instance, when running tests)
         sdk_type: str = "client-python",
         writable_path: str,
+        cache_path: str,
     ):
         self.sdk_type = sdk_type
         self.sdk_version = __version__
         self.app_id = app_id
         self.url = url or "https://api.tanker.io"
         self.writable_path = writable_path
+        self.cache_path = cache_path
         self.c_tanker = None
 
         self._create_tanker_obj()
@@ -632,17 +634,33 @@ class Tanker:
         c_url = ffihelpers.str_to_c_string(self.url)
         c_app_id = ffihelpers.str_to_c_string(self.app_id)
         c_writable_path = ffihelpers.str_to_c_string(self.writable_path)
+        c_cache_path = ffihelpers.str_to_c_string(self.cache_path)
         c_sdk_type = ffihelpers.str_to_c_string(self.sdk_type)
         c_sdk_version = ffihelpers.str_to_c_string(__version__)
         tanker_options = ffi.new(
             "tanker_options_t *",
             {
-                "version": 2,
+                "version": 4,
                 "app_id": c_app_id,
                 "url": c_url,
                 "writable_path": c_writable_path,
                 "sdk_type": c_sdk_type,
                 "sdk_version": c_sdk_version,
+                "http_options": {
+                    "send_request": ffi.NULL,
+                    "cancel_request": ffi.NULL,
+                    "data": ffi.NULL,
+                },
+                "cache_path": c_cache_path,
+                "datastore_options": {
+                    "open": ffi.NULL,
+                    "close": ffi.NULL,
+                    "nuke": ffi.NULL,
+                    "put_serialized_device": ffi.NULL,
+                    "find_serialized_device": ffi.NULL,
+                    "put_cache_values": ffi.NULL,
+                    "find_cache_values": ffi.NULL,
+                },
             },
         )
         create_fut = tankerlib.tanker_create(tanker_options)
