@@ -132,7 +132,10 @@ def main() -> None:
     prepare_parser.add_argument("--profile", default="default")
     prepare_parser.add_argument("--tanker-ref")
     prepare_parser.add_argument(
-        "--update", action="store_true", default=False, dest="update",
+        "--update",
+        action="store_true",
+        default=False,
+        dest="update",
     )
 
     reset_branch_parser = subparsers.add_parser("reset-branch")
