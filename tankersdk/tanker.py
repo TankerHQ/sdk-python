@@ -577,7 +577,9 @@ class EncryptionSession:
         """Encrypt `clear_data` with the session"""
         c_clear_buffer = ffihelpers.bytes_to_c_buffer(clear_data)  # type: CData
         clear_size = len(c_clear_buffer)
-        size = tankerlib.tanker_encryption_session_encrypted_size(clear_size)
+        size = tankerlib.tanker_encryption_session_encrypted_size(
+            self.c_session, clear_size
+        )
         c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
         c_future = tankerlib.tanker_encryption_session_encrypt(
             self.c_session, c_encrypted_buffer, c_clear_buffer, clear_size
@@ -1111,6 +1113,7 @@ class Tanker:
                 share_with_users=options.share_with_users,
                 share_with_groups=options.share_with_groups,
                 share_with_self=options.share_with_self,
+                padding_step=options.padding_step,
             )
         else:
             c_encrypt_options = CEncryptionOptions()

@@ -517,7 +517,8 @@ tanker_future_t* tanker_encryption_session_open(
 tanker_future_t* tanker_encryption_session_close(
     tanker_encryption_session_t* session);
 
-uint64_t tanker_encryption_session_encrypted_size(uint64_t clear_size);
+uint64_t tanker_encryption_session_encrypted_size(
+    tanker_encryption_session_t* session, uint64_t clear_size);
 
 tanker_expected_t* tanker_encryption_session_get_resource_id(
     tanker_encryption_session_t* session);

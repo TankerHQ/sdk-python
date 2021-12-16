@@ -661,6 +661,78 @@ async def test_share_with_encryption_session_without_self(
     await bob.session.stop()
 
 
+ENCRYPTION_SESSION_OVERHEAD = 57
+
+
+@pytest.mark.asyncio
+async def test_encryption_session_auto_padding_by_default(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"my clear data is clear"
+    length_with_padme = 24
+    enc_session = await alice.session.create_encryption_session()
+    encrypted = await enc_session.encrypt(message)
+    assert len(encrypted) - ENCRYPTION_SESSION_OVERHEAD == length_with_padme
+
+    decrypted = await alice.session.decrypt(encrypted)
+    assert decrypted == message
+    await alice.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_encryption_session_auto_padding(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"my clear data is clear"
+    length_with_padme = 24
+    enc_session = await alice.session.create_encryption_session(
+        EncryptionOptions(padding_step=Padding.AUTO)
+    )
+    encrypted = await enc_session.encrypt(message)
+    assert len(encrypted) - ENCRYPTION_SESSION_OVERHEAD == length_with_padme
+
+    decrypted = await alice.session.decrypt(encrypted)
+    assert decrypted == message
+    await alice.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_encryption_session_no_padding(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"Ceci n'est pas un test"
+    enc_session = await alice.session.create_encryption_session(
+        EncryptionOptions(padding_step=Padding.OFF)
+    )
+    encrypted = await enc_session.encrypt(message)
+    assert len(encrypted) - ENCRYPTION_SESSION_OVERHEAD == len(message)
+
+    decrypted = await alice.session.decrypt(encrypted)
+    assert decrypted == message
+    await alice.session.stop()
+
+
+@pytest.mark.asyncio
+async def test_encryption_session_padding_step(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b"Ceci n'est pas un test"
+    step = 13
+    enc_session = await alice.session.create_encryption_session(
+        EncryptionOptions(padding_step=step)
+    )
+    encrypted = await enc_session.encrypt(message)
+    assert (len(encrypted) - ENCRYPTION_SESSION_OVERHEAD) % step == 0
+
+    decrypted = await alice.session.decrypt(encrypted)
+    assert decrypted == message
+    await alice.session.stop()
+
+
 @pytest.mark.asyncio
 async def test_encryption_session_streams(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
