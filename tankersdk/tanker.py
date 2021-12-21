@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any, Callable, List, Optional, cast
 
 import typing_extensions
+
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
@@ -406,6 +407,32 @@ class CVerification:
         return self._c_verification
 
 
+class CVerificationList:
+    """Wraps the tanker_verification_list_t C type"""
+
+    def __init__(
+        self,
+        verifications: List[Verification],
+    ):
+        c_verification_list = ffi.new("tanker_verification_list_t *", {"version": 1})
+        c_verification_list.count = len(verifications)
+        c_verification_list.verifications = ffi.new(
+            "tanker_verification_t [%i]" % len(verifications)
+        )
+        # We need to keep the reference to the CVerifications to prevent deallocation
+        self._verification_list = []
+        for (i, verification) in enumerate(verifications):
+            c_verification = CVerification(verification)
+            self._verification_list.append(c_verification)
+            # We use [0] to dereference the pointer
+            c_verification_list.verifications[i] = c_verification.get()[0]
+
+        self._c_verification_list = c_verification_list
+
+    def get(self) -> CData:
+        return self._c_verification_list
+
+
 class Device:
     """An element of the list returned by `tanker.get_device_list()`
 
@@ -685,6 +712,22 @@ class Tanker:
     def status(self) -> Status:
         """Retrieve the status of the current session, as a :py:class:`Status` instance"""
         return Status(tankerlib.tanker_status(self.c_tanker))
+
+    async def enroll_user(
+        self, identity: str, verifications: List[Verification]
+    ) -> None:
+        """Enroll a user
+
+        :param identity: The user's Tanker identity
+        :param options: The list of preverified verifications
+        """
+        c_identity = ffihelpers.str_to_c_string(identity)
+        c_verifications = CVerificationList(verifications)
+
+        c_future_enroll = tankerlib.tanker_enroll_user(
+            self.c_tanker, c_identity, c_verifications.get()
+        )
+        await ffihelpers.handle_tanker_future(c_future_enroll)
 
     async def start(self, identity: str) -> Status:
         """Start a new Tanker session
