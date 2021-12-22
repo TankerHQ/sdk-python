@@ -61,11 +61,11 @@ stages:
 
 .python3.9:
   variables:
-    PYENV_VERSION: 3.9.7
+    PYENV_VERSION: 3.9.9
 
 .python3.10:
   variables:
-    PYENV_VERSION: 3.10.0
+    PYENV_VERSION: 3.10.1
 
 #############################
 # Default settings override #
