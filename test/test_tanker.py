@@ -138,7 +138,7 @@ async def test_tanker_enroll_user_fails_with_passphrase(
 ) -> None:
     admin.update_app(
         app["id"],
-        enroll_users=True,
+        user_enrollment=True,
     )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
@@ -160,7 +160,7 @@ async def test_tanker_enroll_user_fails_with_email(
 ) -> None:
     admin.update_app(
         app["id"],
-        enroll_users=True,
+        user_enrollment=True,
     )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
@@ -185,7 +185,7 @@ async def test_tanker_enroll_user_fails_with_phone_number(
 ) -> None:
     admin.update_app(
         app["id"],
-        enroll_users=True,
+        user_enrollment=True,
     )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
@@ -209,7 +209,7 @@ async def test_tanker_enroll_user_with_preverified_methods(
 ) -> None:
     admin.update_app(
         app["id"],
-        enroll_users=True,
+        user_enrollment=True,
     )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 

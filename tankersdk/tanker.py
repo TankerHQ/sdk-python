@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Any, Callable, List, Optional, cast
 
 import typing_extensions
-
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
