@@ -415,9 +415,10 @@ class CVerificationList:
     ):
         c_verification_list = ffi.new("tanker_verification_list_t *", {"version": 1})
         c_verification_list.count = len(verifications)
-        c_verification_list.verifications = ffi.new(
+        self._tanker_verifications = ffi.new(
             "tanker_verification_t [%i]" % len(verifications)
         )
+        c_verification_list.verifications = self._tanker_verifications
         # We need to keep the reference to the CVerifications to prevent deallocation
         self._verification_list = []
         for (i, verification) in enumerate(verifications):
