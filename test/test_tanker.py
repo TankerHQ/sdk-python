@@ -133,6 +133,129 @@ async def test_tanker_start_invalid_path(app: Dict[str, str]) -> None:
 
 
 @pytest.mark.asyncio
+async def test_tanker_enroll_user_fails_with_passphrase(
+    app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"],
+        user_enrollment=True,
+    )
+    server = create_tanker(app["id"], persistent_path=tmp_path)
+
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4())
+    )
+
+    passphrase = "this is my secure passphrase"
+
+    with pytest.raises(error.InvalidArgument):
+        await server.enroll_user(
+            identity, [PassphraseVerification(passphrase=passphrase)]
+        )
+
+
+@pytest.mark.asyncio
+async def test_tanker_enroll_user_fails_with_email(
+    app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"],
+        user_enrollment=True,
+    )
+    server = create_tanker(app["id"], persistent_path=tmp_path)
+
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4())
+    )
+
+    fake = Faker()
+    email = fake.email(domain="tanker.io")
+
+    verification_code = get_verification_code_email(app, email)
+
+    with pytest.raises(error.InvalidArgument):
+        await server.enroll_user(
+            identity, [EmailVerification(email, verification_code)]
+        )
+
+
+@pytest.mark.asyncio
+async def test_tanker_enroll_user_fails_with_phone_number(
+    app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"],
+        user_enrollment=True,
+    )
+    server = create_tanker(app["id"], persistent_path=tmp_path)
+
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4())
+    )
+
+    phone_number = "+33639982233"
+
+    verification_code = get_verification_code_sms(app, phone_number)
+
+    with pytest.raises(error.InvalidArgument):
+        await server.enroll_user(
+            identity, [PhoneNumberVerification(phone_number, verification_code)]
+        )
+
+
+@pytest.mark.asyncio
+async def test_tanker_enroll_user_with_preverified_methods(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    admin.update_app(
+        app["id"],
+        user_enrollment=True,
+    )
+    server = create_tanker(app["id"], persistent_path=tmp_path)
+
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["app_secret"], str(uuid.uuid4())
+    )
+
+    fake = Faker()
+    email = fake.email(domain="tanker.io")
+
+    phone_number = "+33639982233"
+
+    await server.enroll_user(
+        identity,
+        [
+            PreverifiedEmailVerification(preverified_email=email),
+            PreverifiedPhoneNumberVerification(preverified_phone_number=phone_number),
+        ],
+    )
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+
+    await phone_tanker.start(identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    verification_code = get_verification_code_email(app, email)
+    await phone_tanker.verify_identity(EmailVerification(email, verification_code))
+    assert phone_tanker.status == TankerStatus.READY
+
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+
+    await laptop_tanker.start(identity)
+    assert laptop_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    verification_code = get_verification_code_sms(app, phone_number)
+    await laptop_tanker.verify_identity(
+        PhoneNumberVerification(phone_number, verification_code)
+    )
+    assert laptop_tanker.status == TankerStatus.READY
+
+
+@pytest.mark.asyncio
 async def test_tanker_sdk_version(tmp_path: Path, app: Dict[str, str]) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     sdk_version = tanker.sdk_version

@@ -240,6 +240,7 @@ typedef struct tanker_email_verification tanker_email_verification_t;
 typedef struct tanker_phone_number_verification
     tanker_phone_number_verification_t;
 typedef struct tanker_verification tanker_verification_t;
+typedef struct tanker_verification_list tanker_verification_list_t;
 typedef struct tanker_verification_method tanker_verification_method_t;
 typedef struct tanker_verification_options tanker_verification_options_t;
 typedef struct tanker_encrypt_options tanker_encrypt_options_t;
@@ -266,6 +267,13 @@ struct tanker_device_list_elem
 struct tanker_verification_method_list
 {
   tanker_verification_method_t* methods;
+  uint32_t count;
+};
+
+struct tanker_verification_list
+{
+  uint8_t version;
+  tanker_verification_t* verifications;
   uint32_t count;
 };
 
@@ -392,6 +400,10 @@ tanker_expected_t* tanker_event_disconnect(tanker_t* tanker,
                                            enum tanker_event event);
 
 tanker_future_t* tanker_start(tanker_t* tanker, char const* identity);
+
+tanker_expected_t* tanker_enroll_user(tanker_t* tanker,
+                                      char const* identity,
+                                      tanker_verification_list_t const* verifications);
 
 tanker_future_t* tanker_register_identity(
     tanker_t* tanker,
