@@ -1,5 +1,6 @@
 import asyncio
 import os
+import warnings
 import weakref
 from enum import Enum
 from typing import Any, List, Optional, cast
@@ -820,6 +821,11 @@ class Tanker:
 
     async def device_id(self) -> str:
         """:return: the current device id"""
+        warnings.warn(
+            'The "device_id" method is deprecated, it will be removed in the future',
+            DeprecationWarning,
+        )
+
         c_future = tankerlib.tanker_device_id(self.c_tanker)
         c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
@@ -832,6 +838,11 @@ class Tanker:
 
         :returns: a list of :py:class`Device` instances
         """
+        warnings.warn(
+            'The "get_device_list" method is deprecated, it will be removed in the future',
+            DeprecationWarning,
+        )
+
         c_future = tankerlib.tanker_get_device_list(self.c_tanker)
         c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_list = ffi.cast("tanker_device_list_t*", c_voidp)
