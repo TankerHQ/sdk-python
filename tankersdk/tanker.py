@@ -2,7 +2,7 @@ import asyncio
 import os
 import weakref
 from enum import Enum
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, List, Optional, cast
 
 import typing_extensions
 from _tanker import ffi
@@ -32,13 +32,6 @@ def log_handler(record: CData) -> None:
 
 
 tankerlib.tanker_set_log_handler(tankerlib.log_handler)
-
-
-@ffi.def_extern()  # type: ignore
-def revoke_callback(args: CData, data: CData) -> None:
-    tanker_instance = ffi.from_handle(data)()  # data is a weakref.ref
-    if tanker_instance and tanker_instance.on_revoked:
-        tanker_instance.on_revoked()
 
 
 class Status(Enum):
@@ -201,9 +194,6 @@ def verification_method_from_c(c_verification_method: CData) -> VerificationMeth
         res
     ), f"Could not convert C verification method to python: unknown type: {type}"
     return res
-
-
-RevokeFunc = Callable[[], None]
 
 
 class AttachResult:
@@ -630,8 +620,6 @@ class Tanker:
         self.c_tanker = None
 
         self._create_tanker_obj()
-        self._set_event_callbacks()
-        self.on_revoked = None  # type: Optional[RevokeFunc]
 
     def __del__(self) -> None:
         if getattr(self, "c_tanker", None):
@@ -693,19 +681,6 @@ class Tanker:
         ffihelpers.wait_fut_or_raise(create_fut)
         c_voidp = tankerlib.tanker_future_get_voidptr(create_fut)
         self.c_tanker = ffi.cast("tanker_t*", c_voidp)
-
-    def _set_event_callbacks(self) -> None:
-        # userdata must live as long as self, and userdata must not hold a
-        # reference on self
-        userdata = ffi.new_handle(weakref.ref(self))
-        _GLOBAL_TANKERS[self] = userdata
-        c_future_connect = tankerlib.tanker_event_connect(
-            self.c_tanker,
-            tankerlib.TANKER_EVENT_DEVICE_REVOKED,
-            tankerlib.revoke_callback,
-            userdata,
-        )
-        ffihelpers.wait_fut_or_raise(c_future_connect)
 
     @property
     def status(self) -> Status:
