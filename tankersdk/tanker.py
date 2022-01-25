@@ -1,6 +1,5 @@
 import asyncio
 import os
-import warnings
 import weakref
 from enum import Enum
 from typing import Any, Callable, List, Optional, cast
@@ -870,16 +869,6 @@ class Tanker:
             res.append(device_description)
         tankerlib.tanker_free_device_list(c_list)
         return res
-
-    async def revoke_device(self, device_id: str) -> None:
-        """Revoke the given device"""
-        warnings.warn(
-            'The "revoke_device" method is deprecated, it will be removed in the future',
-            DeprecationWarning,
-        )
-        c_device_id = ffihelpers.str_to_c_string(device_id)
-        c_future = tankerlib.tanker_revoke_device(self.c_tanker, c_device_id)
-        await ffihelpers.handle_tanker_future(c_future)
 
     def get_resource_id(self, encrypted_data: bytes) -> str:
         """Get resource ID from `encrypted` data"""

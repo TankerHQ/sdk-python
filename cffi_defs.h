@@ -462,8 +462,6 @@ tanker_future_t* tanker_attach_provisional_identity(
 tanker_future_t* tanker_verify_provisional_identity(
     tanker_t* ctanker, tanker_verification_t const* verification);
 
-tanker_future_t* tanker_revoke_device(tanker_t* session, char const* device_id);
-
 void tanker_free_buffer(void const* buffer);
 
 void tanker_free_device_list(tanker_device_list_t* list);
