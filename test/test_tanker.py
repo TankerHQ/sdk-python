@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import io
 import json
@@ -625,42 +624,16 @@ async def test_add_device(tmp_path: Path, app: Dict[str, str]) -> None:
 
 
 @pytest.mark.asyncio
-async def test_revoke_device(tmp_path: Path, app: Dict[str, str]) -> None:
-    _, laptop, phone = await create_two_devices(tmp_path, app)
-    laptop_id = await laptop.device_id()
-    laptop_revoked = asyncio.Event()
-    loop = asyncio.get_event_loop()
-
-    def on_revoked() -> None:
-        async def cb() -> None:
-            laptop_revoked.set()
-
-        asyncio.run_coroutine_threadsafe(cb(), loop)
-
-    laptop.on_revoked = on_revoked
-    await phone.revoke_device(laptop_id)
-    with pytest.raises(error.DeviceRevoked):
-        await laptop.encrypt(b"will fail")
-    # Check callback is called
-    await asyncio.wait_for(laptop_revoked.wait(), timeout=1)
-    assert laptop.status == TankerStatus.STOPPED
-
-
-@pytest.mark.asyncio
 async def test_get_device_list(tmp_path: Path, app: Dict[str, str]) -> None:
     _, laptop, phone = await create_two_devices(tmp_path, app)
     laptop_id = await laptop.device_id()
     phone_id = await phone.device_id()
 
-    await phone.revoke_device(laptop_id)
-
     actual_list = await phone.get_device_list()
     actual_ids = [x.device_id for x in actual_list]
     assert set(actual_ids) == set([laptop_id, phone_id])
     revoked = [x for x in actual_list if x.is_revoked]
-    assert len(revoked) == 1
-    actual_revoked_id = revoked[0].device_id
-    assert actual_revoked_id == laptop_id
+    assert len(revoked) == 0
 
 
 @pytest.mark.asyncio
@@ -1136,14 +1109,6 @@ async def test_group_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
         await alice.session.update_group_members(
             group_id, users_to_add=[alice.public_identity]
         )
-
-
-@pytest.mark.asyncio
-async def test_device_not_found(tmp_path: Path, app: Dict[str, str]) -> None:
-    device_id = encode("*" * 32)
-    alice = await create_user_session(tmp_path, app)
-    with pytest.raises(error.InvalidArgument):
-        await alice.session.revoke_device(device_id)
 
 
 @pytest.mark.asyncio

@@ -205,14 +205,6 @@ enum tanker_status
   TANKER_STATUS_LAST
 };
 
-enum tanker_event
-{
-  TANKER_EVENT_SESSION_CLOSED,
-  TANKER_EVENT_DEVICE_REVOKED,
-
-  TANKER_EVENT_LAST,
-};
-
 enum tanker_verification_method_type
 {
   TANKER_VERIFICATION_METHOD_EMAIL = 0x1,
@@ -287,9 +279,6 @@ struct tanker_log_record
 };
 
 typedef void (*tanker_log_handler_t)(tanker_log_record_t const* record);
-
-typedef struct tanker_connection tanker_connection_t;
-typedef void (*tanker_event_callback_t)(void* arg, void* data);
 
 struct tanker_options
 {
@@ -391,14 +380,6 @@ tanker_future_t* tanker_create(tanker_options_t const* options);
 
 tanker_future_t* tanker_destroy(tanker_t* tanker);
 
-tanker_expected_t* tanker_event_connect(tanker_t* tanker,
-                                        enum tanker_event event,
-                                        tanker_event_callback_t cb,
-                                        void* data);
-
-tanker_expected_t* tanker_event_disconnect(tanker_t* tanker,
-                                           enum tanker_event event);
-
 tanker_future_t* tanker_start(tanker_t* tanker, char const* identity);
 
 tanker_expected_t* tanker_enroll_user(tanker_t* tanker,
@@ -461,8 +442,6 @@ tanker_future_t* tanker_attach_provisional_identity(
 
 tanker_future_t* tanker_verify_provisional_identity(
     tanker_t* ctanker, tanker_verification_t const* verification);
-
-tanker_future_t* tanker_revoke_device(tanker_t* session, char const* device_id);
 
 void tanker_free_buffer(void const* buffer);
 
@@ -548,7 +527,6 @@ tanker_future_t* tanker_encryption_session_stream_encrypt(
 
 // cffi specific
 extern "Python" void log_handler(tanker_log_record_t*);
-extern "Python" void revoke_callback(void* arg, void* data);
 extern "Python" void stream_input_source_callback(
     uint8_t* buffer,
     int64_t buffer_size,
