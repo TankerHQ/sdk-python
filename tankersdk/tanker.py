@@ -720,6 +720,21 @@ class Tanker:
         c_future = tankerlib.tanker_stop(self.c_tanker)
         await ffihelpers.handle_tanker_future(c_future)
 
+    async def create_oidc_nonce(self) -> str:
+        """Create a nonce to use in oidc authorization code flow"""
+        c_future = tankerlib.tanker_create_oidc_nonce(self.c_tanker)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
+        c_str = ffi.cast("char*", c_voidp)
+        res = ffihelpers.c_string_to_str(c_str)
+        tankerlib.tanker_free_buffer(c_str)
+        return res
+
+    async def set_oidc_test_nonce(self, nonce: str) -> None:
+        """Set the oidc nonce to use during the next verification operation"""
+        c_nonce = ffihelpers.str_to_c_string(nonce)
+        c_future = tankerlib.tanker_set_oidc_test_nonce(self.c_tanker, c_nonce)
+        await ffihelpers.handle_tanker_future(c_future)
+
     async def encrypt(
         self, clear_data: bytes, options: Optional[EncryptionOptions] = None
     ) -> bytes:
