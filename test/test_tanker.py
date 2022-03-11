@@ -1203,7 +1203,9 @@ async def test_oidc_verification(
         app["id"], app["secret"], str(uuid.uuid4())
     )
 
+    nonce = await martine_phone.create_oidc_nonce()
     await martine_phone.start(identity)
+    await martine_phone._set_oidc_test_nonce(nonce)
     await martine_phone.register_identity(OidcIdTokenVerification(oidc_id_token))
     await martine_phone.stop()
 
@@ -1213,6 +1215,8 @@ async def test_oidc_verification(
     await martine_laptop.start(identity)
 
     assert martine_laptop.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    nonce = await martine_laptop.create_oidc_nonce()
+    await martine_laptop._set_oidc_test_nonce(nonce)
     await martine_laptop.verify_identity(OidcIdTokenVerification(oidc_id_token))
     assert martine_laptop.status == TankerStatus.READY
 
@@ -1221,44 +1225,6 @@ async def test_oidc_verification(
     assert actual_method.method_type == VerificationMethodType.OIDC_ID_TOKEN
 
     await martine_laptop.stop()
-
-
-@pytest.mark.asyncio
-async def test_oidc_preshare(tmp_path: Path, app: Dict[str, str], admin: Admin) -> None:
-    email, oidc_id_token = set_up_oidc(app, admin, "martine")
-    alice = await create_user_session(tmp_path, app)
-
-    provisional_identity = tankersdk_identity.create_provisional_identity(
-        app["id"], email
-    )
-    public_provisional_identity = tankersdk_identity.get_public_identity(
-        provisional_identity
-    )
-
-    message = b"hello OIDC user"
-    encrypted = await alice.session.encrypt(
-        message, EncryptionOptions(share_with_users=[public_provisional_identity])
-    )
-
-    martine_phone = create_tanker(app["id"], persistent_path=tmp_path)
-    identity = tankersdk_identity.create_identity(
-        app["id"], app["secret"], str(uuid.uuid4())
-    )
-
-    status = await martine_phone.start(identity)
-    assert status == TankerStatus.IDENTITY_REGISTRATION_NEEDED
-    await martine_phone.register_identity(OidcIdTokenVerification(oidc_id_token))
-    attach_result = await martine_phone.attach_provisional_identity(
-        provisional_identity
-    )
-    assert attach_result.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
-    await martine_phone.verify_provisional_identity(
-        OidcIdTokenVerification(oidc_id_token)
-    )
-    clear_data = await alice.session.decrypt(encrypted)
-    assert clear_data == message
-    await martine_phone.stop()
-    await alice.session.stop()
 
 
 @pytest.mark.asyncio

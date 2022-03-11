@@ -398,6 +398,10 @@ tanker_future_t* tanker_verify_identity(
 
 tanker_future_t* tanker_stop(tanker_t* tanker);
 
+tanker_future_t* tanker_create_oidc_nonce(tanker_t* tanker);
+
+tanker_future_t* tanker_set_oidc_test_nonce(tanker_t* tanker, char const* nonce);
+
 enum tanker_status tanker_status(tanker_t* tanker);
 
 tanker_future_t* tanker_device_id(tanker_t* session);
