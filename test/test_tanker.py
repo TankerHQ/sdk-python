@@ -52,8 +52,9 @@ def assert_env(name: str) -> str:
 def read_test_config() -> Dict[str, Any]:
     res: Dict[str, Any] = {}
     res["server"] = {
-        "adminUrl": assert_env("TANKER_ADMIND_URL"),
-        "idToken": assert_env("TANKER_ID_TOKEN"),
+        "appManagementApiToken": assert_env("TANKER_MANAGEMENT_API_ACCESS_TOKEN"),
+        "appManagementApiUrl": assert_env("TANKER_MANAGEMENT_API_URL"),
+        "environmentName": assert_env("TANKER_MANAGEMENT_API_DEFAULT_ENVIRONMENT_NAME"),
         "url": assert_env("TANKER_APPD_URL"),
         "trustchaindUrl": assert_env("TANKER_TRUSTCHAIND_URL"),
     }
@@ -94,14 +95,16 @@ def tmp_path(tmpdir: str) -> Path:
 @pytest.fixture(scope="session")
 def admin() -> Iterator[Admin]:
     yield Admin(
-        url=TEST_CONFIG["server"]["adminUrl"], id_token=TEST_CONFIG["server"]["idToken"]
+        url=TEST_CONFIG["server"]["appManagementApiUrl"],
+        app_management_token=TEST_CONFIG["server"]["appManagementApiToken"],
+        environment_name=TEST_CONFIG["server"]["environmentName"],
     )
 
 
 @pytest.fixture(scope="session")
 def app(admin: Admin) -> Iterator[Dict[str, str]]:
     name = "python_bindings"
-    app = admin.create_app(name, is_test=True)
+    app = admin.create_app(name)
     yield app
     admin.delete_app(app["id"])
 
@@ -125,7 +128,7 @@ def test_init_tanker_invalid_id(tmp_path: Path) -> None:
 async def test_tanker_start_invalid_path(app: Dict[str, str]) -> None:
     tanker = create_tanker(app_id=app["id"], persistent_path=Path("/path/to/no-such"))
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     with pytest.raises(error.InternalError):
         await tanker.start(identity)
@@ -142,7 +145,7 @@ async def test_tanker_enroll_user_fails_with_passphrase(
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
 
     passphrase = "this is my secure passphrase"
@@ -164,7 +167,7 @@ async def test_tanker_enroll_user_fails_with_email(
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
 
     fake = Faker()
@@ -189,7 +192,7 @@ async def test_tanker_enroll_user_fails_with_phone_number(
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
 
     phone_number = "+33639982233"
@@ -213,7 +216,7 @@ async def test_tanker_enroll_user_with_preverified_methods(
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
 
     fake = Faker()
@@ -265,7 +268,7 @@ async def test_tanker_sdk_version(tmp_path: Path, app: Dict[str, str]) -> None:
 async def test_start_new_account(tmp_path: Path, app: Dict[str, str]) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     status = await tanker.start(identity)
     assert status == TankerStatus.IDENTITY_REGISTRATION_NEEDED
@@ -292,7 +295,7 @@ async def test_start_identity_incorrect_format(
 async def test_create_account_then_sign_in(tmp_path: Path, app: Dict[str, str]) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     await tanker.start(identity)
     key = await tanker.generate_verification_key()
@@ -310,7 +313,7 @@ User = namedtuple("User", ["session", "public_identity", "private_identity"])
 async def create_user_session(tmp_path: Path, app: Dict[str, str]) -> User:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     private_identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     public_identity = tankersdk_identity.get_public_identity(private_identity)
     await tanker.start(private_identity)
@@ -601,7 +604,7 @@ async def create_two_devices(
     laptop_path.mkdir(exist_ok=True)
     laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], fake.email(domain="tanker.io")
+        app["id"], app["secret"], fake.email(domain="tanker.io")
     )
     await laptop_tanker.start(identity)
     await laptop_tanker.register_identity(PassphraseVerification(passphrase))
@@ -644,7 +647,7 @@ async def test_must_verify_identity_on_second_device(
     laptop_path.mkdir(exist_ok=True)
     laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
     alice_identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     passphrase = "my secure passphrase"
     await laptop_tanker.start(alice_identity)
@@ -668,7 +671,7 @@ async def test_using_verification_key_on_second_device(
     laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -692,7 +695,7 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
     laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -749,7 +752,7 @@ async def test_email_verification(tmp_path: Path, app: Dict[str, str]) -> None:
     email = fake.email(domain="tanker.io")
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -778,7 +781,7 @@ async def test_sms_verification(tmp_path: Path, app: Dict[str, str]) -> None:
     phone_number = "+33639982233"
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -812,7 +815,7 @@ async def test_bad_verification_code(tmp_path: Path, app: Dict[str, str]) -> Non
     email = fake.email(domain="tanker.io")
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     phone_path = tmp_path.joinpath("phone")
@@ -990,7 +993,7 @@ async def test_update_verification_passphrase(
     laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -1118,7 +1121,7 @@ async def test_get_verification_methods(tmp_path: Path, app: Dict[str, str]) -> 
     email = fake.email(domain="tanker.io")
     phone_number = "+33639982233"
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     await tanker.start(identity)
     passphrase = "my passphrase"
@@ -1197,7 +1200,7 @@ async def test_oidc_verification(
     phone_path.mkdir(exist_ok=True)
     martine_phone = create_tanker(app["id"], persistent_path=phone_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
 
     await martine_phone.start(identity)
@@ -1239,7 +1242,7 @@ async def test_oidc_preshare(tmp_path: Path, app: Dict[str, str], admin: Admin) 
 
     martine_phone = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
 
     status = await martine_phone.start(identity)
@@ -1272,7 +1275,7 @@ async def test_register_fails_with_preverified_email(
 
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     await tanker.start(identity)
 
@@ -1295,7 +1298,7 @@ async def test_register_fails_with_preverified_phone_number(
 
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     await tanker.start(identity)
 
@@ -1321,7 +1324,7 @@ async def test_verify_fails_with_preverified_email(
     email = fake.email(domain="tanker.io")
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -1355,7 +1358,7 @@ async def test_verify_fails_with_preverified_phone_number(
     phone_number = "+33639982233"
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -1393,7 +1396,7 @@ async def test_set_verification_method_with_preverified_email(
     email = fake.email(domain="tanker.io")
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -1445,7 +1448,7 @@ async def test_set_verification_method_with_preverified_phone_number(
     phone_number = "+33639982233"
     alice_identity = tankersdk_identity.create_identity(
         app["id"],
-        app["app_secret"],
+        app["secret"],
         str(uuid.uuid4()),
     )
     await laptop_tanker.start(alice_identity)
@@ -1539,7 +1542,7 @@ async def test_get_session_token_with_register_identity(
     passphrase = "50lbs bags of white rocks"
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     await tanker.start(identity)
 
@@ -1567,7 +1570,7 @@ async def test_get_session_token_with_verify_identity(
 
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     await tanker.start(identity)
 
@@ -1597,7 +1600,7 @@ async def test_get_session_token_with_set_verification_method(
 
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
-        app["id"], app["app_secret"], str(uuid.uuid4())
+        app["id"], app["secret"], str(uuid.uuid4())
     )
     await tanker.start(identity)
 
