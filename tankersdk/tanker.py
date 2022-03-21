@@ -729,7 +729,7 @@ class Tanker:
         tankerlib.tanker_free_buffer(c_str)
         return res
 
-    async def set_oidc_test_nonce(self, nonce: str) -> None:
+    async def _set_oidc_test_nonce(self, nonce: str) -> None:
         """Set the oidc nonce to use during the next verification operation"""
         c_nonce = ffihelpers.str_to_c_string(nonce)
         c_future = tankerlib.tanker_set_oidc_test_nonce(self.c_tanker, c_nonce)
