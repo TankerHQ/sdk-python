@@ -3,16 +3,24 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import List, Optional  # noqa
+from typing import Dict, List, Optional  # noqa
 
 import tankerci
 import tankerci.bump
 import tankerci.conan
 import tankerci.git
 import tankerci.gitlab
+import tankerci.tanker_configs
 from tankerci.conan import TankerSource
 
 PUBLIC_REPOSITORY_URL = "https://gitlab.com/api/v4/projects/20920099/packages/pypi"
+
+
+def get_env() -> Dict[str, str]:
+    return {
+        **os.environ.copy(),
+        **tankerci.tanker_configs.get_dotenv_vars_for_env("staging"),
+    }
 
 
 def prepare(
@@ -57,7 +65,7 @@ def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
 
 
 def run_test() -> None:
-    env = os.environ.copy()
+    env = get_env()
     env["TANKER_SDK_DEBUG"] = "1"
     src_path = Path.cwd()
     # fmt: off
