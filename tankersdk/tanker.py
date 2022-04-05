@@ -472,7 +472,7 @@ class Stream:
         if size is not None:
             return await self._read_with_size(size)
         else:
-            chunk_size = 1024 ** 2
+            chunk_size = 1024**2
             res = bytearray()
             while True:
                 chunk = await self._read_with_size(chunk_size)

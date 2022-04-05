@@ -348,7 +348,7 @@ class TestStreams:
         self, tmp_path: Path, app: Dict[str, str]
     ) -> None:
         alice = await create_user_session(tmp_path, app)
-        chunk_size = 1024 ** 2
+        chunk_size = 1024**2
         message = bytearray(
             3 * chunk_size + 2
         )  # three big chunks plus a little something
@@ -370,7 +370,7 @@ class TestStreams:
         self, tmp_path: Path, app: Dict[str, str]
     ) -> None:
         alice = await create_user_session(tmp_path, app)
-        chunk_size = 1024 ** 2
+        chunk_size = 1024**2
         message = bytearray(
             3 * chunk_size + 2
         )  # three big chunks plus a little something
@@ -584,7 +584,7 @@ async def test_share_with_encryption_session_without_self(
 @pytest.mark.asyncio
 async def test_encryption_session_streams(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
-    chunk_size = 1024 ** 2
+    chunk_size = 1024**2
     message = bytearray(3 * chunk_size + 2)  # three big chunks plus a little something
     input_stream = InMemoryAsyncStream(message)
     async with await alice.session.create_encryption_session() as enc_session:
