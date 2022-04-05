@@ -1,5 +1,6 @@
 import argparse
 import os
+import platform
 import shutil
 import sys
 from pathlib import Path
@@ -10,14 +11,33 @@ import tankerci.bump
 import tankerci.conan
 import tankerci.git
 import tankerci.gitlab
-from tankerci.conan import TankerSource
+from tankerci.conan import Profile, TankerSource
 
 PUBLIC_REPOSITORY_URL = "https://gitlab.com/api/v4/projects/20920099/packages/pypi"
+
+build_profiles = {
+    "linux-x86_64": "linux-x86_64",
+    "darwin-x86_64": "macos-x86_64",
+    "darwin-arm64": "macos-armv8",
+    "win32-x86_64": "windows-x86_64",
+}
+
+
+def machine() -> str:
+    machine = platform.machine().lower()
+    if machine == "amd64":
+        return "x86_64"
+    return machine
+
+
+def get_build_profile() -> Profile:
+    arch = machine()
+    return Profile(build_profiles[f"{sys.platform}-{arch}"])
 
 
 def prepare(
     tanker_source: TankerSource,
-    profile: str,
+    profile: Profile,
     update: bool,
     tanker_ref: Optional[str] = None,
 ) -> None:
@@ -27,13 +47,14 @@ def prepare(
     tankerci.conan.install_tanker_source(
         tanker_source,
         output_path=Path("conan") / "out",
-        profiles=[profile],
+        host_profiles=[profile],
+        build_profile=get_build_profile(),
         update=update,
         tanker_deployed_ref=tanker_deployed_ref,
     )
 
 
-def build_wheel(profile: str, version: str, tanker_ref: str) -> None:
+def build_wheel(profile: Profile, version: str, tanker_ref: str) -> None:
     src_path = Path.cwd()
     tankerci.bump.bump_files(version)
     dist_path = src_path / "dist"
@@ -80,7 +101,7 @@ def run_test() -> None:
 
 
 def build(
-    profile: str, release_version: Optional[str], tanker_ref: str, test: bool
+    profile: Profile, release_version: Optional[str], tanker_ref: str, test: bool
 ) -> None:
     tankerci.run("poetry", "install", cwd=Path.cwd())
     if release_version:
@@ -117,10 +138,11 @@ def main() -> None:
     subparsers = parser.add_subparsers(title="subcommands", dest="command")
 
     build_parser = subparsers.add_parser("build")
-    build_parser.add_argument("--profile", default="default")
+    build_parser.add_argument("--profile", default="default", nargs="+")
     build_parser.add_argument("--tanker-ref")
     build_parser.add_argument("--test", action="store_true")
     build_parser.add_argument("--release")
+    build_parser.add_argument("--remote", default="artifactory")
 
     prepare_parser = subparsers.add_parser("prepare")
     prepare_parser.add_argument(
@@ -129,7 +151,7 @@ def main() -> None:
         default=TankerSource.EDITABLE,
         dest="tanker_source",
     )
-    prepare_parser.add_argument("--profile", default="default")
+    prepare_parser.add_argument("--profile", default="default", nargs="+")
     prepare_parser.add_argument("--tanker-ref")
     prepare_parser.add_argument(
         "--update",
@@ -137,6 +159,7 @@ def main() -> None:
         default=False,
         dest="update",
     )
+    prepare_parser.add_argument("--remote", default="artifactory")
 
     reset_branch_parser = subparsers.add_parser("reset-branch")
     reset_branch_parser.add_argument("branch", nargs="?")
@@ -151,9 +174,9 @@ def main() -> None:
     args = parser.parse_args()
     command = args.command
 
+    user_home = None
     if args.home_isolation:
-        tankerci.conan.set_home_isolation()
-        tankerci.conan.update_config()
+        user_home = Path.cwd() / ".cache" / "conan" / args.remote
         if command == "prepare":
             # Because of GitLab issue https://gitlab.com/gitlab-org/gitlab/-/issues/254323
             # the downstream deploy jobs will be triggered even if upstream has failed
@@ -162,9 +185,13 @@ def main() -> None:
             tankerci.conan.run("remove", "tanker/*", "--force")
 
     if command == "build":
-        build(args.profile, args.release, args.tanker_ref, args.test)
+        with tankerci.conan.ConanContextManager([args.remote], conan_home=user_home):
+            build(Profile(args.profile), args.release, args.tanker_ref, args.test)
     elif command == "prepare":
-        prepare(args.tanker_source, args.profile, args.update, args.tanker_ref)
+        with tankerci.conan.ConanContextManager([args.remote], conan_home=user_home):
+            prepare(
+                args.tanker_source, Profile(args.profile), args.update, args.tanker_ref
+            )
     elif command == "deploy":
         deploy()
     elif command == "reset-branch":
