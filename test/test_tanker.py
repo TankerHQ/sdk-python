@@ -1215,7 +1215,7 @@ async def test_oidc_verification(
 
     nonce = await martine_phone.create_oidc_nonce()
     await martine_phone.start(identity)
-    await martine_phone._set_oidc_test_nonce(nonce)
+    await martine_phone.set_oidc_test_nonce(nonce)
     await martine_phone.register_identity(OidcIdTokenVerification(oidc_id_token))
     await martine_phone.stop()
 
@@ -1226,7 +1226,7 @@ async def test_oidc_verification(
 
     assert martine_laptop.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     nonce = await martine_laptop.create_oidc_nonce()
-    await martine_laptop._set_oidc_test_nonce(nonce)
+    await martine_laptop.set_oidc_test_nonce(nonce)
     await martine_laptop.verify_identity(OidcIdTokenVerification(oidc_id_token))
     assert martine_laptop.status == TankerStatus.READY
 
