@@ -778,8 +778,11 @@ class Tanker:
         c_future = tankerlib.tanker_decrypt(
             self.c_tanker, c_clear_buffer, c_encrypted_buffer, len(c_encrypted_buffer)
         )
-        await ffihelpers.handle_tanker_future(c_future)
-        return ffihelpers.c_buffer_to_bytes(c_clear_buffer)
+        c_voidp = await ffihelpers.handle_tanker_future(c_future)
+        c_clear_size = ffi.cast("uint64_t", c_voidp)
+        clear_size = int(c_clear_size)
+
+        return ffihelpers.c_buffer_to_bytes(c_clear_buffer, clear_size)
 
     async def encrypt_stream(
         self, clear_stream: InputStream, options: Optional[EncryptionOptions] = None

@@ -415,6 +415,16 @@ async def test_encrypt_decrypt(tmp_path: Path, app: Dict[str, str]) -> None:
 
 
 @pytest.mark.asyncio
+async def test_encrypt_decrypt_empty(tmp_path: Path, app: Dict[str, str]) -> None:
+    alice = await create_user_session(tmp_path, app)
+    message = b""
+    encrypted_data = await alice.session.encrypt(message)
+    clear_data = await alice.session.decrypt(encrypted_data)
+    assert clear_data == message
+    await alice.session.stop()
+
+
+@pytest.mark.asyncio
 async def test_share_during_encrypt(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)

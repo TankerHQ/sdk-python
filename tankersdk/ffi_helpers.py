@@ -2,7 +2,7 @@ import asyncio
 from asyncio import Future
 from typing import Any, Callable, List, Optional, cast
 
-from .error import Error, ErrorCode, make_error
+from .error import Error, ErrorCode, InvalidArgument, make_error
 
 # mypy does not know ffi types, this is for documentation purposes only
 CData = Any
@@ -28,8 +28,14 @@ class FFIHelpers:
     def c_string_to_bytes(self, c_data: CData) -> bytes:
         return cast(bytes, self.ffi.string(c_data))
 
-    def c_buffer_to_bytes(self, c_data: CData) -> bytes:
-        res = self.ffi.buffer(c_data, len(c_data))
+    def c_buffer_to_bytes(self, c_data: CData, length: Optional[int] = None) -> bytes:
+        if length is not None:
+            if length < 0:
+                raise InvalidArgument("Negative buffer size")
+            buffer_size = length
+        else:
+            buffer_size = len(c_data)
+        res = self.ffi.buffer(c_data, buffer_size)
         # Make a copy of the self.ffi.buffer as a simple `bytes`
         # object so that it can be used without worrying
         # about the self.ffi buffer being garbage collected.
