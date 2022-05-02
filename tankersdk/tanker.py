@@ -735,6 +735,10 @@ class Tanker:
         c_future = tankerlib.tanker_set_oidc_test_nonce(self.c_tanker, c_nonce)
         await ffihelpers.handle_tanker_future(c_future)
 
+    async def set_oidc_test_nonce(self, nonce: str) -> None:
+        """Set the oidc nonce to use during the next verification operation"""
+        await self._set_oidc_test_nonce(nonce)
+
     async def encrypt(
         self, clear_data: bytes, options: Optional[EncryptionOptions] = None
     ) -> bytes:
