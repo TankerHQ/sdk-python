@@ -11,6 +11,8 @@ from .error import Error, ErrorCode  # noqa
 # fmt: off
 from .tanker import (  # noqa
     AttachResult,
+    E2ePassphraseVerification,
+    E2ePassphraseVerificationMethod,
     EmailVerification,
     EmailVerificationMethod,
     EncryptionOptions,
