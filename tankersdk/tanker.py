@@ -179,6 +179,10 @@ class PreverifiedPhoneNumberVerificationMethod(VerificationMethod):
         self.preverified_phone_number = preverified_phone_number
 
 
+class E2ePassphraseVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.E2E_PASSPHRASE
+
+
 def verification_method_from_c(c_verification_method: CData) -> VerificationMethod:
     method_type = VerificationMethodType(c_verification_method.verification_method_type)
     res: Optional[VerificationMethod] = None
@@ -204,6 +208,8 @@ def verification_method_from_c(c_verification_method: CData) -> VerificationMeth
         res = PreverifiedPhoneNumberVerificationMethod(
             ffihelpers.c_string_to_str(c_preverified_phone_number)
         )
+    elif method_type == VerificationMethodType.E2E_PASSPHRASE:
+        res = E2ePassphraseVerificationMethod()
     assert (
         res
     ), f"Could not convert C verification method to python: unknown type: {type}"

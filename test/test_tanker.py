@@ -16,6 +16,7 @@ from tankeradminsdk import Admin
 
 import tankersdk
 from tankersdk import (
+    E2ePassphraseVerification,
     EmailVerification,
     EmailVerificationMethod,
     EncryptionOptions,
@@ -1027,6 +1028,153 @@ async def test_update_verification_passphrase(
 
 
 @pytest.mark.asyncio
+async def test_register_e2e_passphrase(tmp_path: Path, app: Dict[str, str]) -> None:
+    passphrase = "portocaval anastomosis"
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(E2ePassphraseVerification(passphrase))
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+    await phone_tanker.start(alice_identity)
+
+    await phone_tanker.verify_identity(E2ePassphraseVerification(passphrase))
+    assert phone_tanker.status == TankerStatus.READY
+
+
+@pytest.mark.asyncio
+async def test_update_e2e_passphrase(tmp_path: Path, app: Dict[str, str]) -> None:
+    old_passphrase = "alkalosis"
+    new_passphrase = "acidosis"
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(E2ePassphraseVerification(old_passphrase))
+
+    await laptop_tanker.set_verification_method(
+        E2ePassphraseVerification(new_passphrase)
+    )
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+    await phone_tanker.start(alice_identity)
+
+    # Old passphrase should not work
+    with pytest.raises(error.InvalidVerification):
+        await phone_tanker.verify_identity(E2ePassphraseVerification(old_passphrase))
+
+    # But new passphrase should
+    await phone_tanker.verify_identity(E2ePassphraseVerification(new_passphrase))
+    assert phone_tanker.status == TankerStatus.READY
+
+
+@pytest.mark.asyncio
+async def test_switch_to_e2e_passphrase(tmp_path: Path, app: Dict[str, str]) -> None:
+    old_passphrase = "alkalosis"
+    new_passphrase = "acidosis"
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(PassphraseVerification(old_passphrase))
+
+    options = VerificationOptions(allow_e2e_method_switch=True)
+    await laptop_tanker.set_verification_method(
+        E2ePassphraseVerification(new_passphrase), options
+    )
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+    await phone_tanker.start(alice_identity)
+
+    # Old passphrase should not work
+    with pytest.raises(error.InvalidVerification):
+        await phone_tanker.verify_identity(E2ePassphraseVerification(old_passphrase))
+
+    # But new passphrase should
+    await phone_tanker.verify_identity(E2ePassphraseVerification(new_passphrase))
+    assert phone_tanker.status == TankerStatus.READY
+
+
+@pytest.mark.asyncio
+async def test_switch_from_e2e_passphrase(tmp_path: Path, app: Dict[str, str]) -> None:
+    old_passphrase = "alkalosis"
+    new_passphrase = "acidosis"
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(E2ePassphraseVerification(old_passphrase))
+
+    options = VerificationOptions(allow_e2e_method_switch=True)
+    await laptop_tanker.set_verification_method(
+        PassphraseVerification(new_passphrase), options
+    )
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+    await phone_tanker.start(alice_identity)
+
+    # Old passphrase should not work
+    with pytest.raises(error.InvalidVerification):
+        await phone_tanker.verify_identity(PassphraseVerification(old_passphrase))
+
+    # But new passphrase should
+    await phone_tanker.verify_identity(PassphraseVerification(new_passphrase))
+    assert phone_tanker.status == TankerStatus.READY
+
+
+@pytest.mark.asyncio
+async def test_cannot_switch_to_e2e_passphrase_without_e2e_switch_flag(
+    tmp_path: Path, app: Dict[str, str]
+) -> None:
+    old_passphrase = "alkalosis"
+    new_passphrase = "acidosis"
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(PassphraseVerification(old_passphrase))
+
+    with pytest.raises(error.InvalidArgument):
+        await laptop_tanker.set_verification_method(
+            E2ePassphraseVerification(new_passphrase)
+        )
+
+
+@pytest.mark.asyncio
 async def test_create_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you all, my group"
@@ -1168,6 +1316,13 @@ async def test_get_verification_methods(tmp_path: Path, app: Dict[str, str]) -> 
     assert len(phone_number_methods) == 1
     (phone_number_method,) = phone_number_methods
     assert phone_number_method.phone_number == phone_number
+
+    options = VerificationOptions(allow_e2e_method_switch=True)
+    await tanker.set_verification_method(E2ePassphraseVerification(passphrase), options)
+
+    methods = await tanker.get_verification_methods()
+    (e2e_passphrase_method,) = methods
+    assert e2e_passphrase_method.method_type == VerificationMethodType.E2E_PASSPHRASE
 
 
 def set_up_oidc(app: Dict[str, str], admin: Admin, user: str) -> Tuple[str, str]:
