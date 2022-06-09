@@ -57,6 +57,7 @@ def read_test_config() -> Dict[str, Any]:
         "environmentName": assert_env("TANKER_MANAGEMENT_API_DEFAULT_ENVIRONMENT_NAME"),
         "url": assert_env("TANKER_APPD_URL"),
         "trustchaindUrl": assert_env("TANKER_TRUSTCHAIND_URL"),
+        "verificationApiToken": assert_env("TANKER_VERIFICATION_API_TEST_TOKEN"),
     }
     res["oidc"] = {
         "clientId": assert_env("TANKER_OIDC_CLIENT_ID"),
@@ -739,7 +740,7 @@ def get_verification_code_email(app: Dict[str, str], email: str) -> str:
     return tankeradminsdk.get_verification_code(
         url=TEST_CONFIG["server"]["trustchaindUrl"],
         app_id=app["id"],
-        auth_token=app["auth_token"],
+        verification_api_token=TEST_CONFIG["server"]["verificationApiToken"],
         email=email,
     )
 
@@ -748,7 +749,7 @@ def get_verification_code_sms(app: Dict[str, str], phone_number: str) -> str:
     return tankeradminsdk.get_verification_code_sms(
         url=TEST_CONFIG["server"]["trustchaindUrl"],
         app_id=app["id"],
-        auth_token=app["auth_token"],
+        verification_api_token=TEST_CONFIG["server"]["verificationApiToken"],
         phone_number=phone_number,
     )
 
@@ -1485,7 +1486,6 @@ def test_prehash_password_vector_2() -> None:
 
 def check_session_token(
     app_id: str,
-    auth_token: str,
     public_identity: str,
     session_token: str,
     method: str,
@@ -1502,7 +1502,7 @@ def check_session_token(
         headers={"content-type": "application/json"},
         json={
             "app_id": app_id,
-            "auth_token": auth_token,
+            "auth_token": TEST_CONFIG["server"]["verificationApiToken"],
             "public_identity": public_identity,
             "session_token": session_token,
             "allowed_methods": allowed_methods,
@@ -1530,7 +1530,7 @@ async def test_get_session_token_with_register_identity(
     expected_method = "passphrase"
     public_identity = tankersdk_identity.get_public_identity(identity)
     actual_method = check_session_token(
-        app["id"], app["auth_token"], public_identity, token, expected_method
+        app["id"], public_identity, token, expected_method
     )
     assert expected_method == actual_method
     await tanker.stop()
@@ -1555,7 +1555,7 @@ async def test_get_session_token_with_verify_identity(
     expected_method = "passphrase"
     public_identity = tankersdk_identity.get_public_identity(identity)
     actual_method = check_session_token(
-        app["id"], app["auth_token"], public_identity, token, expected_method
+        app["id"], public_identity, token, expected_method
     )
     assert expected_method == actual_method
     await tanker.stop()
@@ -1580,7 +1580,7 @@ async def test_get_session_token_with_set_verification_method_with_passphrase(
     expected_method = "passphrase"
     public_identity = tankersdk_identity.get_public_identity(identity)
     actual_method = check_session_token(
-        app["id"], app["auth_token"], public_identity, token, expected_method
+        app["id"], public_identity, token, expected_method
     )
     assert expected_method == actual_method
     await tanker.stop()
@@ -1610,7 +1610,7 @@ async def test_get_session_token_with_set_verification_method_with_email(
     expected_method = "email"
     public_identity = tankersdk_identity.get_public_identity(identity)
     actual_method = check_session_token(
-        app["id"], app["auth_token"], public_identity, token, expected_method, email
+        app["id"], public_identity, token, expected_method, email
     )
     assert expected_method == actual_method
     await tanker.stop()
@@ -1640,7 +1640,6 @@ async def test_get_session_token_with_set_verification_method_with_phone_number(
     public_identity = tankersdk_identity.get_public_identity(identity)
     actual_method = check_session_token(
         app["id"],
-        app["auth_token"],
         public_identity,
         token,
         expected_method,
