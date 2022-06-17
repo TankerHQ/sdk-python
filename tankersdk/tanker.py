@@ -863,6 +863,7 @@ class Tanker:
                 share_with_users=options.share_with_users,
                 share_with_groups=options.share_with_groups,
                 share_with_self=options.share_with_self,
+                padding_step=options.padding_step,
             )
         else:
             c_encrypt_options = CEncryptionOptions()
