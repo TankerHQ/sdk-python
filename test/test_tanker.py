@@ -737,7 +737,7 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
 
 
 def get_verification_code_email(app: Dict[str, str], email: str) -> str:
-    return tankeradminsdk.get_verification_code(
+    return tankeradminsdk.get_verification_code_email(
         url=TEST_CONFIG["server"]["trustchaindUrl"],
         app_id=app["id"],
         verification_api_token=TEST_CONFIG["server"]["verificationApiToken"],
