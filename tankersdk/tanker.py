@@ -254,10 +254,10 @@ class EncryptionOptions:
         self.share_with_groups = share_with_groups
         self.share_with_self = share_with_self
 
-        if (
-            padding_step is not None
-            and padding_step <= 1  # noqa: W503
-            and type(padding_step) is not Padding  # noqa: W503
+        if not (
+            padding_step is None
+            or type(padding_step) is Padding  # noqa: W503
+            or (padding_step >= 2 and type(padding_step) is int)  # noqa: W503
         ):
             raise InvalidArgument(
                 "Invalid padding step. Use Padding.{OFF|AUTO} or an integer >= 2 instead."

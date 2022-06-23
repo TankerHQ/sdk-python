@@ -513,6 +513,9 @@ def test_padding_opt_error(tmp_path: Path, app: Dict[str, str]) -> None:
     with pytest.raises(error.InvalidArgument):
         EncryptionOptions(padding_step=-1)
 
+    with pytest.raises(error.InvalidArgument):
+        EncryptionOptions(padding_step=2.42)  # type: ignore
+
 
 @pytest.mark.asyncio
 async def test_share_during_encrypt(tmp_path: Path, app: Dict[str, str]) -> None:
