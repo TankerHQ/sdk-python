@@ -48,7 +48,7 @@ def on_import() -> None:
 
     assert build_info
     conaninfo = json.loads(build_info.read_text())
-    libs: List[str] = list()
+    libs: List[str] = []
     for dep_info in conaninfo["dependencies"]:
         libs_for_dep = dep_info["libs"]
         lib_paths = dep_info["lib_paths"]
