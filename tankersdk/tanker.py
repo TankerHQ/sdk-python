@@ -903,7 +903,7 @@ class Tanker:
         c_list = ffi.cast("tanker_device_list_t*", c_voidp)
         count = c_list.count
         c_devices = c_list.devices
-        res = list()
+        res = []
         for i in range(count):
             c_device_list_elem = c_devices[i]
             device_description = Device.from_c(c_device_list_elem)
@@ -1031,7 +1031,7 @@ class Tanker:
         c_list = ffi.cast("tanker_verification_method_list_t*", c_voidp)
         count = c_list.count
         c_methods = c_list.methods
-        res = list()
+        res = []
         for i in range(count):
             c_method = c_methods[i]
             method = verification_method_from_c(c_method)

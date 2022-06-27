@@ -646,7 +646,7 @@ async def test_get_device_list(tmp_path: Path, app: Dict[str, str]) -> None:
 
     actual_list = await phone.get_device_list()
     actual_ids = [x.device_id for x in actual_list]
-    assert set(actual_ids) == set([laptop_id, phone_id])
+    assert set(actual_ids) == {laptop_id, phone_id}
     revoked = [x for x in actual_list if x.is_revoked]
     assert len(revoked) == 0
 
@@ -865,7 +865,7 @@ async def create_pre_user(tmp_path: Path, app: Dict[str, str]) -> PreUser:
     fake = Faker()
     bob_email = fake.email(domain="tanker.io")
     bob_provisional_identity = tankersdk_identity.create_provisional_identity(
-        app["id"], bob_email
+        app["id"], "email", bob_email
     )
     bob_public_provisional_identity = tankersdk_identity.get_public_identity(
         bob_provisional_identity
