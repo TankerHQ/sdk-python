@@ -54,6 +54,7 @@ class VerificationMethodType(Enum):
     PHONE_NUMBER = 5
     PREVERIFIED_EMAIL = 6
     PREVERIFIED_PHONE_NUMBER = 7
+    E2E_PASSPHRASE = 8
 
 
 class Verification:
@@ -64,8 +65,13 @@ class Verification:
 
 
 class VerificationOptions:
-    def __init__(self, with_session_token: bool):
+    def __init__(
+        self,
+        with_session_token: bool = False,
+        allow_e2e_method_switch: bool = False,
+    ):
         self.with_session_token = with_session_token
+        self.allow_e2e_method_switch = allow_e2e_method_switch
 
 
 class EmailVerification(Verification):
@@ -96,6 +102,13 @@ class PassphraseVerification(Verification):
 
     def __init__(self, passphrase: str):
         self.passphrase = passphrase
+
+
+class E2ePassphraseVerification(Verification):
+    method_type = VerificationMethodType.E2E_PASSPHRASE
+
+    def __init__(self, e2e_passphrase: str):
+        self.e2e_passphrase = e2e_passphrase
 
 
 class VerificationKeyVerification(Verification):
@@ -166,6 +179,10 @@ class PreverifiedPhoneNumberVerificationMethod(VerificationMethod):
         self.preverified_phone_number = preverified_phone_number
 
 
+class E2ePassphraseVerificationMethod(VerificationMethod):
+    method_type = VerificationMethodType.E2E_PASSPHRASE
+
+
 def verification_method_from_c(c_verification_method: CData) -> VerificationMethod:
     method_type = VerificationMethodType(c_verification_method.verification_method_type)
     res: Optional[VerificationMethod] = None
@@ -191,6 +208,8 @@ def verification_method_from_c(c_verification_method: CData) -> VerificationMeth
         res = PreverifiedPhoneNumberVerificationMethod(
             ffihelpers.c_string_to_str(c_preverified_phone_number)
         )
+    elif method_type == VerificationMethodType.E2E_PASSPHRASE:
+        res = E2ePassphraseVerificationMethod()
     assert (
         res
     ), f"Could not convert C verification method to python: unknown type: {type}"
@@ -302,10 +321,15 @@ class CVerificationOptions:
     def __init__(
         self,
         with_session_token: bool,
+        allow_e2e_method_switch: bool,
     ):
         self._c_data = ffi.new(
             "tanker_verification_options_t *",
-            {"version": 1, "with_session_token": with_session_token},
+            {
+                "version": 2,
+                "with_session_token": with_session_token,
+                "allow_e2e_method_switch": allow_e2e_method_switch,
+            },
         )
 
     def get(self) -> CData:
@@ -322,7 +346,7 @@ class CVerification:
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
-        c_verification = ffi.new("tanker_verification_t *", {"version": 5})
+        c_verification = ffi.new("tanker_verification_t *", {"version": 6})
         if isinstance(verification, VerificationKeyVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
@@ -338,6 +362,15 @@ class CVerification:
             )
             self._passphrase = ffihelpers.str_to_c_string(verification.passphrase)
             c_verification.passphrase = self._passphrase
+
+        elif isinstance(verification, E2ePassphraseVerification):
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_E2E_PASSPHRASE
+            )
+            self._e2e_passphrase = ffihelpers.str_to_c_string(
+                verification.e2e_passphrase
+            )
+            c_verification.e2e_passphrase = self._e2e_passphrase
 
         elif isinstance(verification, EmailVerification):
             c_verification.verification_method_type = (
@@ -914,6 +947,7 @@ class Tanker:
         if options:
             c_verif_opts = CVerificationOptions(
                 with_session_token=options.with_session_token,
+                allow_e2e_method_switch=options.allow_e2e_method_switch,
             ).get()
         else:
             c_verif_opts = ffi.NULL
@@ -938,6 +972,7 @@ class Tanker:
         if options:
             c_verif_opts = CVerificationOptions(
                 with_session_token=options.with_session_token,
+                allow_e2e_method_switch=options.allow_e2e_method_switch,
             ).get()
         else:
             c_verif_opts = ffi.NULL
@@ -972,6 +1007,7 @@ class Tanker:
         if options:
             c_verif_opts = CVerificationOptions(
                 with_session_token=options.with_session_token,
+                allow_e2e_method_switch=options.allow_e2e_method_switch,
             ).get()
         else:
             c_verif_opts = ffi.NULL

@@ -214,6 +214,7 @@ enum tanker_verification_method_type
   TANKER_VERIFICATION_METHOD_PHONE_NUMBER,
   TANKER_VERIFICATION_METHOD_PREVERIFIED_EMAIL,
   TANKER_VERIFICATION_METHOD_PREVERIFIED_PHONE_NUMBER,
+  TANKER_VERIFICATION_METHOD_E2E_PASSPHRASE,
 
   TANKER_VERIFICATION_METHOD_LAST
 };
@@ -321,6 +322,7 @@ struct tanker_verification
   char const* verification_key;
   tanker_email_verification_t email_verification;
   char const* passphrase;
+  char const* e2e_passphrase;
   char const* oidc_id_token;
   tanker_phone_number_verification_t phone_number_verification;
   char const* preverified_email;
@@ -340,6 +342,7 @@ struct tanker_verification_options
 {
   uint8_t version;
   bool with_session_token;
+  bool allow_e2e_method_switch;
 };
 
 struct tanker_encrypt_options
