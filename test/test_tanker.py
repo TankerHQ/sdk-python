@@ -105,7 +105,7 @@ def admin() -> Iterator[Admin]:
 
 @pytest.fixture(scope="session")
 def app(admin: Admin) -> Iterator[Dict[str, str]]:
-    name = "python_bindings"
+    name = "sdk-python-tests"
     app = admin.create_app(name)
     yield app
     admin.delete_app(app["id"])
