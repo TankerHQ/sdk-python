@@ -408,7 +408,7 @@ safety:
   script:
     - poetry run python run-ci.py reset-branch $UPSTREAM_BRANCH_NAME
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile $CONAN_PROFILE
-    - poetry run python run-ci.py --isolate-conan-user-home build --profile $CONAN_PROFILE - $SDK_PYTHON_RELEASE_VERSION --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --profile $CONAN_PROFILE --release $SDK_PYTHON_RELEASE_VERSION --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
   artifacts:
     paths:
       - dist
