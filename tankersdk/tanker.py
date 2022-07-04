@@ -484,19 +484,16 @@ class Device:
     """An element of the list returned by `tanker.get_device_list()`
 
     :ivar device_id: The id of the device
-    :ivar is_revoked: Whether the device is revoked
 
     """
 
-    def __init__(self, device_id: str, is_revoked: bool):
+    def __init__(self, device_id: str):
         self.device_id = device_id
-        self.is_revoked = is_revoked
 
     @classmethod
     def from_c(cls, c_device_list_elem: CData) -> "Device":
         device_id = ffihelpers.c_string_to_str(c_device_list_elem.device_id)
-        is_revoked = c_device_list_elem.is_revoked
-        return cls(device_id, is_revoked)
+        return cls(device_id)
 
 
 class InputStream(typing_extensions.Protocol):

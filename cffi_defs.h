@@ -254,7 +254,6 @@ struct tanker_device_list
 struct tanker_device_list_elem
 {
   char const* device_id;
-  bool is_revoked;
 };
 
 struct tanker_verification_method_list

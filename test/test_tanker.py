@@ -813,8 +813,6 @@ async def test_get_device_list(tmp_path: Path, app: Dict[str, str]) -> None:
     actual_list = await phone.get_device_list()
     actual_ids = [x.device_id for x in actual_list]
     assert set(actual_ids) == {laptop_id, phone_id}
-    revoked = [x for x in actual_list if x.is_revoked]
-    assert len(revoked) == 0
 
 
 @pytest.mark.asyncio
