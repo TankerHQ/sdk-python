@@ -260,7 +260,8 @@ class EncryptionOptions:
             or (padding_step >= 2 and type(padding_step) is int)  # noqa: W503
         ):
             raise InvalidArgument(
-                "Invalid padding step. Use Padding.{OFF|AUTO} or an integer >= 2 instead."
+                f"Invalid padding step. Got: `{padding_step}`, use "
+                + "Padding.{OFF|AUTO} or an integer >= 2 instead."  # noqa: W503
             )
 
         self.padding_step = padding_step
