@@ -239,22 +239,9 @@ typedef struct tanker_verification_options tanker_verification_options_t;
 typedef struct tanker_encrypt_options tanker_encrypt_options_t;
 typedef struct tanker_sharing_options tanker_sharing_options_t;
 typedef struct tanker_log_record tanker_log_record_t;
-typedef struct tanker_device_list_elem tanker_device_list_elem_t;
-typedef struct tanker_device_list tanker_device_list_t;
 typedef struct tanker_verification_method_list
     tanker_verification_method_list_t;
 typedef struct tanker_attach_result tanker_attach_result_t;
-
-struct tanker_device_list
-{
-  tanker_device_list_elem_t* devices;
-  uint32_t count;
-};
-
-struct tanker_device_list_elem
-{
-  char const* device_id;
-};
 
 struct tanker_verification_method_list
 {
@@ -409,8 +396,6 @@ enum tanker_status tanker_status(tanker_t* tanker);
 
 tanker_future_t* tanker_device_id(tanker_t* session);
 
-tanker_future_t* tanker_get_device_list(tanker_t* session);
-
 tanker_future_t* tanker_generate_verification_key(tanker_t* session);
 
 tanker_future_t* tanker_set_verification_method(
@@ -451,8 +436,6 @@ tanker_future_t* tanker_verify_provisional_identity(
     tanker_t* ctanker, tanker_verification_t const* verification);
 
 void tanker_free_buffer(void const* buffer);
-
-void tanker_free_device_list(tanker_device_list_t* list);
 
 void tanker_free_verification_method_list(
     tanker_verification_method_list_t* list);

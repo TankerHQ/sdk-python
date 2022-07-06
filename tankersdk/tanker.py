@@ -480,22 +480,6 @@ class CVerificationList:
         return self._c_verification_list
 
 
-class Device:
-    """An element of the list returned by `tanker.get_device_list()`
-
-    :ivar device_id: The id of the device
-
-    """
-
-    def __init__(self, device_id: str):
-        self.device_id = device_id
-
-    @classmethod
-    def from_c(cls, c_device_list_elem: CData) -> "Device":
-        device_id = ffihelpers.c_string_to_str(c_device_list_elem.device_id)
-        return cls(device_id)
-
-
 class InputStream(typing_extensions.Protocol):
     async def read(self, size: int) -> bytes:
         ...
@@ -913,29 +897,6 @@ class Tanker:
         c_str = ffi.cast("char*", c_voidp)
         res = ffihelpers.c_string_to_str(c_str)
         tankerlib.tanker_free_buffer(c_str)
-        return res
-
-    async def get_device_list(self) -> List[Device]:
-        """Get the list of devices owned by the current user
-
-        :returns: a list of :py:class`Device` instances
-        """
-        warnings.warn(
-            'The "get_device_list" method is deprecated, it will be removed in the future',
-            DeprecationWarning,
-        )
-
-        c_future = tankerlib.tanker_get_device_list(self.c_tanker)
-        c_voidp = await ffihelpers.handle_tanker_future(c_future)
-        c_list = ffi.cast("tanker_device_list_t*", c_voidp)
-        count = c_list.count
-        c_devices = c_list.devices
-        res = []
-        for i in range(count):
-            c_device_list_elem = c_devices[i]
-            device_description = Device.from_c(c_device_list_elem)
-            res.append(device_description)
-        tankerlib.tanker_free_device_list(c_list)
         return res
 
     def get_resource_id(self, encrypted_data: bytes) -> str:

@@ -805,17 +805,6 @@ async def test_add_device(tmp_path: Path, app: Dict[str, str]) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_device_list(tmp_path: Path, app: Dict[str, str]) -> None:
-    _, laptop, phone = await create_two_devices(tmp_path, app)
-    laptop_id = await laptop.device_id()
-    phone_id = await phone.device_id()
-
-    actual_list = await phone.get_device_list()
-    actual_ids = [x.device_id for x in actual_list]
-    assert set(actual_ids) == {laptop_id, phone_id}
-
-
-@pytest.mark.asyncio
 async def test_must_verify_identity_on_second_device(
     tmp_path: Path, app: Dict[str, str]
 ) -> None:
