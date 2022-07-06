@@ -394,8 +394,6 @@ tanker_future_t* tanker_set_oidc_test_nonce(tanker_t* tanker, char const* nonce)
 
 enum tanker_status tanker_status(tanker_t* tanker);
 
-tanker_future_t* tanker_device_id(tanker_t* session);
-
 tanker_future_t* tanker_generate_verification_key(tanker_t* session);
 
 tanker_future_t* tanker_set_verification_method(

@@ -278,8 +278,6 @@ async def test_start_new_account(tmp_path: Path, app: Dict[str, str]) -> None:
     key = await tanker.generate_verification_key()
     await tanker.register_identity(VerificationKeyVerification(key))
     assert tanker.status == TankerStatus.READY
-    device_id = await tanker.device_id()
-    assert device_id
     await tanker.stop()
     assert tanker.status == TankerStatus.STOPPED
 
