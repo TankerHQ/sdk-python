@@ -116,7 +116,10 @@ def deploy() -> None:
     env["TWINE_USERNAME"] = env["GITLAB_USERNAME"]
 
     wheels_path = Path.cwd() / "dist"
-    for wheel in wheels_path.glob("tankersdk-*.whl"):
+    wheels = list(wheels_path.glob("tankersdk-*.whl"))
+    if len(wheels) == 0:
+        raise Exception("no wheel found")
+    for wheel in wheels:
         # fmt: off
         tankerci.run(
             "poetry", "run",

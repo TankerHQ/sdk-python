@@ -2,14 +2,15 @@ import asyncio
 import os
 import warnings
 import weakref
-from enum import Enum
-from typing import Any, List, Optional, cast
+from enum import Enum, IntEnum
+from typing import Any, List, Optional, Union, cast
 
 import typing_extensions
 from _tanker import ffi
 from _tanker import lib as tankerlib
 
 from .error import Error as TankerError
+from .error import InvalidArgument
 from .ffi_helpers import CCharList, CData, FFIHelpers, OptionalStrList
 from .version import __version__
 
@@ -42,6 +43,13 @@ class Status(Enum):
     READY = 1
     IDENTITY_REGISTRATION_NEEDED = 2
     IDENTITY_VERIFICATION_NEEDED = 3
+
+
+class Padding(IntEnum):
+    """Special constants for the padding_step encryption option"""
+
+    AUTO = 0
+    OFF = 1
 
 
 class VerificationMethodType(Enum):
@@ -240,10 +248,23 @@ class EncryptionOptions:
         share_with_users: Optional[List[str]] = None,
         share_with_groups: Optional[List[str]] = None,
         share_with_self: bool = True,
+        padding_step: Optional[Union[int, Padding]] = None,
     ):
         self.share_with_users = share_with_users
         self.share_with_groups = share_with_groups
         self.share_with_self = share_with_self
+
+        if not (
+            padding_step is None
+            or type(padding_step) is Padding  # noqa: W503
+            or (padding_step >= 2 and type(padding_step) is int)  # noqa: W503
+        ):
+            raise InvalidArgument(
+                f"Invalid padding step. Got: `{padding_step}`, use "
+                + "Padding.{OFF|AUTO} or an integer >= 2 instead."  # noqa: W503
+            )
+
+        self.padding_step = padding_step
 
 
 class CEncryptionOptions:
@@ -255,19 +276,22 @@ class CEncryptionOptions:
         share_with_users: OptionalStrList = None,
         share_with_groups: OptionalStrList = None,
         share_with_self: bool = True,
+        padding_step: Optional[int] = None,
     ) -> None:
         self.user_list = CCharList(share_with_users, ffi, tankerlib)
         self.group_list = CCharList(share_with_groups, ffi, tankerlib)
+        self.padding_step = ffi.cast("uint32_t", padding_step or Padding.AUTO)
 
         self._c_data = ffi.new(
             "tanker_encrypt_options_t *",
             {
-                "version": 3,
+                "version": 4,
                 "share_with_users": self.user_list.data,
                 "nb_users": self.user_list.size,
                 "share_with_groups": self.group_list.data,
                 "nb_groups": self.group_list.size,
                 "share_with_self": share_with_self,
+                "padding_step": self.padding_step,
             },
         )
 
@@ -554,7 +578,9 @@ class EncryptionSession:
         """Encrypt `clear_data` with the session"""
         c_clear_buffer = ffihelpers.bytes_to_c_buffer(clear_data)  # type: CData
         clear_size = len(c_clear_buffer)
-        size = tankerlib.tanker_encryption_session_encrypted_size(clear_size)
+        size = tankerlib.tanker_encryption_session_encrypted_size(
+            self.c_session, clear_size
+        )
         c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
         c_future = tankerlib.tanker_encryption_session_encrypt(
             self.c_session, c_encrypted_buffer, c_clear_buffer, clear_size
@@ -785,12 +811,15 @@ class Tanker:
                 share_with_users=options.share_with_users,
                 share_with_groups=options.share_with_groups,
                 share_with_self=options.share_with_self,
+                padding_step=options.padding_step,
             )
         else:
             c_encrypt_options = CEncryptionOptions()
         c_clear_buffer = ffihelpers.bytes_to_c_buffer(clear_data)  # type: CData
         clear_size = len(c_clear_buffer)
-        size = tankerlib.tanker_encrypted_size(clear_size)
+        size = tankerlib.tanker_encrypted_size(
+            clear_size, c_encrypt_options.padding_step
+        )
         c_encrypted_buffer = ffi.new("uint8_t[%i]" % size)
         c_future = tankerlib.tanker_encrypt(
             self.c_tanker,
@@ -835,6 +864,7 @@ class Tanker:
                 share_with_users=options.share_with_users,
                 share_with_groups=options.share_with_groups,
                 share_with_self=options.share_with_self,
+                padding_step=options.padding_step,
             )
         else:
             c_encrypt_options = CEncryptionOptions()
@@ -1085,6 +1115,7 @@ class Tanker:
                 share_with_users=options.share_with_users,
                 share_with_groups=options.share_with_groups,
                 share_with_self=options.share_with_self,
+                padding_step=options.padding_step,
             )
         else:
             c_encrypt_options = CEncryptionOptions()

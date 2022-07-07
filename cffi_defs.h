@@ -353,6 +353,7 @@ struct tanker_encrypt_options
   char const* const* share_with_groups;
   uint32_t nb_groups;
   bool share_with_self;
+  uint32_t padding_step;
 };
 
 struct tanker_sharing_options
@@ -420,7 +421,7 @@ tanker_future_t* tanker_set_verification_method(
 
 tanker_future_t* tanker_get_verification_methods(tanker_t* session);
 
-uint64_t tanker_encrypted_size(uint64_t clear_size);
+uint64_t tanker_encrypted_size(uint64_t clear_size, uint32_t padding_step);
 
 tanker_expected_t* tanker_decrypted_size(uint8_t const* encrypted_data,
                                          uint64_t encrypted_size);
@@ -516,7 +517,8 @@ tanker_future_t* tanker_encryption_session_open(
 tanker_future_t* tanker_encryption_session_close(
     tanker_encryption_session_t* session);
 
-uint64_t tanker_encryption_session_encrypted_size(uint64_t clear_size);
+uint64_t tanker_encryption_session_encrypted_size(
+    tanker_encryption_session_t* session, uint64_t clear_size);
 
 tanker_expected_t* tanker_encryption_session_get_resource_id(
     tanker_encryption_session_t* session);
