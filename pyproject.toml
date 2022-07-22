@@ -43,7 +43,7 @@ pytest-cov = "3.0.0"
 pytest-asyncio = "0.18.3"
 pytest-xdist = "2.5.0"
 tankeradminsdk = { version = "^3.0.0", source = "gitlab" }
-tankersdk-identity = "3.2.0"
+tankersdk-identity = "3.3.0"
 
 
 [[tool.poetry.source]]
