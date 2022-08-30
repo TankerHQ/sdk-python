@@ -3,15 +3,15 @@ include:
   ref: 2022-08-19-248
   file: /common.yml
 
+variables:
+  SDK_NATIVE_LATEST_CONAN_REFERENCE: tanker/latest-stable@
+
 ############
 # Workflow #
 ############
 
 workflow:
   rules:
-    - if: $SDK_NATIVE_LATEST_CONAN_REFERENCE == null
-      variables:
-        SDK_NATIVE_LATEST_CONAN_REFERENCE: tanker/latest-stable@
     # web pipelines for releases only
     - if: $CI_PIPELINE_SOURCE == "web" && $SDK_PYTHON_RELEASE_VERSION !~ /\A\d+\.\d+\.\d+((a|b)\d+)?\z/
       when: never
