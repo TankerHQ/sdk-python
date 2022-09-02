@@ -32,7 +32,7 @@ flake8-comprehensions = "3.10.0"
 flake8-docstrings = "1.6.0"
 isort = "5.10.1"
 mypy = "0.961"
-safety = "1.10.3"
+safety = "2.1.1"
 
 # tests
 faker = "13.14.0"
