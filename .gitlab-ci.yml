@@ -390,8 +390,7 @@ safety:
   extends:
     - .rules/nightly
   script:
-    # ignore coverage package beta release recommendation
-    - poetry run safety check -i 41002 --full-report
+    - poetry run safety check --full-report
   tags: !reference [.tags/linux, tags]
 
 #####################
