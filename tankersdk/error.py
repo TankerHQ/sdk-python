@@ -18,7 +18,7 @@ class ErrorCode(Enum):
     EXPIRED_VERIFICATION = 10
 
     IO_ERROR = 11
-    DEVICE_REVOKED = 12
+    # DEVICE_REVOKED = 12
 
     CONFLICT = 13
     UPGRADE_REQUIRED = 14
@@ -81,11 +81,6 @@ class ExpiredVerification(Error):
         super().__init__(message, ErrorCode.EXPIRED_VERIFICATION)
 
 
-class DeviceRevoked(Error):
-    def __init__(self, message: str):
-        super().__init__(message, ErrorCode.DEVICE_REVOKED)
-
-
 class Conflict(Error):
     def __init__(self, message: str):
         super().__init__(message, ErrorCode.CONFLICT)
@@ -113,7 +108,6 @@ def make_error(message: str, code: ErrorCode) -> Error:
         ErrorCode.INVALID_VERIFICATION: InvalidVerification,
         ErrorCode.TOO_MANY_ATTEMPTS: TooManyAttempts,
         ErrorCode.EXPIRED_VERIFICATION: ExpiredVerification,
-        ErrorCode.DEVICE_REVOKED: DeviceRevoked,
         ErrorCode.CONFLICT: Conflict,
         ErrorCode.UPGRADE_REQUIRED: UpgradeRequired,
         ErrorCode.IDENTITY_ALREADY_ATTACHED: IdentityAlreadyAttached,

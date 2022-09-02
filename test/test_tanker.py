@@ -278,8 +278,6 @@ async def test_start_new_account(tmp_path: Path, app: Dict[str, str]) -> None:
     key = await tanker.generate_verification_key()
     await tanker.register_identity(VerificationKeyVerification(key))
     assert tanker.status == TankerStatus.READY
-    device_id = await tanker.device_id()
-    assert device_id
     await tanker.stop()
     assert tanker.status == TankerStatus.STOPPED
 
@@ -802,19 +800,6 @@ async def test_add_device(tmp_path: Path, app: Dict[str, str]) -> None:
     assert phone.status == TankerStatus.READY
     await laptop.stop()
     await phone.stop()
-
-
-@pytest.mark.asyncio
-async def test_get_device_list(tmp_path: Path, app: Dict[str, str]) -> None:
-    _, laptop, phone = await create_two_devices(tmp_path, app)
-    laptop_id = await laptop.device_id()
-    phone_id = await phone.device_id()
-
-    actual_list = await phone.get_device_list()
-    actual_ids = [x.device_id for x in actual_list]
-    assert set(actual_ids) == {laptop_id, phone_id}
-    revoked = [x for x in actual_list if x.is_revoked]
-    assert len(revoked) == 0
 
 
 @pytest.mark.asyncio
