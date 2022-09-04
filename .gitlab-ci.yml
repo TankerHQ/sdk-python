@@ -1,10 +1,10 @@
 include:
   project: TankerHQ/gitlab-ci-files
-  ref: 2022-08-19-248
   file: /common.yml
+  ref: 2022-09-05-258
 
 variables:
-  SDK_NATIVE_LATEST_CONAN_REFERENCE: tanker/latest-stable@
+  SDK_NATIVE_CONAN_REFERENCE: tanker/latest-stable@
 
 ############
 # Workflow #
@@ -112,8 +112,8 @@ lint:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
   tags: !reference [.tags/linux, tags]
 
 .check/deployed-native/macos/x86_64:
@@ -122,8 +122,8 @@ lint:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
   tags: !reference [.tags/macos/x86_64, tags]
 
 .check/deployed-native/macos/arm:
@@ -132,8 +132,8 @@ lint:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
   tags: !reference [.tags/macos/arm, tags]
 
 
@@ -193,8 +193,8 @@ check/deployed-native/windows:
     - .coverage
     - .rules/deployed-native
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile windows-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile windows-x86_64
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile windows-x86_64
+    - poetry run python run-ci.py --isolate-conan-user-home build --test --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile windows-x86_64
   tags: !reference [.tags/windows, tags]
 
 
@@ -408,8 +408,8 @@ safety:
   extends:
     - .rules/build-wheel
   script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=deployed --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE --profile $CONAN_PROFILE
-    - poetry run python run-ci.py --isolate-conan-user-home build --profile $CONAN_PROFILE --release $SDK_PYTHON_RELEASE_VERSION --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_LATEST_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=deployed --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile $CONAN_PROFILE
+    - poetry run python run-ci.py --isolate-conan-user-home build --profile $CONAN_PROFILE --release $SDK_PYTHON_RELEASE_VERSION --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE
   artifacts:
     paths:
       - dist
