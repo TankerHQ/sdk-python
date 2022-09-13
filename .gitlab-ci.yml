@@ -30,8 +30,10 @@ workflow:
 
 default:
   before_script:
+    - poetry -V
     - poetry run python -m pip install --upgrade pip
     - poetry install --no-root
+    - poetry run python --version
   image: registry.gitlab.com/tankerhq/docker/sdk-python:latest
 
 ##########
@@ -60,19 +62,19 @@ stages:
 
 .python3.7:
   variables:
-    PYENV_VERSION: 3.7.12
+    PYENV_VERSION: 3.7.13
 
 .python3.8:
   variables:
-    PYENV_VERSION: 3.8.12
+    PYENV_VERSION: 3.8.13
 
 .python3.9:
   variables:
-    PYENV_VERSION: 3.9.9
+    PYENV_VERSION: 3.9.13
 
 .python3.10:
   variables:
-    PYENV_VERSION: 3.10.1
+    PYENV_VERSION: 3.10.6
 
 #############################
 # Default settings override #
