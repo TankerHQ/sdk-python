@@ -1549,11 +1549,6 @@ async def test_oidc_verification(
 async def test_register_fails_with_preverified_email(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        preverified_verification=True,
-    )
-
     fake = Faker()
     email = fake.email(domain="tanker.io")
 
@@ -1573,11 +1568,6 @@ async def test_register_fails_with_preverified_email(
 async def test_register_fails_with_preverified_phone_number(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        preverified_verification=True,
-    )
-
     phone_number = "+33639982233"
 
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
@@ -1596,11 +1586,6 @@ async def test_register_fails_with_preverified_phone_number(
 async def test_verify_fails_with_preverified_email(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        preverified_verification=True,
-    )
-
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
@@ -1631,11 +1616,6 @@ async def test_verify_fails_with_preverified_email(
 async def test_verify_fails_with_preverified_phone_number(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        preverified_verification=True,
-    )
-
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
     laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
@@ -1667,11 +1647,6 @@ async def test_verify_fails_with_preverified_phone_number(
 async def test_set_verification_method_with_preverified_email(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        preverified_verification=True,
-    )
-
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
@@ -1720,11 +1695,6 @@ async def test_set_verification_method_with_preverified_email(
 async def test_set_verification_method_with_preverified_phone_number(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        preverified_verification=True,
-    )
-
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
     laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
