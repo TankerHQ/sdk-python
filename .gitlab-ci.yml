@@ -258,21 +258,29 @@ check/native-from-sources/macos/x86_64/3.7:
   extends:
     - .check/native-from-sources/macos/x86_64
     - .python3.7
+  variables:
+    PYENV_VERSION: 3.7.13
 
 check/native-from-sources/macos/x86_64/3.8:
   extends:
     - .check/native-from-sources/macos/x86_64
     - .python3.8
+  variables:
+    PYENV_VERSION: 3.8.13
 
 check/native-from-sources/macos/x86_64/3.9:
   extends:
     - .check/native-from-sources/macos/x86_64
     - .python3.9
+  variables:
+    PYENV_VERSION: 3.9.13
 
 check/native-from-sources/macos/x86_64/3.10:
   extends:
     - .check/native-from-sources/macos/x86_64
     - .python3.10
+  variables:
+    PYENV_VERSION: 3.10.6
 
 check/native-from-sources/macos/arm/3.9:
   extends:
@@ -352,21 +360,29 @@ check/downstream/macos/x86_64/3.7:
   extends:
     - .check/downstream/macos/x86_64
     - .python3.7
+  variables:
+    PYENV_VERSION: 3.7.13
 
 check/downstream/macos/x86_64/3.8:
   extends:
     - .check/downstream/macos/x86_64
     - .python3.8
+  variables:
+    PYENV_VERSION: 3.8.13
 
 check/downstream/macos/x86_64/3.9:
   extends:
     - .check/downstream/macos/x86_64
     - .python3.9
+  variables:
+    PYENV_VERSION: 3.9.13
 
 check/downstream/macos/x86_64/3.10:
   extends:
     - .check/downstream/macos/x86_64
     - .python3.10
+  variables:
+    PYENV_VERSION: 3.10.6
 
 check/downstream/macos/arm/3.9:
   extends:
@@ -470,21 +486,29 @@ build-wheel/macos/x86_64/3.7:
   extends:
     - .build-wheel/macos/x86_64
     - .python3.7
+  variables:
+    PYENV_VERSION: 3.7.13
 
 build-wheel/macos/x86_64/3.8:
   extends:
     - .build-wheel/macos/x86_64
     - .python3.8
+  variables:
+    PYENV_VERSION: 3.8.13
 
 build-wheel/macos/x86_64/3.9:
   extends:
     - .build-wheel/macos/x86_64
     - .python3.9
+  variables:
+    PYENV_VERSION: 3.9.13
 
 build-wheel/macos/x86_64/3.10:
   extends:
     - .build-wheel/macos/x86_64
     - .python3.10
+  variables:
+    PYENV_VERSION: 3.10.6
 
 build-wheel/macos/arm/3.9:
   extends:
