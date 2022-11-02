@@ -157,21 +157,29 @@ check/deployed-native/macos/x86_64/3.7:
   extends:
     - .check/deployed-native/macos/x86_64
     - .python3.7
+  variables:
+    PYENV_VERSION: 3.7.13
 
 check/deployed-native/macos/x86_64/3.8:
   extends:
     - .check/deployed-native/macos/x86_64
     - .python3.8
+  variables:
+    PYENV_VERSION: 3.8.13
 
 check/deployed-native/macos/x86_64/3.9:
   extends:
     - .check/deployed-native/macos/x86_64
     - .python3.9
+  variables:
+    PYENV_VERSION: 3.9.13
 
 check/deployed-native/macos/x86_64/3.10:
   extends:
     - .check/deployed-native/macos/x86_64
     - .python3.10
+  variables:
+    PYENV_VERSION: 3.10.6
 
 check/deployed-native/macos/arm/3.9:
   extends:
