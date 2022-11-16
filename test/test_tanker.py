@@ -139,7 +139,7 @@ async def test_tanker_start_invalid_path(app: Dict[str, str]) -> None:
 
 @pytest.mark.asyncio
 async def test_tanker_enroll_user_fails_with_passphrase(
-        app: Dict[str, str], admin: Admin
+    app: Dict[str, str], admin: Admin
 ) -> None:
     admin.update_app(
         app["id"],
@@ -161,7 +161,7 @@ async def test_tanker_enroll_user_fails_with_passphrase(
 
 @pytest.mark.asyncio
 async def test_tanker_enroll_user_fails_with_email(
-        app: Dict[str, str], admin: Admin
+    app: Dict[str, str], admin: Admin
 ) -> None:
     admin.update_app(
         app["id"],
@@ -186,7 +186,7 @@ async def test_tanker_enroll_user_fails_with_email(
 
 @pytest.mark.asyncio
 async def test_tanker_enroll_user_fails_with_phone_number(
-        app: Dict[str, str], admin: Admin
+    app: Dict[str, str], admin: Admin
 ) -> None:
     admin.update_app(
         app["id"],
@@ -210,7 +210,7 @@ async def test_tanker_enroll_user_fails_with_phone_number(
 
 @pytest.mark.asyncio
 async def test_tanker_enroll_user_with_preverified_methods(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     admin.update_app(
         app["id"],
@@ -284,7 +284,7 @@ async def test_start_new_account(tmp_path: Path, app: Dict[str, str]) -> None:
 
 @pytest.mark.asyncio
 async def test_start_identity_incorrect_format(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     with pytest.raises(error.InvalidArgument):
@@ -346,10 +346,10 @@ class FailingStream:
 class TestStreams:
     @pytest.mark.asyncio
     async def test_async_read_write_by_chunks(
-            self, tmp_path: Path, app: Dict[str, str]
+        self, tmp_path: Path, app: Dict[str, str]
     ) -> None:
         alice = await create_user_session(tmp_path, app)
-        chunk_size = 1024 ** 2
+        chunk_size = 1024**2
         message = bytearray(
             3 * chunk_size + 2
         )  # three big chunks plus a little something
@@ -368,10 +368,10 @@ class TestStreams:
 
     @pytest.mark.asyncio
     async def test_async_read_in_one_go(
-            self, tmp_path: Path, app: Dict[str, str]
+        self, tmp_path: Path, app: Dict[str, str]
     ) -> None:
         alice = await create_user_session(tmp_path, app)
-        chunk_size = 1024 ** 2
+        chunk_size = 1024**2
         message = bytearray(
             3 * chunk_size + 2
         )  # three big chunks plus a little something
@@ -406,16 +406,16 @@ class TestStreams:
 
     @pytest.mark.asyncio
     async def test_encrypt_with_padding(
-            self, tmp_path: Path, app: Dict[str, str]
+        self, tmp_path: Path, app: Dict[str, str]
     ) -> None:
         alice = await create_user_session(tmp_path, app)
-        chunk_size = 1024 ** 2
+        chunk_size = 1024**2
         message = bytearray(
             3 * chunk_size + 2
         )  # three big chunks plus a little something
         input_stream = InMemoryAsyncStream(message)
         async with await alice.session.encrypt_stream(
-                input_stream, EncryptionOptions(padding_step=500)
+            input_stream, EncryptionOptions(padding_step=500)
         ) as encrypted_stream:
             encrypted_message = await encrypted_stream.read()
         assert len(encrypted_message) == 3 * 1024 * 1024 + 389
@@ -531,7 +531,7 @@ async def test_share_during_encrypt(tmp_path: Path, app: Dict[str, str]) -> None
 
 @pytest.mark.asyncio
 async def test_share_during_encrypt_without_self(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
@@ -568,7 +568,7 @@ async def test_postponed_share(tmp_path: Path, app: Dict[str, str]) -> None:
 
 
 async def check_share_with_group_works(
-        alice: User, group_id: str, members: List[User], non_members: List[User] = []
+    alice: User, group_id: str, members: List[User], non_members: List[User] = []
 ) -> None:
     message = b"Hi, guys"
     encrypted = await alice.session.encrypt(
@@ -628,7 +628,7 @@ async def test_update_group_empty(tmp_path: Path, app: Dict[str, str]) -> None:
 
 @pytest.mark.asyncio
 async def test_encryption_session_resource_id_matches_ciphertext(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     message = b"Henri-Robert-Marcel"
@@ -643,7 +643,7 @@ async def test_encryption_session_resource_id_matches_ciphertext(
 
 @pytest.mark.asyncio
 async def test_share_with_encryption_session(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
@@ -661,7 +661,7 @@ async def test_share_with_encryption_session(
 
 @pytest.mark.asyncio
 async def test_share_with_encryption_session_without_self(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     bob = await create_user_session(tmp_path, app)
@@ -689,7 +689,7 @@ ENCRYPTION_SESSION_PADDED_OVERHEAD = ENCRYPTION_SESSION_OVERHEAD + 1
 
 @pytest.mark.asyncio
 async def test_encryption_session_auto_padding_by_default(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     message = b"my clear data is clear!"
@@ -705,7 +705,7 @@ async def test_encryption_session_auto_padding_by_default(
 
 @pytest.mark.asyncio
 async def test_encryption_session_auto_padding(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     message = b"my clear data is clear!"
@@ -723,7 +723,7 @@ async def test_encryption_session_auto_padding(
 
 @pytest.mark.asyncio
 async def test_encryption_session_no_padding(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     message = b"Ceci n'est pas un test"
@@ -740,7 +740,7 @@ async def test_encryption_session_no_padding(
 
 @pytest.mark.asyncio
 async def test_encryption_session_padding_step(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice = await create_user_session(tmp_path, app)
     message = b"Ceci n'est pas un test"
@@ -759,7 +759,7 @@ async def test_encryption_session_padding_step(
 @pytest.mark.asyncio
 async def test_encryption_session_streams(tmp_path: Path, app: Dict[str, str]) -> None:
     alice = await create_user_session(tmp_path, app)
-    chunk_size = 1024 ** 2
+    chunk_size = 1024**2
     message = bytearray(3 * chunk_size + 2)  # three big chunks plus a little something
     input_stream = InMemoryAsyncStream(message)
     async with await alice.session.create_encryption_session() as enc_session:
@@ -771,7 +771,7 @@ async def test_encryption_session_streams(tmp_path: Path, app: Dict[str, str]) -
 
 
 async def create_two_devices(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> Tuple[str, Tanker, Tanker]:
     fake = Faker()
     passphrase = "this is my secure passphrase"
@@ -803,7 +803,7 @@ async def test_add_device(tmp_path: Path, app: Dict[str, str]) -> None:
 
 @pytest.mark.asyncio
 async def test_must_verify_identity_on_second_device(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
@@ -826,7 +826,7 @@ async def test_must_verify_identity_on_second_device(
 
 @pytest.mark.asyncio
 async def test_using_verification_key_on_second_device(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
@@ -1040,7 +1040,7 @@ async def set_up_preshare(tmp_path: Path, app: Dict[str, str]) -> Tuple[User, Pr
 
 @pytest.mark.asyncio
 async def test_cannot_decrypt_if_provisional_identity_not_attached(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
@@ -1052,7 +1052,7 @@ async def test_cannot_decrypt_if_provisional_identity_not_attached(
 
 
 async def share_and_attach_provisional_identity(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> Tuple[PreUser, bytes, bytes]:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
@@ -1076,7 +1076,7 @@ async def share_and_attach_provisional_identity(
 
 @pytest.mark.asyncio
 async def test_attach_provisional_identity_simple(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, app)
     decrypted = await bob.session.decrypt(encrypted)
@@ -1085,7 +1085,7 @@ async def test_attach_provisional_identity_simple(
 
 @pytest.mark.asyncio
 async def test_attach_provisional_identity_after_sign_out(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     bob, encrypted, message = await share_and_attach_provisional_identity(tmp_path, app)
     await bob.session.stop()
@@ -1106,7 +1106,7 @@ async def test_already_attached_identity(tmp_path: Path, app: Dict[str, str]) ->
 
 @pytest.mark.asyncio
 async def test_already_attached_identity_by_someone_else(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
 
@@ -1132,7 +1132,7 @@ async def test_already_attached_identity_by_someone_else(
 
 @pytest.mark.asyncio
 async def test_attach_provisional_identity_with_incorrect_code(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"I love you"
@@ -1146,7 +1146,7 @@ async def test_attach_provisional_identity_with_incorrect_code(
 
 @pytest.mark.asyncio
 async def test_update_verification_passphrase(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     old_passphrase = "plop"
     new_passphrase = "zzzz"
@@ -1303,7 +1303,7 @@ async def test_switch_from_e2e_passphrase(tmp_path: Path, app: Dict[str, str]) -
 
 @pytest.mark.asyncio
 async def test_cannot_switch_to_e2e_passphrase_without_e2e_switch_flag(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     old_passphrase = "alkalosis"
     new_passphrase = "acidosis"
@@ -1342,7 +1342,7 @@ async def test_create_group_with_prov_id(tmp_path: Path, app: Dict[str, str]) ->
 
 @pytest.mark.asyncio
 async def test_add_group_members_with_prov_id(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"Hi, this is for a group"
@@ -1363,7 +1363,7 @@ async def test_add_group_members_with_prov_id(
 
 @pytest.mark.asyncio
 async def test_remove_group_members_with_prov_id(
-        tmp_path: Path, app: Dict[str, str]
+    tmp_path: Path, app: Dict[str, str]
 ) -> None:
     alice, bob = await set_up_preshare(tmp_path, app)
     message = b"Hi, this is for a group"
@@ -1509,7 +1509,7 @@ def set_up_oidc(app: Dict[str, str], admin: Admin, user: str) -> Tuple[str, str]
 
 @pytest.mark.asyncio
 async def test_oidc_verification(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     _, oidc_id_token = set_up_oidc(app, admin, "martine")
 
@@ -1546,7 +1546,7 @@ async def test_oidc_verification(
 
 @pytest.mark.asyncio
 async def test_register_fails_with_preverified_email(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     fake = Faker()
     email = fake.email(domain="tanker.io")
@@ -1565,7 +1565,7 @@ async def test_register_fails_with_preverified_email(
 
 @pytest.mark.asyncio
 async def test_register_fails_with_preverified_phone_number(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     phone_number = "+33639982233"
 
@@ -1583,7 +1583,7 @@ async def test_register_fails_with_preverified_phone_number(
 
 @pytest.mark.asyncio
 async def test_verify_fails_with_preverified_email(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
@@ -1613,7 +1613,7 @@ async def test_verify_fails_with_preverified_email(
 
 @pytest.mark.asyncio
 async def test_verify_fails_with_preverified_phone_number(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
@@ -1644,7 +1644,7 @@ async def test_verify_fails_with_preverified_phone_number(
 
 @pytest.mark.asyncio
 async def test_set_verification_method_with_preverified_email(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     fake = Faker()
     laptop_path = tmp_path.joinpath("laptop")
@@ -1692,7 +1692,7 @@ async def test_set_verification_method_with_preverified_email(
 
 @pytest.mark.asyncio
 async def test_set_verification_method_with_preverified_phone_number(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     laptop_path = tmp_path.joinpath("laptop")
     laptop_path.mkdir(exist_ok=True)
@@ -1761,11 +1761,11 @@ def test_prehash_password_vector_2() -> None:
 
 
 def check_session_token(
-        app_id: str,
-        public_identity: str,
-        session_token: str,
-        method: str,
-        value: str = "",
+    app_id: str,
+    public_identity: str,
+    session_token: str,
+    method: str,
+    value: str = "",
 ) -> str:
     url = TEST_CONFIG["server"]["trustchaindUrl"] + "/verification/session-token"
     allowed_method = {"type": method}
@@ -1790,7 +1790,7 @@ def check_session_token(
 
 @pytest.mark.asyncio
 async def test_get_session_token_with_register_identity(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     passphrase = "50lbs bags of white rocks"
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
@@ -1814,7 +1814,7 @@ async def test_get_session_token_with_register_identity(
 
 @pytest.mark.asyncio
 async def test_get_session_token_with_verify_identity(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
@@ -1839,7 +1839,7 @@ async def test_get_session_token_with_verify_identity(
 
 @pytest.mark.asyncio
 async def test_get_session_token_with_set_verification_method_with_passphrase(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
@@ -1864,7 +1864,7 @@ async def test_get_session_token_with_set_verification_method_with_passphrase(
 
 @pytest.mark.asyncio
 async def test_get_session_token_with_set_verification_method_with_email(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
@@ -1894,7 +1894,7 @@ async def test_get_session_token_with_set_verification_method_with_email(
 
 @pytest.mark.asyncio
 async def test_get_session_token_with_set_verification_method_with_phone_number(
-        tmp_path: Path, app: Dict[str, str], admin: Admin
+    tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
     tanker = create_tanker(app["id"], persistent_path=tmp_path)
     identity = tankersdk_identity.create_identity(
