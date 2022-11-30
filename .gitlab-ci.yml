@@ -435,7 +435,7 @@ safety:
   extends:
     - .rules/nightly
   script:
-    - poetry run safety check --full-report
+    - poetry run safety check --full-report --ignore=51499
   tags: !reference [.tags/linux, tags]
 
 #####################
