@@ -418,7 +418,7 @@ class TestStreams:
             input_stream, EncryptionOptions(padding_step=500)
         ) as encrypted_stream:
             encrypted_message = await encrypted_stream.read()
-        assert len(encrypted_message) == 3146248
+        assert len(encrypted_message) == 3 * 1024 * 1024 + 389
         await alice.session.stop()
 
 
@@ -442,8 +442,8 @@ async def test_encrypt_decrypt_empty(tmp_path: Path, app: Dict[str, str]) -> Non
     await alice.session.stop()
 
 
-SIMPLE_ENCRYPTION_OVERHEAD = 17
-
+# Encryption format v10 overhead
+SIMPLE_ENCRYPTION_OVERHEAD = 49
 
 SIMPLE_PADDED_ENCRYPTION_OVERHEAD = SIMPLE_ENCRYPTION_OVERHEAD + 1
 
@@ -683,7 +683,6 @@ async def test_share_with_encryption_session_without_self(
 
 
 ENCRYPTION_SESSION_OVERHEAD = 57
-
 
 ENCRYPTION_SESSION_PADDED_OVERHEAD = ENCRYPTION_SESSION_OVERHEAD + 1
 
