@@ -22,7 +22,7 @@ typing_extensions = "^3.7.4"
 
 [tool.poetry.dev-dependencies]
 # CI/CD
-tankerci = { version = ">= 2022.12.4584", source = "gitlab" }
+tankerci = { version = ">= 2023.1.4627", source = "gitlab" }
 twine = "^3.2.0"
 
 # linters
@@ -36,7 +36,7 @@ safety = "2.2.0"
 
 # tests
 faker = "13.14.0"
-requests = "2.28.0"
+requests = "2.28.2"
 types-requests = "2.27.31"
 pytest = "7.2.0"
 pytest-cov = "4.0.0"
