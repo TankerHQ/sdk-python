@@ -32,7 +32,7 @@ default:
   before_script:
     - poetry -V
     - poetry run python -m pip install --upgrade pip
-    - poetry install --no-root --remove-untracked
+    - poetry install --no-root
     - poetry run python --version
   image: registry.gitlab.com/tankerhq/docker/sdk-python:latest
 
@@ -87,7 +87,7 @@ stages:
 .before-script/download-artifacts:
   before_script:
     - poetry run python -m pip install --upgrade pip
-    - poetry install --no-root --remove-untracked
+    - poetry install --no-root
     - poetry run python run-ci.py download-artifacts --project-id=$UPSTREAM_PROJECT_ID --pipeline-id=$UPSTREAM_PIPELINE_ID --job-name=$UPSTREAM_JOB_NAME
 
 ###############
@@ -435,6 +435,9 @@ safety:
   extends:
     - .rules/nightly
   script:
+    # poetry does not remove deps that aren't necessary anymore, that leads to
+    # false positive on safety's side
+    - poetry env remove (which python3) || true
     - poetry run safety check --full-report --ignore=51499
   tags: !reference [.tags/linux, tags]
 
