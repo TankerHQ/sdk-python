@@ -434,10 +434,15 @@ safety:
   stage: check
   extends:
     - .rules/nightly
-  script:
+  before_script:
+    - poetry -V
     # poetry does not remove deps that aren't necessary anymore, that leads to
     # false positive on safety's side
-    - poetry env remove (which python3) || true
+    - poetry env remove $(which python3) || true
+    - poetry run python -m pip install --upgrade pip
+    - poetry install --no-root
+    - poetry run python --version
+  script:
     - poetry run safety check --full-report --ignore=51499
   tags: !reference [.tags/linux, tags]
 
