@@ -15,7 +15,7 @@ Tanker Python SDK
 Overview
 --------
 
-The `Tanker SDK <https://tanker.io>`_ provides an easy-to-use SDK allowing you to protect your users'
+The Tanker SDK provides an easy-to-use SDK allowing you to protect your users'
 data.
 
 This repository only contains Python3 bindings. The core library can be found in the `TankerHQ/sdk-native GitHub project <https://github.com/TankerHQ/sdk-native>`_.
