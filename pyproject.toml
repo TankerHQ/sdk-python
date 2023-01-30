@@ -2,7 +2,7 @@
 name = "tankersdk"
 version = "0.0.0"
 description = "Python client fo Tanker"
-authors = ["Tanker team <tech@tanker.io>"]
+authors = ["Tanker team"]
 build = "build.py"
 
 include = [
