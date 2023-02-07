@@ -1,3 +1,5 @@
+<a href="#readme"><img src="https://raw.githubusercontent.com/TankerHQ/spec/master/img/tanker-logotype-blue-nomargin-350.png" alt="Tanker logo" width="175" /></a>
+
 [![License][https://img.shields.io/badge/License-Apache%202.0-blue.svg]][https://opensource.org/licenses/Apache-2.0]
 ![Supported versions][https://img.shields.io/badge/python-v3.7--v3.11-blue]
 [![Code style: black][https://img.shields.io/badge/code%20style-black-000000.svg]][https://github.com/psf/black]
@@ -20,7 +22,3 @@ open issues or pull requests on the [GitLab project](https://gitlab.com/TankerHQ
 ## Documentation
 
 See [API documentation](https://docs.tanker.io/latest/api/core/python).
-
-## License
-
-The Tanker Python SDK is licensed under the [Apache License, version 2.0](https://apache.org/licenses/LICENSE-2.0).
