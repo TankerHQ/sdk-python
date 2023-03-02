@@ -35,7 +35,7 @@ default:
     - poetry run python -m pip install --upgrade pip
     - poetry install --no-root
     - poetry run python --version
-  image: registry.gitlab.com/tankerhq/docker/sdk-python:latest
+  image: registry.gitlab.com/tankerhq/docker/native:latest
 
 ##########
 # Stages #
