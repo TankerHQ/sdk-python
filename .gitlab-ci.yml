@@ -117,17 +117,6 @@ check/deployed-native/macos/arm:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
   tags: !reference [.tags/macos/arm, tags]
 
-check/deployed-native/windows:
-  stage: check
-  extends:
-    - .coverage
-    - .rules/deployed-native
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile windows-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile windows-x86_64
-  tags: !reference [.tags/windows, tags]
-
-
 ## native from sources
 
 check/native-from-sources/linux:
@@ -159,16 +148,6 @@ check/native-from-sources/macos/arm:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile macos-armv8
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8
   tags: !reference [.tags/macos/arm, tags]
-
-check/native-from-sources/windows:
-  stage: check
-  extends:
-    - .coverage
-    - .rules/native-from-sources
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile windows-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile windows-x86_64
-  tags: !reference [.tags/compilation-windows, tags]
 
 ## downstream
 
@@ -203,17 +182,6 @@ check/downstream/macos/arm:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile macos-armv8
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8
   tags: !reference [.tags/macos/arm, tags]
-
-check/downstream/windows:
-  stage: check
-  extends:
-    - .before-script/download-artifacts
-    - .rules/check/downstream/windows
-  dependencies: []
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile windows-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile windows-x86_64
-  tags: !reference [.tags/windows, tags]
 
 safety:
   stage: check
@@ -273,13 +241,6 @@ build-wheel/macos/arm:
     CONAN_PROFILE: macos-armv8
   tags: !reference [.tags/macos/arm, tags]
 
-build-wheel/windows:
-  extends:
-    - .job/build-wheel
-  variables:
-    CONAN_PROFILE: windows-x86_64
-  tags: !reference [.tags/windows, tags]
-
 ################
 # deploy stage #
 ################
@@ -291,7 +252,6 @@ deploy:
   script:
     - poetry run python run-ci.py deploy
   needs:
-    - build-wheel/windows
     - build-wheel/linux
     - build-wheel/macos/x86_64
     - build-wheel/macos/arm
