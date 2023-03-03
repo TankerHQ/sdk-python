@@ -23,6 +23,7 @@ workflow:
     - when: always
       variables:
         CONAN_REMOTE: "artifactory"
+        PYENV_VERSION: "3.10"
 
 ###########
 # Default #
@@ -34,7 +35,7 @@ default:
     - poetry run python -m pip install --upgrade pip
     - poetry install --no-root
     - poetry run python --version
-  image: registry.gitlab.com/tankerhq/docker/sdk-python:latest
+  image: registry.gitlab.com/tankerhq/docker/native:latest
 
 ##########
 # Stages #
@@ -59,26 +60,6 @@ stages:
   rules:
     - !reference [.rules/web/auto, rules]
     - !reference [.rules/mr/manual, rules]
-
-.python3.7:
-  variables:
-    PYENV_VERSION: "3.7"
-
-.python3.8:
-  variables:
-    PYENV_VERSION: "3.8"
-
-.python3.9:
-  variables:
-    PYENV_VERSION: "3.9"
-
-.python3.10:
-  variables:
-    PYENV_VERSION: "3.10"
-
-.python3.11:
-  variables:
-    PYENV_VERSION: "3.11"
 
 #############################
 # Default settings override #
@@ -106,7 +87,7 @@ lint:
 
 ## deployed native
 
-.check/deployed-native/linux:
+check/deployed-native/linux:
   stage: check
   extends:
     - .coverage
@@ -116,7 +97,7 @@ lint:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
   tags: !reference [.tags/linux, tags]
 
-.check/deployed-native/macos/x86_64:
+check/deployed-native/macos/x86_64:
   stage: check
   extends:
     - .coverage
@@ -126,7 +107,7 @@ lint:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
   tags: !reference [.tags/macos/x86_64, tags]
 
-.check/deployed-native/macos/arm:
+check/deployed-native/macos/arm:
   stage: check
   extends:
     - .coverage
@@ -136,86 +117,9 @@ lint:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
   tags: !reference [.tags/macos/arm, tags]
 
-
-check/deployed-native/linux/3.7:
-  extends:
-    - .check/deployed-native/linux
-    - .python3.7
-
-check/deployed-native/linux/3.8:
-  extends:
-    - .check/deployed-native/linux
-    - .python3.8
-
-check/deployed-native/linux/3.9:
-  extends:
-    - .check/deployed-native/linux
-    - .python3.9
-
-check/deployed-native/linux/3.10:
-  extends:
-    - .check/deployed-native/linux
-    - .python3.10
-
-check/deployed-native/linux/3.11:
-  extends:
-    - .check/deployed-native/linux
-    - .python3.11
-
-check/deployed-native/macos/x86_64/3.7:
-  extends:
-    - .check/deployed-native/macos/x86_64
-    - .python3.7
-
-check/deployed-native/macos/x86_64/3.8:
-  extends:
-    - .check/deployed-native/macos/x86_64
-    - .python3.8
-
-check/deployed-native/macos/x86_64/3.9:
-  extends:
-    - .check/deployed-native/macos/x86_64
-    - .python3.9
-
-check/deployed-native/macos/x86_64/3.10:
-  extends:
-    - .check/deployed-native/macos/x86_64
-    - .python3.10
-
-check/deployed-native/macos/x86_64/3.11:
-  extends:
-    - .check/deployed-native/linux
-    - .python3.11
-
-check/deployed-native/macos/arm/3.9:
-  extends:
-    - .check/deployed-native/macos/arm
-    - .python3.9
-
-check/deployed-native/macos/arm/3.10:
-  extends:
-    - .check/deployed-native/macos/arm
-    - .python3.10
-
-check/deployed-native/macos/arm/3.11:
-  extends:
-    - .check/deployed-native/macos/arm
-    - .python3.11
-
-check/deployed-native/windows:
-  stage: check
-  extends:
-    - .coverage
-    - .rules/deployed-native
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile windows-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile windows-x86_64
-  tags: !reference [.tags/windows, tags]
-
-
 ## native from sources
 
-.check/native-from-sources/linux:
+check/native-from-sources/linux:
   stage: check
   extends:
     - .coverage
@@ -225,7 +129,7 @@ check/deployed-native/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64
   tags: !reference [.tags/compilation-linux, tags]
 
-.check/native-from-sources/macos/x86_64:
+check/native-from-sources/macos/x86_64:
   stage: check
   extends:
     - .coverage
@@ -235,7 +139,7 @@ check/deployed-native/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64
   tags: !reference [.tags/macos/x86_64, tags]
 
-.check/native-from-sources/macos/arm:
+check/native-from-sources/macos/arm:
   stage: check
   extends:
     - .coverage
@@ -245,84 +149,9 @@ check/deployed-native/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8
   tags: !reference [.tags/macos/arm, tags]
 
-check/native-from-sources/linux/3.7:
-  extends:
-    - .check/native-from-sources/linux
-    - .python3.7
-
-check/native-from-sources/linux/3.8:
-  extends:
-    - .check/native-from-sources/linux
-    - .python3.8
-
-check/native-from-sources/linux/3.9:
-  extends:
-    - .check/native-from-sources/linux
-    - .python3.9
-
-check/native-from-sources/linux/3.10:
-  extends:
-    - .check/native-from-sources/linux
-    - .python3.10
-
-check/native-from-sources/linux/3.11:
-  extends:
-    - .check/native-from-sources/linux
-    - .python3.11
-
-check/native-from-sources/macos/x86_64/3.7:
-  extends:
-    - .check/native-from-sources/macos/x86_64
-    - .python3.7
-
-check/native-from-sources/macos/x86_64/3.8:
-  extends:
-    - .check/native-from-sources/macos/x86_64
-    - .python3.8
-
-check/native-from-sources/macos/x86_64/3.9:
-  extends:
-    - .check/native-from-sources/macos/x86_64
-    - .python3.9
-
-check/native-from-sources/macos/x86_64/3.10:
-  extends:
-    - .check/native-from-sources/macos/x86_64
-    - .python3.10
-
-check/native-from-sources/macos/x86_64/3.11:
-  extends:
-    - .check/native-from-sources/macos/x86_64
-    - .python3.11
-
-check/native-from-sources/macos/arm/3.9:
-  extends:
-    - .check/native-from-sources/macos/arm
-    - .python3.9
-
-check/native-from-sources/macos/arm/3.10:
-  extends:
-    - .check/native-from-sources/macos/arm
-    - .python3.10
-
-check/native-from-sources/macos/arm/3.11:
-  extends:
-    - .check/native-from-sources/macos/arm
-    - .python3.11
-
-check/native-from-sources/windows:
-  stage: check
-  extends:
-    - .coverage
-    - .rules/native-from-sources
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile windows-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile windows-x86_64
-  tags: !reference [.tags/compilation-windows, tags]
-
 ## downstream
 
-.check/downstream/linux:
+check/downstream/linux:
   stage: check
   extends:
     - .before-script/download-artifacts
@@ -332,7 +161,7 @@ check/native-from-sources/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64
   tags: !reference [.tags/linux, tags]
 
-.check/downstream/macos/x86_64:
+check/downstream/macos/x86_64:
   stage: check
   extends:
     - .before-script/download-artifacts
@@ -343,7 +172,7 @@ check/native-from-sources/windows:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64
   tags: !reference [.tags/macos/x86_64, tags]
 
-.check/downstream/macos/arm:
+check/downstream/macos/arm:
   stage: check
   extends:
     - .before-script/download-artifacts
@@ -353,82 +182,6 @@ check/native-from-sources/windows:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile macos-armv8
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8
   tags: !reference [.tags/macos/arm, tags]
-
-check/downstream/linux/3.7:
-  extends:
-    - .check/downstream/linux
-    - .python3.7
-
-check/downstream/linux/3.8:
-  extends:
-    - .check/downstream/linux
-    - .python3.8
-
-check/downstream/linux/3.9:
-  extends:
-    - .check/downstream/linux
-    - .python3.9
-
-check/downstream/linux/3.10:
-  extends:
-    - .check/downstream/linux
-    - .python3.10
-
-check/downstream/linux/3.11:
-  extends:
-    - .check/downstream/linux
-    - .python3.11
-
-check/downstream/macos/x86_64/3.7:
-  extends:
-    - .check/downstream/macos/x86_64
-    - .python3.7
-
-check/downstream/macos/x86_64/3.8:
-  extends:
-    - .check/downstream/macos/x86_64
-    - .python3.8
-
-check/downstream/macos/x86_64/3.9:
-  extends:
-    - .check/downstream/macos/x86_64
-    - .python3.9
-
-check/downstream/macos/x86_64/3.10:
-  extends:
-    - .check/downstream/macos/x86_64
-    - .python3.10
-
-check/downstream/macos/x86_64/3.11:
-  extends:
-    - .check/downstream/macos/x86_64
-    - .python3.11
-
-check/downstream/macos/arm/3.9:
-  extends:
-    - .check/downstream/macos/arm
-    - .python3.9
-
-check/downstream/macos/arm/3.10:
-  extends:
-    - .check/downstream/macos/arm
-    - .python3.10
-
-check/downstream/macos/arm/3.11:
-  extends:
-    - .check/downstream/macos/arm
-    - .python3.11
-
-check/downstream/windows:
-  stage: check
-  extends:
-    - .before-script/download-artifacts
-    - .rules/check/downstream/windows
-  dependencies: []
-  script:
-    - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile windows-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile windows-x86_64
-  tags: !reference [.tags/windows, tags]
 
 safety:
   stage: check
@@ -467,98 +220,26 @@ safety:
     paths:
       - dist
 
-.build-wheel/linux:
+build-wheel/linux:
   extends:
     - .job/build-wheel
   variables:
     CONAN_PROFILE: linux-x86_64
   tags: !reference [.tags/linux, tags]
 
-.build-wheel/macos/x86_64:
+build-wheel/macos/x86_64:
   extends:
     - .job/build-wheel
   variables:
     CONAN_PROFILE: macos-x86_64
   tags: !reference [.tags/macos/x86_64, tags]
 
-.build-wheel/macos/arm:
+build-wheel/macos/arm:
   extends:
     - .job/build-wheel
   variables:
     CONAN_PROFILE: macos-armv8
   tags: !reference [.tags/macos/arm, tags]
-
-build-wheel/windows:
-  extends:
-    - .job/build-wheel
-  variables:
-    CONAN_PROFILE: windows-x86_64
-  tags: !reference [.tags/windows, tags]
-
-build-wheel/linux/3.7:
-  extends:
-    - .build-wheel/linux
-    - .python3.7
-
-build-wheel/linux/3.8:
-  extends:
-    - .build-wheel/linux
-    - .python3.8
-
-build-wheel/linux/3.9:
-  extends:
-    - .build-wheel/linux
-    - .python3.9
-
-build-wheel/linux/3.10:
-  extends:
-    - .build-wheel/linux
-    - .python3.10
-
-build-wheel/linux/3.11:
-  extends:
-    - .build-wheel/linux
-    - .python3.11
-
-build-wheel/macos/x86_64/3.7:
-  extends:
-    - .build-wheel/macos/x86_64
-    - .python3.7
-
-build-wheel/macos/x86_64/3.8:
-  extends:
-    - .build-wheel/macos/x86_64
-    - .python3.8
-
-build-wheel/macos/x86_64/3.9:
-  extends:
-    - .build-wheel/macos/x86_64
-    - .python3.9
-
-build-wheel/macos/x86_64/3.10:
-  extends:
-    - .build-wheel/macos/x86_64
-    - .python3.10
-
-build-wheel/macos/x86_64/3.11:
-  extends:
-    - .build-wheel/macos/x86_64
-    - .python3.11
-
-build-wheel/macos/arm/3.9:
-  extends:
-    - .build-wheel/macos/arm
-    - .python3.9
-
-build-wheel/macos/arm/3.10:
-  extends:
-    - .build-wheel/macos/arm
-    - .python3.10
-
-build-wheel/macos/arm/3.11:
-  extends:
-    - .build-wheel/macos/arm
-    - .python3.11
 
 ################
 # deploy stage #
@@ -571,20 +252,9 @@ deploy:
   script:
     - poetry run python run-ci.py deploy
   needs:
-    - build-wheel/windows
-    - build-wheel/linux/3.7
-    - build-wheel/linux/3.8
-    - build-wheel/linux/3.9
-    - build-wheel/linux/3.10
-    - build-wheel/linux/3.11
-    - build-wheel/macos/x86_64/3.7
-    - build-wheel/macos/x86_64/3.8
-    - build-wheel/macos/x86_64/3.9
-    - build-wheel/macos/x86_64/3.10
-    - build-wheel/macos/x86_64/3.11
-    - build-wheel/macos/arm/3.9
-    - build-wheel/macos/arm/3.10
-    - build-wheel/macos/arm/3.11
+    - build-wheel/linux
+    - build-wheel/macos/x86_64
+    - build-wheel/macos/arm
   release:
     description: sdk-python v$SDK_PYTHON_RELEASE_VERSION
     tag_name: v$SDK_PYTHON_RELEASE_VERSION
@@ -595,7 +265,7 @@ pages:
   extends:
     - .rules/push-master-or-feat
   needs:
-    - check/native-from-sources/linux/3.7
+    - check/native-from-sources/linux
   script:
     - mv coverage/ public/
   artifacts:
