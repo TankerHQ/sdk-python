@@ -183,10 +183,8 @@ check/downstream/macos/arm:
     - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8
   tags: !reference [.tags/macos/arm, tags]
 
-safety:
+.safety:
   stage: check
-  extends:
-    - .rules/nightly
   before_script:
     - poetry -V
     # poetry does not remove deps that aren't necessary anymore, that leads to
@@ -196,8 +194,18 @@ safety:
     - poetry install --no-root
     - poetry run python --version
   script:
-    - poetry run safety check --full-report --ignore=51499
+    - poetry run safety check --full-report
   tags: !reference [.tags/linux, tags]
+
+safety:
+  extends:
+    - .rules/nightly
+    - .safety
+
+safety/manual:
+  extends:
+    - .rules/mr/manual
+    - .safety
 
 #####################
 # build-wheel stage #
