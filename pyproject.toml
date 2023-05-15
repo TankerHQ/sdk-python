@@ -3,7 +3,6 @@ name = "tankersdk"
 version = "0.0.0"
 description = "Python client fo Tanker"
 authors = ["Tanker team"]
-build = "build.py"
 
 include = [
   "build_tanker.py",
@@ -45,6 +44,9 @@ pytest-xdist = "3.0.2"
 tankeradminsdk = { version = "^3.0.0", source = "gitlab" }
 tankersdk-identity = "3.3.0"
 
+[tool.poetry.build]
+generate-setup-file = true
+script = "build.py"
 
 [[tool.poetry.source]]
 name = "gitlab"
