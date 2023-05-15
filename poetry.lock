@@ -1616,14 +1616,14 @@ reference = "gitlab"
 
 [[package]]
 name = "tankerci"
-version = "2023.4.4717"
+version = "2023.5.4760"
 description = "Tanker CI library"
 category = "dev"
 optional = false
-python-versions = ">=3.10,<4.0"
+python-versions = ">=3.11,<4.0"
 files = [
-    {file = "tankerci-2023.4.4717-py3-none-any.whl", hash = "sha256:61841fb91ac6db1bc5d7b12d6e8d7e8f11e2d49205cb03e15978c2e7120d7ce1"},
-    {file = "tankerci-2023.4.4717.tar.gz", hash = "sha256:819d5f384719f866163670fe45206c0021525bfb8553006bc2fd5fd8ed8a9495"},
+    {file = "tankerci-2023.5.4760-py3-none-any.whl", hash = "sha256:464e6cf61b5eae35390c94d07796569e3c25e0859bed32db6ae54c188d98fd5a"},
+    {file = "tankerci-2023.5.4760.tar.gz", hash = "sha256:9f6c1eceff81422d7275b884cb2264d61a60cd237480ca7988b0a618cc3de92f"},
 ]
 
 [package.dependencies]

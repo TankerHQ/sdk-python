@@ -52,7 +52,7 @@ def prepare(
     )
 
 
-def build_wheel(profile: Profile, version: str, tanker_ref: str) -> None:
+def build_wheel(version: str) -> None:
     src_path = Path.cwd()
     tankerci.bump.bump_files(version)
     dist_path = src_path / "dist"
@@ -69,7 +69,7 @@ def build_wheel(profile: Profile, version: str, tanker_ref: str) -> None:
     # so that they can be found even when the working directory
     # changes, and we make sure *all* paths used in build_tanker.py
     # are absolute
-    tankerci.run("poetry", "build", env=env)
+    tankerci.run("poetry", "run", "python", "-m", "build", "--wheel", env=env)
     wheels = list(dist_path.glob("tankersdk-*.whl"))
     if len(wheels) != 1:
         raise Exception("multiple wheels found: {}".format(wheels))
@@ -98,12 +98,14 @@ def run_test() -> None:
     shutil.copytree(coverage_dir, dest_dir)
 
 
-def build(
-    profile: Profile, release_version: Optional[str], tanker_ref: str, test: bool
-) -> None:
+def build(release_version: Optional[str], test: bool) -> None:
+    # Installs the dependencies (and the pure-python part of the package, without the C extension)
     tankerci.run("poetry", "install", cwd=Path.cwd())
+    # Builds a local version of the package (a wheel) and installs it inside the poetry virtualenv
+    tankerci.run("poetry", "run", "pip", "install", ".", cwd=Path.cwd())
+
     if release_version:
-        build_wheel(profile, release_version, tanker_ref)
+        build_wheel(release_version)
     if test:
         run_test()
 
@@ -139,11 +141,8 @@ def main() -> None:
     subparsers = parser.add_subparsers(title="subcommands", dest="command")
 
     build_parser = subparsers.add_parser("build")
-    build_parser.add_argument("--profile", default="default", nargs="+")
-    build_parser.add_argument("--tanker-ref")
     build_parser.add_argument("--test", action="store_true")
     build_parser.add_argument("--release")
-    build_parser.add_argument("--remote", default="artifactory")
 
     prepare_parser = subparsers.add_parser("prepare")
     prepare_parser.add_argument(
@@ -183,8 +182,7 @@ def main() -> None:
             tankerci.conan.run("remove", "tanker/*", "--force")
 
     if command == "build":
-        with tankerci.conan.ConanContextManager([args.remote], conan_home=user_home):
-            build(Profile(args.profile), args.release, args.tanker_ref, args.test)
+        build(args.release, args.test)
     elif command == "prepare":
         with tankerci.conan.ConanContextManager([args.remote], conan_home=user_home):
             prepare(

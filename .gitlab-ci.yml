@@ -94,7 +94,7 @@ check/deployed-native/linux:
     - .rules/deployed-native
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/linux, tags]
 
 check/deployed-native/macos/x86_64:
@@ -104,7 +104,7 @@ check/deployed-native/macos/x86_64:
     - .rules/deployed-native
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/deployed-native/macos/arm:
@@ -114,7 +114,7 @@ check/deployed-native/macos/arm:
     - .rules/deployed-native
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/macos/arm, tags]
 
 ## native from sources
@@ -126,7 +126,7 @@ check/native-from-sources/linux:
     - .rules/native-from-sources
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile linux-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/compilation-linux, tags]
 
 check/native-from-sources/macos/x86_64:
@@ -136,7 +136,7 @@ check/native-from-sources/macos/x86_64:
     - .rules/native-from-sources
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile macos-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/native-from-sources/macos/arm:
@@ -146,7 +146,7 @@ check/native-from-sources/macos/arm:
     - .rules/native-from-sources
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile macos-armv8
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/macos/arm, tags]
 
 ## downstream
@@ -158,7 +158,7 @@ check/downstream/linux:
     - .rules/check/downstream/linux
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile linux-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile linux-x86_64
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/linux, tags]
 
 check/downstream/macos/x86_64:
@@ -169,7 +169,7 @@ check/downstream/macos/x86_64:
   dependencies: []
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile macos-x86_64
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-x86_64
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/downstream/macos/arm:
@@ -180,7 +180,7 @@ check/downstream/macos/arm:
   dependencies: []
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile macos-armv8
-    - poetry run python run-ci.py --isolate-conan-user-home build --test --profile macos-armv8
+    - poetry run python run-ci.py build --test
   tags: !reference [.tags/macos/arm, tags]
 
 .safety:
@@ -223,7 +223,7 @@ safety/manual:
     - .rules/build-wheel
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=deployed --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile $CONAN_PROFILE
-    - poetry run python run-ci.py --isolate-conan-user-home build --profile $CONAN_PROFILE --release $SDK_PYTHON_RELEASE_VERSION --remote $CONAN_REMOTE --tanker-ref $SDK_NATIVE_CONAN_REFERENCE
+    - poetry run python run-ci.py --isolate-conan-user-home build --release $SDK_PYTHON_RELEASE_VERSION
   artifacts:
     paths:
       - dist
