@@ -223,7 +223,7 @@ safety/manual:
     - .rules/build-wheel
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=deployed --tanker-ref $SDK_NATIVE_CONAN_REFERENCE --profile $CONAN_PROFILE
-    - poetry run python run-ci.py --isolate-conan-user-home build --release $SDK_PYTHON_RELEASE_VERSION
+    - poetry run python run-ci.py build --release $SDK_PYTHON_RELEASE_VERSION
   artifacts:
     paths:
       - dist
