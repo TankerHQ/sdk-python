@@ -69,7 +69,7 @@ def build_wheel(version: str) -> None:
     # so that they can be found even when the working directory
     # changes, and we make sure *all* paths used in build_tanker.py
     # are absolute
-    tankerci.run("poetry", "run", "python", "-m", "build", "--wheel", env=env)
+    tankerci.run("poetry", "run", "python", "-Im", "build", "--wheel", env=env)
     wheels = list(dist_path.glob("tankersdk-*.whl"))
     if len(wheels) != 1:
         raise Exception("multiple wheels found: {}".format(wheels))
@@ -100,7 +100,7 @@ def run_test() -> None:
 
 def build(release_version: Optional[str], test: bool) -> None:
     # Installs the dependencies (and the pure-python part of the package, without the C extension)
-    tankerci.run("poetry", "install", cwd=Path.cwd())
+    tankerci.run("poetry", "install", "--no-root", cwd=Path.cwd())
     # Builds a local version of the package (a wheel) and installs it inside the poetry virtualenv
     tankerci.run("poetry", "run", "pip", "install", ".", cwd=Path.cwd())
 
