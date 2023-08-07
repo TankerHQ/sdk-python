@@ -1,7 +1,7 @@
 [project]
 name = "tankersdk"
 version = "0.0.0"
-description = "Python client fo Tanker"
+description = "Python client for Tanker"
 authors = [{ name = "Tanker team" }]
 requires-python = ">=3.11"
 dependencies = [
@@ -13,7 +13,7 @@ dependencies = [
 [tool.poetry]
 name = "tankersdk"
 version = "0.0.0"
-description = "Python client fo Tanker"
+description = "Python client for Tanker"
 authors = ["Tanker team"]
 
 [tool.poetry.dependencies]
