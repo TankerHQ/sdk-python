@@ -9,6 +9,7 @@ regex = '''
   \.
   (?P<patch>\d+)
   (
+     \.
      (
      a(?P<alpha>\d+)
      |
