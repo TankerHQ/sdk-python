@@ -1,7 +1,7 @@
 include:
   project: TankerHQ/gitlab-ci-files
   file: /common.yml
-  ref: 2023-08-07-265
+  ref: tim/semver
 
 variables:
   SDK_NATIVE_CONAN_REFERENCE: tanker/latest-stable@
