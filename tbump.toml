@@ -9,12 +9,9 @@ regex = '''
   \.
   (?P<patch>\d+)
   (
-     \.
-     (
-     a(?P<alpha>\d+)
-     |
-     b(?P<beta>\d+)
-     )
+    -
+    (?P<lifecycle>alpha|beta)
+    (?P<release>\d+)
   )?
   )
   '''
