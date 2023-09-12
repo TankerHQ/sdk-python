@@ -65,6 +65,7 @@ def read_test_config() -> Dict[str, Any]:
         "clientId": assert_env("TANKER_OIDC_CLIENT_ID"),
         "clientSecret": assert_env("TANKER_OIDC_CLIENT_SECRET"),
         "provider": assert_env("TANKER_OIDC_PROVIDER"),
+        "issuer": assert_env("TANKER_OIDC_ISSUER"),
     }
     res["oidc"]["users"] = {
         "martine": {
@@ -1482,10 +1483,12 @@ def set_up_oidc(app: Dict[str, str], admin: Admin, user: str) -> Tuple[str, str]
     oidc_client_id = oidc_test_config["clientId"]
     oidc_client_secret = oidc_test_config["clientSecret"]
     oidc_provider = oidc_test_config["provider"]
+    oidc_issuer = oidc_test_config["issuer"]
     admin.update_app(
         app["id"],
         oidc_client_id=oidc_client_id,
-        oidc_provider=oidc_provider,
+        oidc_display_name=oidc_provider,
+        oidc_issuer=oidc_issuer,
     )
 
     test_users = oidc_test_config["users"]
