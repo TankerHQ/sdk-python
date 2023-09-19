@@ -163,6 +163,10 @@ class PhoneNumberVerificationMethod(VerificationMethod):
 class OidcIdTokenVerificationMethod(VerificationMethod):
     method_type = VerificationMethodType.OIDC_ID_TOKEN
 
+    def __init__(self, provider_id: str, provider_display_name: str):
+        self.provider_id = provider_id
+        self.provider_display_name = provider_display_name
+
 
 class PassphraseVerificationMethod(VerificationMethod):
     method_type = VerificationMethodType.PASSPHRASE
@@ -194,24 +198,29 @@ def verification_method_from_c(c_verification_method: CData) -> VerificationMeth
     method_type = VerificationMethodType(c_verification_method.verification_method_type)
     res: Optional[VerificationMethod] = None
     if method_type == VerificationMethodType.EMAIL:
-        c_email = c_verification_method.value
+        c_email = c_verification_method.value1
         res = EmailVerificationMethod(ffihelpers.c_string_to_str(c_email))
     elif method_type == VerificationMethodType.PASSPHRASE:
         res = PassphraseVerificationMethod()
     elif method_type == VerificationMethodType.VERIFICATION_KEY:
         res = VerificationKeyVerificationMethod()
     elif method_type == VerificationMethodType.OIDC_ID_TOKEN:
-        res = OidcIdTokenVerificationMethod()
+        c_provider_id = c_verification_method.value1
+        c_provider_display_name = c_verification_method.value2
+        res = OidcIdTokenVerificationMethod(
+            ffihelpers.c_string_to_str(c_provider_id),
+            ffihelpers.c_string_to_str(c_provider_display_name),
+        )
     elif method_type == VerificationMethodType.PHONE_NUMBER:
-        c_phone_number = c_verification_method.value
+        c_phone_number = c_verification_method.value1
         res = PhoneNumberVerificationMethod(ffihelpers.c_string_to_str(c_phone_number))
     elif method_type == VerificationMethodType.PREVERIFIED_EMAIL:
-        c_preverified_email = c_verification_method.value
+        c_preverified_email = c_verification_method.value1
         res = PreverifiedEmailVerificationMethod(
             ffihelpers.c_string_to_str(c_preverified_email)
         )
     elif method_type == VerificationMethodType.PREVERIFIED_PHONE_NUMBER:
-        c_preverified_phone_number = c_verification_method.value
+        c_preverified_phone_number = c_verification_method.value1
         res = PreverifiedPhoneNumberVerificationMethod(
             ffihelpers.c_string_to_str(c_preverified_phone_number)
         )

@@ -321,7 +321,8 @@ struct tanker_verification_method
   // enum cannot be binded to java as they do not have a fixed size.
   // It takes a value from tanker_verification_method_type:
   uint8_t verification_method_type;
-  char const* value;
+  char const* value1;
+  char const* value2;
 };
 
 struct tanker_verification_options
