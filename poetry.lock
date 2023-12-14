@@ -1642,13 +1642,13 @@ reference = "gitlab"
 
 [[package]]
 name = "tankersdk-identity"
-version = "3.3.1a1"
+version = "3.3.1"
 description = "Tanker identity library"
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "tankersdk_identity-3.3.1a1-py3-none-any.whl", hash = "sha256:8e21aa0bcb4188fe158cd1d2cfc385e673f5e468a9a84676a4d69d0fcaf56b69"},
-    {file = "tankersdk_identity-3.3.1a1.tar.gz", hash = "sha256:be8351d50a4e3e892c0fc175071b149b4974e991a1b150925c78cf7fde9dc0aa"},
+    {file = "tankersdk_identity-3.3.1-py3-none-any.whl", hash = "sha256:9b1a328368749b711a95ed0c40890eeb050b9a123b08848ea97f690d7d24badd"},
+    {file = "tankersdk_identity-3.3.1.tar.gz", hash = "sha256:d2d6a68994ec7f6e0846adb38d10fcbd9a4d4afba437e06ab2e33f7395f21ca9"},
 ]
 
 [package.dependencies]
@@ -1806,4 +1806,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "06d2ff966eea8bc84b46a7afc218528c0c3c6106a3aa5b04e5406c302a6759bf"
+content-hash = "03fefe275a7c54e8eab19d72e63b48a5146dee23c681fce44c1766ed7fa996a0"
