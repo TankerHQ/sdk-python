@@ -46,7 +46,7 @@ pytest-cov = "4.0.0"
 pytest-asyncio = "0.20.2"
 pytest-xdist = "3.0.2"
 tankeradminsdk = { version = "^4.0.0", source = "gitlab" }
-tankersdk-identity = "3.3.1a1"
+tankersdk-identity = "3.3.1"
 
 [tool.poetry.build]
 script = "poetry_do_not_build.py"
