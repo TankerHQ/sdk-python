@@ -189,7 +189,7 @@ check/downstream/macos/arm:
     - poetry -V
     # poetry does not remove deps that aren't necessary anymore, that leads to
     # false positive on safety's side
-    - poetry env remove $(which python3) || true
+    - poetry env remove $(poetry run which python3 | sed -e 's/^.*tanker\(.*\)\/bin.*$/tanker\1/') || true
     - poetry run python -m pip install --upgrade pip
     - poetry install --no-root
     - poetry run python --version
