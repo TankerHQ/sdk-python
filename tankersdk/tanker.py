@@ -62,6 +62,7 @@ class VerificationMethodType(Enum):
     PREVERIFIED_EMAIL = 6
     PREVERIFIED_PHONE_NUMBER = 7
     E2E_PASSPHRASE = 8
+    PREVERIFIED_OIDC = 9
 
 
 class Verification:
@@ -139,6 +140,14 @@ class PreverifiedPhoneNumberVerification(Verification):
         self.preverified_phone_number = preverified_phone_number
 
 
+class PreverifiedOIDCVerification(Verification):
+    method_type = VerificationMethodType.PREVERIFIED_OIDC
+
+    def __init__(self, subject: str, provider_id: str):
+        self.subject = subject
+        self.provider_id = provider_id
+
+
 class VerificationMethod:
     # Note: we want every subclass to have a 'mehod_type' attribute
     # of type VerificationMethodType, but there's no "good"
@@ -192,6 +201,9 @@ class PreverifiedPhoneNumberVerificationMethod(VerificationMethod):
 
 class E2ePassphraseVerificationMethod(VerificationMethod):
     method_type = VerificationMethodType.E2E_PASSPHRASE
+
+
+# PreverifiedOIDC is not exposed as a VerificationMethod
 
 
 def verification_method_from_c(c_verification_method: CData) -> VerificationMethod:
@@ -378,7 +390,7 @@ class CVerification:
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
-        c_verification = ffi.new("tanker_verification_t *", {"version": 6})
+        c_verification = ffi.new("tanker_verification_t *", {"version": 7})
         if isinstance(verification, VerificationKeyVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
@@ -454,6 +466,19 @@ class CVerification:
                 verification.preverified_phone_number
             )
             c_verification.preverified_phone_number = self._preverified_phone_number
+
+        elif isinstance(verification, PreverifiedOIDCVerification):
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_PREVERIFIED_OIDC
+            )
+            self._preverified_oidc_verification = {
+                "version": 1,
+                "subject": ffihelpers.str_to_c_string(verification.subject),
+                "provider_id": ffihelpers.str_to_c_string(verification.provider_id),
+            }
+            c_verification.preverified_oidc_verification = (
+                self._preverified_oidc_verification
+            )
 
         self._c_verification = c_verification
 

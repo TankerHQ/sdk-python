@@ -21,12 +21,14 @@ from tankersdk import (
     EmailVerificationMethod,
     EncryptionOptions,
     OidcIdTokenVerification,
+    OidcIdTokenVerificationMethod,
     Padding,
     PassphraseVerification,
     PhoneNumberVerification,
     PhoneNumberVerificationMethod,
     PreverifiedEmailVerification,
     PreverifiedEmailVerificationMethod,
+    PreverifiedOIDCVerification,
     PreverifiedPhoneNumberVerification,
     PreverifiedPhoneNumberVerificationMethod,
     SharingOptions,
@@ -228,11 +230,18 @@ async def test_tanker_enroll_user_with_preverified_methods(
 
     phone_number = "+33639982233"
 
+    provider_config = set_up_oidc(app, admin)
+    oidc_id_token = get_id_token()
+    subject = extract_subject(oidc_id_token)
+
     await server.enroll_user(
         identity,
         [
             PreverifiedEmailVerification(preverified_email=email),
             PreverifiedPhoneNumberVerification(preverified_phone_number=phone_number),
+            PreverifiedOIDCVerification(
+                subject=subject, provider_id=provider_config["id"]
+            ),
         ],
     )
 
@@ -259,6 +268,18 @@ async def test_tanker_enroll_user_with_preverified_methods(
         PhoneNumberVerification(phone_number, verification_code)
     )
     assert laptop_tanker.status == TankerStatus.READY
+
+    tablet_path = tmp_path.joinpath("tablet")
+    tablet_path.mkdir(exist_ok=True)
+    tablet_tanker = create_tanker(app["id"], persistent_path=tablet_path)
+
+    await tablet_tanker.start(identity)
+    assert tablet_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    nonce = await tablet_tanker.create_oidc_nonce()
+    await tablet_tanker.set_oidc_test_nonce(nonce)
+    await tablet_tanker.verify_identity(OidcIdTokenVerification(oidc_id_token))
+    assert tablet_tanker.status == TankerStatus.READY
 
 
 @pytest.mark.asyncio
@@ -1477,23 +1498,13 @@ async def test_get_verification_methods(tmp_path: Path, app: Dict[str, str]) -> 
     assert e2e_passphrase_method.method_type == VerificationMethodType.E2E_PASSPHRASE
 
 
-def set_up_oidc(app: Dict[str, str], admin: Admin, user: str) -> Tuple[str, str]:
+def get_id_token(user: str = "martine") -> str:
     oidc_test_config = TEST_CONFIG["oidc"]
-
     oidc_client_id = oidc_test_config["clientId"]
     oidc_client_secret = oidc_test_config["clientSecret"]
-    oidc_provider = oidc_test_config["provider"]
-    oidc_issuer = oidc_test_config["issuer"]
-    admin.update_app(
-        app["id"],
-        oidc_client_id=oidc_client_id,
-        oidc_display_name=oidc_provider,
-        oidc_issuer=oidc_issuer,
-    )
 
     test_users = oidc_test_config["users"]
     assert user in test_users
-    email = test_users[user]["email"]
     refresh_token = test_users[user]["refreshToken"]
     response = requests.post(
         "https://www.googleapis.com/oauth2/v4/token",
@@ -1507,14 +1518,38 @@ def set_up_oidc(app: Dict[str, str], admin: Admin, user: str) -> Tuple[str, str]
     )
     response.raise_for_status()
     oidc_id_token = response.json()["id_token"]
-    return email, oidc_id_token
+    return cast(str, oidc_id_token)
+
+
+def extract_subject(id_token: str) -> str:
+    jwt_body = id_token.split(".")[1]
+    # Add padding because urlsafe_b64decode requires it
+    body = base64.urlsafe_b64decode(jwt_body + "==")
+    return cast(str, json.loads(body)["sub"])
+
+
+def set_up_oidc(app: Dict[str, str], admin: Admin) -> Dict[str, str]:
+    oidc_test_config = TEST_CONFIG["oidc"]
+
+    oidc_client_id = oidc_test_config["clientId"]
+    oidc_provider = oidc_test_config["provider"]
+    oidc_issuer = oidc_test_config["issuer"]
+    admin.update_app(
+        app["id"],
+        oidc_client_id=oidc_client_id,
+        oidc_display_name=oidc_provider,
+        oidc_issuer=oidc_issuer,
+    )
+
+    return cast(Dict[str, str], admin.get_app(app["id"])["oidc_providers"][0])
 
 
 @pytest.mark.asyncio
 async def test_oidc_verification(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    _, oidc_id_token = set_up_oidc(app, admin, "martine")
+    _ = set_up_oidc(app, admin)
+    oidc_id_token = get_id_token()
 
     phone_path = tmp_path / "phone"
     phone_path.mkdir(exist_ok=True)
@@ -1585,6 +1620,27 @@ async def test_register_fails_with_preverified_phone_number(
 
 
 @pytest.mark.asyncio
+async def test_register_fails_with_preverified_oidc(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    provider_config = set_up_oidc(app, admin)
+
+    tanker = create_tanker(app["id"], persistent_path=tmp_path)
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["secret"], str(uuid.uuid4())
+    )
+    await tanker.start(identity)
+
+    with pytest.raises(error.InvalidArgument):
+        await tanker.register_identity(
+            PreverifiedOIDCVerification(
+                subject="subject",
+                provider_id=provider_config["id"],
+            )
+        )
+
+
+@pytest.mark.asyncio
 async def test_verify_fails_with_preverified_email(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
@@ -1642,6 +1698,41 @@ async def test_verify_fails_with_preverified_phone_number(
     with pytest.raises(error.InvalidArgument):
         await phone_tanker.verify_identity(
             PreverifiedPhoneNumberVerification(preverified_phone_number=phone_number)
+        )
+
+
+@pytest.mark.asyncio
+async def test_verify_fails_with_preverified_oidc(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    provider_config = set_up_oidc(app, admin)
+    oidc_id_token = get_id_token()
+
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    nonce = await laptop_tanker.create_oidc_nonce()
+    await laptop_tanker.set_oidc_test_nonce(nonce)
+    await laptop_tanker.register_identity(OidcIdTokenVerification(oidc_id_token))
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    with pytest.raises(error.InvalidArgument):
+        await phone_tanker.verify_identity(
+            PreverifiedOIDCVerification(
+                subject=extract_subject(oidc_id_token),
+                provider_id=provider_config["id"],
+            )
         )
 
 
@@ -1741,6 +1832,53 @@ async def test_set_verification_method_with_preverified_phone_number(
     ]
     (phone_number_method,) = phone_number_methods
     assert phone_number_method.phone_number == phone_number
+
+    await laptop_tanker.stop()
+    await phone_tanker.stop()
+
+
+@pytest.mark.asyncio
+async def test_set_verification_method_with_oidc(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    passphrase = "The cake is not a lie"
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+
+    provider_config = set_up_oidc(app, admin)
+    oidc_id_token = get_id_token()
+    subject = extract_subject(oidc_id_token)
+
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
+
+    await laptop_tanker.set_verification_method(
+        PreverifiedOIDCVerification(subject=subject, provider_id=provider_config["id"])
+    )
+
+    methods = set(await laptop_tanker.get_verification_methods())
+    assert len(methods) == 2
+    oidc_methods = [x for x in methods if isinstance(x, OidcIdTokenVerificationMethod)]
+    assert oidc_methods[0].provider_id == provider_config["id"]
+    assert oidc_methods[0].provider_display_name == provider_config["display_name"]
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    nonce = await phone_tanker.create_oidc_nonce()
+    await phone_tanker.set_oidc_test_nonce(nonce)
+    await phone_tanker.verify_identity(OidcIdTokenVerification(oidc_id_token))
+    assert phone_tanker.status == TankerStatus.READY
 
     await laptop_tanker.stop()
     await phone_tanker.stop()
