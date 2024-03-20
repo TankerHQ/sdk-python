@@ -63,6 +63,7 @@ class VerificationMethodType(Enum):
     PREVERIFIED_PHONE_NUMBER = 7
     E2E_PASSPHRASE = 8
     PREVERIFIED_OIDC = 9
+    OIDC_AUTHORIZATION_CODE = 10
 
 
 class Verification:
@@ -146,6 +147,15 @@ class PreverifiedOIDCVerification(Verification):
     def __init__(self, subject: str, provider_id: str):
         self.subject = subject
         self.provider_id = provider_id
+
+
+class OidcAuthorizationCodeVerification(Verification):
+    method_type = VerificationMethodType.OIDC_AUTHORIZATION_CODE
+
+    def __init__(self, provider_id: str, authorization_code: str, state: str):
+        self.provider_id = provider_id
+        self.authorization_code = authorization_code
+        self.state = state
 
 
 class VerificationMethod:
@@ -390,7 +400,7 @@ class CVerification:
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
-        c_verification = ffi.new("tanker_verification_t *", {"version": 7})
+        c_verification = ffi.new("tanker_verification_t *", {"version": 8})
         if isinstance(verification, VerificationKeyVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
@@ -478,6 +488,21 @@ class CVerification:
             }
             c_verification.preverified_oidc_verification = (
                 self._preverified_oidc_verification
+            )
+        elif isinstance(verification, OidcAuthorizationCodeVerification):
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_OIDC_AUTHORIZATION_CODE
+            )
+            self._oidc_authorization_code_verification = {
+                "version": 1,
+                "provider_id": ffihelpers.str_to_c_string(verification.provider_id),
+                "authorization_code": ffihelpers.str_to_c_string(
+                    verification.authorization_code
+                ),
+                "state": ffihelpers.str_to_c_string(verification.state),
+            }
+            c_verification.oidc_authorization_code_verification = (
+                self._oidc_authorization_code_verification
             )
 
         self._c_verification = c_verification
