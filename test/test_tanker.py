@@ -41,6 +41,7 @@ from tankersdk import (
     VerificationOptions,
     error,
 )
+from tankersdk.experimental import authenticate_with_idp
 
 
 def encode(string: str) -> str:
@@ -68,6 +69,7 @@ def read_test_config() -> Dict[str, Any]:
         "clientSecret": assert_env("TANKER_OIDC_CLIENT_SECRET"),
         "provider": assert_env("TANKER_OIDC_PROVIDER"),
         "issuer": assert_env("TANKER_OIDC_ISSUER"),
+        "fakeOidcIssuerUrl": assert_env("TANKER_FAKE_OIDC_URL") + "/issuer",
     }
     res["oidc"]["users"] = {
         "martine": {
@@ -1546,6 +1548,22 @@ def set_up_oidc(app: Dict[str, str], admin: Admin) -> Dict[str, str]:
     return cast(Dict[str, str], admin.get_app(app["id"])["oidc_providers"][0])
 
 
+def set_up_fake_oidc(app: Dict[str, str], admin: Admin) -> Dict[str, str]:
+    fake_oidc_issuer_url = TEST_CONFIG["oidc"]["fakeOidcIssuerUrl"]
+
+    oidc_issuer = fake_oidc_issuer_url
+    oidc_client_id = "tanker"
+    oidc_provider = "fake-oidc"
+    admin.update_app(
+        app["id"],
+        oidc_client_id=oidc_client_id,
+        oidc_display_name=oidc_provider,
+        oidc_issuer=oidc_issuer,
+    )
+
+    return cast(Dict[str, str], admin.get_app(app["id"])["oidc_providers"][0])
+
+
 @pytest.mark.asyncio
 async def test_oidc_verification(
     tmp_path: Path, app: Dict[str, str], admin: Admin
@@ -1582,6 +1600,61 @@ async def test_oidc_verification(
     assert actual_method.method_type == VerificationMethodType.OIDC_ID_TOKEN
 
     await martine_laptop.stop()
+
+
+@pytest.mark.asyncio
+async def test_oidc_authorization_code_verification(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    provider_config = set_up_fake_oidc(app, admin)
+    provider_id = provider_config["id"]
+    subject_cookie = "fake_oidc_subject=martine"
+
+    phone_path = tmp_path / "phone"
+    phone_path.mkdir(exist_ok=True)
+    martine_phone = create_tanker(app["id"], persistent_path=phone_path)
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["secret"], str(uuid.uuid4())
+    )
+
+    await martine_phone.start(identity)
+
+    verification1 = await authenticate_with_idp(
+        martine_phone, provider_id, subject_cookie
+    )
+    verification2 = await authenticate_with_idp(
+        martine_phone, provider_id, subject_cookie
+    )
+    await martine_phone.register_identity(verification1)
+    await martine_phone.stop()
+
+    laptop_path = tmp_path / "laptop"
+    laptop_path.mkdir(exist_ok=True)
+    martine_laptop = create_tanker(app["id"], persistent_path=laptop_path)
+    await martine_laptop.start(identity)
+
+    assert martine_laptop.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    await martine_laptop.verify_identity(verification2)
+    assert martine_laptop.status == TankerStatus.READY
+
+    actual_methods = await martine_laptop.get_verification_methods()
+    (actual_method,) = actual_methods
+    assert actual_method.method_type == VerificationMethodType.OIDC_ID_TOKEN
+
+    await martine_laptop.stop()
+
+    tablet_path = tmp_path / "tablet"
+    tablet_path.mkdir(exist_ok=True)
+    martine_tablet = create_tanker(app["id"], persistent_path=tablet_path)
+    await martine_tablet.start(identity)
+    verification3 = await authenticate_with_idp(
+        martine_tablet, provider_id, "fake_oidc_subject=not_martine"
+    )
+
+    assert martine_tablet.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    with pytest.raises(error.InvalidVerification):
+        await martine_tablet.verify_identity(verification3)
+    await martine_tablet.stop()
 
 
 @pytest.mark.asyncio
@@ -1880,6 +1953,53 @@ async def test_set_verification_method_with_oidc(
     nonce = await phone_tanker.create_oidc_nonce()
     await phone_tanker.set_oidc_test_nonce(nonce)
     await phone_tanker.verify_identity(OidcIdTokenVerification(oidc_id_token))
+    assert phone_tanker.status == TankerStatus.READY
+
+    await laptop_tanker.stop()
+    await phone_tanker.stop()
+
+
+@pytest.mark.asyncio
+async def test_set_oidc_authorization_code_verification(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    provider_config = set_up_fake_oidc(app, admin)
+    provider_id = provider_config["id"]
+    subject_cookie = "fake_oidc_subject=alice"
+    passphrase = "The cake is not a lie"
+
+    laptop_path = tmp_path / "laptop"
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"], app["secret"], str(uuid.uuid4())
+    )
+
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
+
+    verification2 = await authenticate_with_idp(
+        laptop_tanker, provider_id, subject_cookie
+    )
+    await laptop_tanker.set_verification_method(verification2)
+
+    methods = set(await laptop_tanker.get_verification_methods())
+    assert len(methods) == 2
+    oidc_methods = [x for x in methods if isinstance(x, OidcIdTokenVerificationMethod)]
+    assert oidc_methods[0].provider_id == provider_config["id"]
+    assert oidc_methods[0].provider_display_name == provider_config["display_name"]
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    verification2 = await authenticate_with_idp(
+        laptop_tanker, provider_id, subject_cookie
+    )
+    await phone_tanker.verify_identity(verification2)
     assert phone_tanker.status == TankerStatus.READY
 
     await laptop_tanker.stop()
