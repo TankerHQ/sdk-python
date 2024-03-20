@@ -63,12 +63,18 @@ struct tanker_error
 
 // ctanker/network.h
 
+struct tanker_http_header
+{
+  char const* name;
+  char const* value;
+};
+
 struct tanker_http_request
 {
   char const* method;
   char const* url;
-  char const* instance_id;
-  char const* authorization;
+  struct tanker_http_header* headers;
+  int32_t num_headers;
   char const* body;
   int32_t body_size;
 };
@@ -76,12 +82,14 @@ struct tanker_http_request
 struct tanker_http_response
 {
   char const* error_msg;
-  char const* content_type;
+  struct tanker_http_header* headers;
+  int32_t num_headers;
   char const* body;
   int64_t body_size;
   int32_t status_code;
 };
 
+typedef struct tanker_http_header tanker_http_header_t;
 typedef struct tanker_http_request tanker_http_request_t;
 typedef struct tanker_http_response tanker_http_response_t;
 
