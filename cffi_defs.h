@@ -432,6 +432,7 @@ tanker_future_t* tanker_verify_provisional_identity(
     tanker_t* ctanker, tanker_verification_t const* verification);
 
 tanker_expected_t* tanker_authenticate_with_idp(tanker_t* session, char const* provider_id, char const* cookie);
+void tanker_free_authenticate_with_idp_result(tanker_oidc_authorization_code_verification_t* result);
 
 void tanker_free_buffer(void const* buffer);
 

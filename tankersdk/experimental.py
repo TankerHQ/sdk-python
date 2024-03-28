@@ -20,4 +20,6 @@ async def authenticate_with_idp(
 
     authorization_code = ffihelpers.c_string_to_str(c_authorization_code)
     state = ffihelpers.c_string_to_str(c_state)
+
+    tankerlib.tanker_free_authenticate_with_idp_result(c_verification)
     return OidcAuthorizationCodeVerification(provider_id, authorization_code, state)
