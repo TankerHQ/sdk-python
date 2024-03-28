@@ -61,37 +61,10 @@ struct tanker_error
   char const* message;
 };
 
-// ctanker/network.h
+// ctanker/http.h There is no HTTP revese bindings for python
 
-struct tanker_http_header
-{
-  char const* name;
-  char const* value;
-};
-
-struct tanker_http_request
-{
-  char const* method;
-  char const* url;
-  struct tanker_http_header* headers;
-  int32_t num_headers;
-  char const* body;
-  int32_t body_size;
-};
-
-struct tanker_http_response
-{
-  char const* error_msg;
-  struct tanker_http_header* headers;
-  int32_t num_headers;
-  char const* body;
-  int64_t body_size;
-  int32_t status_code;
-};
-
-typedef struct tanker_http_header tanker_http_header_t;
+// foward declarations to satisfy FFI
 typedef struct tanker_http_request tanker_http_request_t;
-typedef struct tanker_http_response tanker_http_response_t;
 
 typedef void tanker_http_request_handle_t;
 
@@ -110,9 +83,6 @@ struct tanker_http_options
 };
 
 typedef struct tanker_http_options tanker_http_options_t;
-
-void tanker_http_handle_response(tanker_http_request_t*,
-                                 tanker_http_response_t*);
 
 // ctanker/datastore.h
 
