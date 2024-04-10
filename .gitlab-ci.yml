@@ -23,7 +23,7 @@ workflow:
     - when: always
       variables:
         CONAN_REMOTE: "artifactory"
-        PYENV_VERSION: "3.11"
+        PYENV_VERSION: "3.12"
 
 ###########
 # Default #

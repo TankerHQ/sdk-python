@@ -3,7 +3,7 @@ name = "tankersdk"
 version = "0.0.0"
 description = "Python client for Tanker"
 authors = [{ name = "Tanker team" }]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "cffi >= 1.13.2, < 2.0.0a0",
     "attrs >= 19.3.0, < 20.0.0a0",
@@ -15,24 +15,25 @@ name = "tankersdk"
 version = "0.0.0"
 description = "Python client for Tanker"
 authors = ["Tanker team"]
+package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 cffi = "^1.13.2"
 attrs = "^19.3.0"
 typing_extensions = "^4.4.0"
 
 [tool.poetry.dev-dependencies]
 # CI/CD
-tankerci = { version = "== 2023.8.4871", source = "gitlab" }
+tankerci = { version = "== 2024.4.5172", source = "gitlab" }
 twine = "^3.2.0"
 build = "^0.10.0"
 
 # linters
 black = "22.3.0"
-flake8 = "4.0.1"
-flake8-comprehensions = "3.10.0"
-flake8-docstrings = "1.6.0"
+flake8 = "7"
+flake8-comprehensions = "3.14.0"
+flake8-docstrings = "1.7.0"
 isort = "5.10.1"
 mypy = "1.5"
 safety = "2.3.5"
