@@ -15,6 +15,7 @@ name = "tankersdk"
 version = "0.0.0"
 description = "Python client for Tanker"
 authors = ["Tanker team"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
