@@ -496,8 +496,11 @@ name = "docutils"
 version = "0.20.1"
 description = "Docutils -- Python Documentation Utilities"
 optional = false
-python-versions = "*"
-files = []
+python-versions = ">=3.7"
+files = [
+    {file = "docutils-0.20.1-py3-none-any.whl", hash = "sha256:96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6"},
+    {file = "docutils-0.20.1.tar.gz", hash = "sha256:f08a4e276c3a1583a86dce3e34aba3fe04d02bba2dd51ed16106244e8a923e3b"},
+]
 
 [[package]]
 name = "dparse"
@@ -1665,13 +1668,13 @@ widechars = ["wcwidth"]
 
 [[package]]
 name = "tankeradminsdk"
-version = "4.1.0"
+version = "5.0.0"
 description = "Tanker Python Admin SDK"
 optional = false
-python-versions = ">=3.11,<4.0"
+python-versions = ">=3.12,<4.0"
 files = [
-    {file = "tankeradminsdk-4.1.0-py3-none-any.whl", hash = "sha256:347406edc4e1663b2b671f9112bf2afa2735b942f705c6a65f4b93fdd552b803"},
-    {file = "tankeradminsdk-4.1.0.tar.gz", hash = "sha256:2efe3056bbfc5a2e7300e9c529509487e25e46d294a573bf859ac0a894fbe4d9"},
+    {file = "tankeradminsdk-5.0.0-py3-none-any.whl", hash = "sha256:93fdf92c15387a991d55e8aa96f03e4f8ae68e18fa4d5c2c72338b8d10ea3f4f"},
+    {file = "tankeradminsdk-5.0.0.tar.gz", hash = "sha256:cf8de98449da95a22194414e9ec82870b313dc6f51ede1b09db6d3b11bd1bcab"},
 ]
 
 [package.dependencies]
@@ -1876,4 +1879,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "96ce5e7c7198017471178d7057e958bfe4176666f45b3e266cb8fa7f9210b3c3"
+content-hash = "efe4b0aa9894cece441e8f99527531093a5b8cff0b41d48393c4b856100a5bfd"
