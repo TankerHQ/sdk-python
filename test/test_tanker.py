@@ -12,7 +12,7 @@ import requests
 import tankeradminsdk
 import tankersdk_identity
 from faker import Faker
-from tankeradminsdk import Admin
+from tankeradminsdk import Admin, AppOidcProvider
 
 import tankersdk
 from tankersdk import (
@@ -1536,9 +1536,11 @@ def set_up_oidc(app: Dict[str, str], admin: Admin) -> Dict[str, str]:
     oidc_issuer = oidc_test_config["issuer"]
     admin.update_app(
         app["id"],
-        oidc_client_id=oidc_client_id,
-        oidc_display_name=oidc_provider,
-        oidc_issuer=oidc_issuer,
+        oidc_providers=[
+            AppOidcProvider(
+                client_id=oidc_client_id, display_name=oidc_provider, issuer=oidc_issuer
+            )
+        ],
     )
 
     return cast(Dict[str, str], admin.get_app(app["id"])["oidc_providers"][0])
