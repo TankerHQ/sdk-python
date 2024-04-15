@@ -1556,9 +1556,11 @@ def set_up_fake_oidc(app: Dict[str, str], admin: Admin) -> Dict[str, str]:
     oidc_provider = "fake-oidc"
     admin.update_app(
         app["id"],
-        oidc_client_id=oidc_client_id,
-        oidc_display_name=oidc_provider,
-        oidc_issuer=oidc_issuer,
+        oidc_providers=[
+            AppOidcProvider(
+                client_id=oidc_client_id, display_name=oidc_provider, issuer=oidc_issuer
+            )
+        ],
     )
 
     return cast(Dict[str, str], admin.get_app(app["id"])["oidc_providers"][0])
