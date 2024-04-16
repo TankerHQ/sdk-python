@@ -61,29 +61,10 @@ struct tanker_error
   char const* message;
 };
 
-// ctanker/network.h
+// ctanker/http.h There is no HTTP revese bindings for python
 
-struct tanker_http_request
-{
-  char const* method;
-  char const* url;
-  char const* instance_id;
-  char const* authorization;
-  char const* body;
-  int32_t body_size;
-};
-
-struct tanker_http_response
-{
-  char const* error_msg;
-  char const* content_type;
-  char const* body;
-  int64_t body_size;
-  int32_t status_code;
-};
-
+// foward declarations to satisfy FFI
 typedef struct tanker_http_request tanker_http_request_t;
-typedef struct tanker_http_response tanker_http_response_t;
 
 typedef void tanker_http_request_handle_t;
 
@@ -102,9 +83,6 @@ struct tanker_http_options
 };
 
 typedef struct tanker_http_options tanker_http_options_t;
-
-void tanker_http_handle_response(tanker_http_request_t*,
-                                 tanker_http_response_t*);
 
 // ctanker/datastore.h
 
@@ -216,6 +194,7 @@ enum tanker_verification_method_type
   TANKER_VERIFICATION_METHOD_PREVERIFIED_PHONE_NUMBER,
   TANKER_VERIFICATION_METHOD_E2E_PASSPHRASE,
   TANKER_VERIFICATION_METHOD_PREVERIFIED_OIDC,
+  TANKER_VERIFICATION_METHOD_OIDC_AUTHORIZATION_CODE,
 
   TANKER_VERIFICATION_METHOD_LAST
 };
@@ -233,6 +212,7 @@ typedef struct tanker_options tanker_options_t;
 typedef struct tanker_email_verification tanker_email_verification_t;
 typedef struct tanker_phone_number_verification tanker_phone_number_verification_t;
 typedef struct tanker_preverified_oidc_verification tanker_preverified_oidc_verification_t;
+typedef struct tanker_oidc_authorization_code_verification tanker_oidc_authorization_code_verification_t;
 typedef struct tanker_verification tanker_verification_t;
 typedef struct tanker_verification_list tanker_verification_list_t;
 typedef struct tanker_verification_method tanker_verification_method_t;
@@ -306,6 +286,14 @@ struct tanker_preverified_oidc_verification
   char const* provider_id;
 };
 
+struct tanker_oidc_authorization_code_verification
+{
+  uint8_t version;
+  char const* provider_id;
+  char const* authorization_code;
+  char const* state;
+};
+
 struct tanker_verification
 {
   uint8_t version;
@@ -321,6 +309,7 @@ struct tanker_verification
   char const* preverified_email;
   char const* preverified_phone_number;
   tanker_preverified_oidc_verification_t preverified_oidc_verification;
+  tanker_oidc_authorization_code_verification_t oidc_authorization_code_verification;
 };
 
 struct tanker_verification_method
@@ -441,6 +430,9 @@ tanker_future_t* tanker_attach_provisional_identity(
 
 tanker_future_t* tanker_verify_provisional_identity(
     tanker_t* ctanker, tanker_verification_t const* verification);
+
+tanker_expected_t* tanker_authenticate_with_idp(tanker_t* session, char const* provider_id, char const* cookie);
+void tanker_free_authenticate_with_idp_result(tanker_oidc_authorization_code_verification_t* result);
 
 void tanker_free_buffer(void const* buffer);
 

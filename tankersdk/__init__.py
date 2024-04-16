@@ -16,6 +16,7 @@ from .tanker import (  # noqa
     EmailVerification,
     EmailVerificationMethod,
     EncryptionOptions,
+    OidcAuthorizationCodeVerification,
     OidcIdTokenVerification,
     OidcIdTokenVerificationMethod,
     Padding,
