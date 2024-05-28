@@ -26,7 +26,7 @@ from .tanker import (  # noqa
     PhoneNumberVerificationMethod,
     PreverifiedEmailVerification,
     PreverifiedEmailVerificationMethod,
-    PreverifiedOIDCVerification,
+    PreverifiedOidcVerification,
     PreverifiedPhoneNumberVerification,
     PreverifiedPhoneNumberVerificationMethod,
     SharingOptions,

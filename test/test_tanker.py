@@ -28,7 +28,7 @@ from tankersdk import (
     PhoneNumberVerificationMethod,
     PreverifiedEmailVerification,
     PreverifiedEmailVerificationMethod,
-    PreverifiedOIDCVerification,
+    PreverifiedOidcVerification,
     PreverifiedPhoneNumberVerification,
     PreverifiedPhoneNumberVerificationMethod,
     SharingOptions,
@@ -241,7 +241,7 @@ async def test_tanker_enroll_user_with_preverified_methods(
         [
             PreverifiedEmailVerification(preverified_email=email),
             PreverifiedPhoneNumberVerification(preverified_phone_number=phone_number),
-            PreverifiedOIDCVerification(
+            PreverifiedOidcVerification(
                 subject=subject, provider_id=provider_config["id"]
             ),
         ],
@@ -1710,7 +1710,7 @@ async def test_register_fails_with_preverified_oidc(
 
     with pytest.raises(error.InvalidArgument):
         await tanker.register_identity(
-            PreverifiedOIDCVerification(
+            PreverifiedOidcVerification(
                 subject="subject",
                 provider_id=provider_config["id"],
             )
@@ -1806,7 +1806,7 @@ async def test_verify_fails_with_preverified_oidc(
     assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
     with pytest.raises(error.InvalidArgument):
         await phone_tanker.verify_identity(
-            PreverifiedOIDCVerification(
+            PreverifiedOidcVerification(
                 subject=extract_subject(oidc_id_token),
                 provider_id=provider_config["id"],
             )
@@ -1936,7 +1936,7 @@ async def test_set_verification_method_with_oidc(
     await laptop_tanker.register_identity(PassphraseVerification(passphrase))
 
     await laptop_tanker.set_verification_method(
-        PreverifiedOIDCVerification(subject=subject, provider_id=provider_config["id"])
+        PreverifiedOidcVerification(subject=subject, provider_id=provider_config["id"])
     )
 
     methods = set(await laptop_tanker.get_verification_methods())
