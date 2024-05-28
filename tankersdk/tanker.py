@@ -141,7 +141,7 @@ class PreverifiedPhoneNumberVerification(Verification):
         self.preverified_phone_number = preverified_phone_number
 
 
-class PreverifiedOIDCVerification(Verification):
+class PreverifiedOidcVerification(Verification):
     method_type = VerificationMethodType.PREVERIFIED_OIDC
 
     def __init__(self, subject: str, provider_id: str):
@@ -477,7 +477,7 @@ class CVerification:
             )
             c_verification.preverified_phone_number = self._preverified_phone_number
 
-        elif isinstance(verification, PreverifiedOIDCVerification):
+        elif isinstance(verification, PreverifiedOidcVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_PREVERIFIED_OIDC
             )
