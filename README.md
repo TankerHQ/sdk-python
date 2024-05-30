@@ -1,7 +1,7 @@
 <a href="#readme"><img src="https://raw.githubusercontent.com/TankerHQ/spec/master/img/tanker-logotype-blue-nomargin-350.png" alt="Tanker logo" width="175" /></a>
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![Supported versions](https://img.shields.io/badge/python-v3.10-blue)
+![Supported versions](https://img.shields.io/badge/python-v3.12-blue)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue.svg)](https://mypy-lang.org)
 [![Build status](https://gitlab.com/TankerHQ/sdk-python/badges/master/pipeline.svg)](https://gitlab.com/TankerHQ/sdk-python/pipelines)
