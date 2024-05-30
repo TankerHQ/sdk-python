@@ -213,7 +213,7 @@ class E2ePassphraseVerificationMethod(VerificationMethod):
     method_type = VerificationMethodType.E2E_PASSPHRASE
 
 
-# PreverifiedOIDC is not exposed as a VerificationMethod
+# PreverifiedOidc is not exposed as a VerificationMethod
 
 
 def verification_method_from_c(c_verification_method: CData) -> VerificationMethod:
