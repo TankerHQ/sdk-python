@@ -1,5 +1,6 @@
 import asyncio
 import os
+import warnings
 import weakref
 from enum import Enum, IntEnum
 from typing import Any, List, Optional, Union, cast
@@ -103,6 +104,12 @@ class OidcIdTokenVerification(Verification):
     method_type = VerificationMethodType.OIDC_ID_TOKEN
 
     def __init__(self, oidc_id_token: str):
+        warnings.warn(
+            "The entire OIDC flow has been reworked in version 4.2.0, "
+            '"OidcIdTokenVerification" has been deprecated as a result, '
+            'use "OidcAuthorizationCodeVerification" instead',
+            DeprecationWarning,
+        )
         self.oidc_id_token = oidc_id_token
 
 
@@ -820,6 +827,12 @@ class Tanker:
 
     async def create_oidc_nonce(self) -> str:
         """Create a nonce to use in oidc authorization code flow"""
+        warnings.warn(
+            "The entire OIDC flow has been reworked in version 4.2.0, "
+            'method "create_oidc_nonce" has been deprecated as a result',
+            DeprecationWarning,
+        )
+
         c_future = tankerlib.tanker_create_oidc_nonce(self.c_tanker)
         c_voidp = await ffihelpers.handle_tanker_future(c_future)
         c_str = ffi.cast("char*", c_voidp)
@@ -835,6 +848,12 @@ class Tanker:
 
     async def set_oidc_test_nonce(self, nonce: str) -> None:
         """Set the oidc nonce to use during the next verification operation"""
+        warnings.warn(
+            "The entire OIDC flow has been reworked in version 4.2.0, "
+            'method "set_oidc_test_nonce" has been deprecated as a result',
+            DeprecationWarning,
+        )
+
         await self._set_oidc_test_nonce(nonce)
 
     async def encrypt(
