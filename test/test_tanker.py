@@ -69,7 +69,7 @@ def read_test_config() -> Dict[str, Any]:
         "clientSecret": assert_env("TANKER_OIDC_CLIENT_SECRET"),
         "provider": assert_env("TANKER_OIDC_PROVIDER"),
         "issuer": assert_env("TANKER_OIDC_ISSUER"),
-        "fakeOidcIssuerUrl": assert_env("TANKER_FAKE_OIDC_URL") + "/issuer",
+        "fakeOidcIssuerUrl": assert_env("TANKER_FAKE_OIDC_URL") + "/issuers/main",
     }
     res["oidc"]["users"] = {
         "martine": {
