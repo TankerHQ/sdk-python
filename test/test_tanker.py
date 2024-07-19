@@ -1540,7 +1540,10 @@ def set_up_oidc(app: Dict[str, str], admin: Admin) -> Dict[str, str]:
         app["id"],
         oidc_providers=[
             AppOidcProvider(
-                client_id=oidc_client_id, display_name=oidc_provider, issuer=oidc_issuer
+                client_id=oidc_client_id,
+                display_name=oidc_provider,
+                issuer=oidc_issuer,
+                provider_group_id="WXMnNsPtVsMmP-4frYkCVK7DKC1HrsfFjW_CC7kQ8Jg",
             )
         ],
     )
@@ -1558,7 +1561,10 @@ def set_up_fake_oidc(app: Dict[str, str], admin: Admin) -> Dict[str, str]:
         app["id"],
         oidc_providers=[
             AppOidcProvider(
-                client_id=oidc_client_id, display_name=oidc_provider, issuer=oidc_issuer
+                client_id=oidc_client_id,
+                display_name=oidc_provider,
+                issuer=oidc_issuer,
+                provider_group_id="zHH4ySkOPdKbgLYD-e-ypGxGekJqp7Wl6zNB6KKPPjk",
             )
         ],
     )
