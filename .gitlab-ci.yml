@@ -23,7 +23,6 @@ workflow:
     - when: always
       variables:
         CONAN_REMOTE: "artifactory"
-        PYENV_VERSION: "3.12"
 
 ###########
 # Default #
@@ -95,6 +94,9 @@ check/deployed-native/linux:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile linux-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/linux, tags]
 
 check/deployed-native/macos/x86_64:
@@ -105,6 +107,9 @@ check/deployed-native/macos/x86_64:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-x86_64 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/deployed-native/macos/arm:
@@ -115,6 +120,9 @@ check/deployed-native/macos/arm:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --use-tanker=deployed --profile macos-armv8 --remote $CONAN_REMOTE --tanker-ref=$SDK_NATIVE_CONAN_REFERENCE
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/macos/arm, tags]
 
 ## native from sources
@@ -127,6 +135,9 @@ check/native-from-sources/linux:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile linux-x86_64
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/compilation-linux, tags]
 
 check/native-from-sources/macos/x86_64:
@@ -137,6 +148,9 @@ check/native-from-sources/macos/x86_64:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile macos-x86_64
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/native-from-sources/macos/arm:
@@ -147,6 +161,9 @@ check/native-from-sources/macos/arm:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=same-as-branch --profile macos-armv8
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/macos/arm, tags]
 
 ## downstream
@@ -159,6 +176,9 @@ check/downstream/linux:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile linux-x86_64
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/linux, tags]
 
 check/downstream/macos/x86_64:
@@ -170,6 +190,9 @@ check/downstream/macos/x86_64:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile macos-x86_64
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/downstream/macos/arm:
@@ -181,6 +204,9 @@ check/downstream/macos/arm:
   script:
     - poetry run python run-ci.py --isolate-conan-user-home prepare --remote $CONAN_REMOTE --use-tanker=upstream --profile macos-armv8
     - poetry run python run-ci.py build --test
+  parallel:
+    matrix:
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
   tags: !reference [.tags/macos/arm, tags]
 
 .safety:
