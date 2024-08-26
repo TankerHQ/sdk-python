@@ -20,7 +20,6 @@ package-mode = false
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 cffi = "^1.13.2"
-attrs = "^19.3.0"
 typing_extensions = "^4.4.0"
 
 [tool.poetry.dev-dependencies]
