@@ -533,7 +533,7 @@ class CVerificationList:
         c_verification_list.verifications = self._tanker_verifications
         # We need to keep the reference to the CVerifications to prevent deallocation
         self._verification_list = []
-        for (i, verification) in enumerate(verifications):
+        for i, verification in enumerate(verifications):
             c_verification = CVerification(verification)
             self._verification_list.append(c_verification)
             # We use [0] to dereference the pointer
@@ -546,8 +546,7 @@ class CVerificationList:
 
 
 class InputStream(typing_extensions.Protocol):
-    async def read(self, size: int) -> bytes:
-        ...
+    async def read(self, size: int) -> bytes: ...
 
 
 class Stream:

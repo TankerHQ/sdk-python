@@ -901,9 +901,9 @@ async def test_invalid_verification_key(tmp_path: Path, app: Dict[str, str]) -> 
 
     key_json = base64.b64decode(verification_key.encode()).decode()
     key = json.loads(key_json)
-    key[
-        "privateSignatureKey"
-    ] = "O85hg7XxxGWq3cQf4xQ/VXaTiAPcqWoUIGDvaLpZ+trNQkp+rNzZrLvIfhERwb33iUjV0sFiL5XqweVgqTdg6Q=="
+    key["privateSignatureKey"] = (
+        "O85hg7XxxGWq3cQf4xQ/VXaTiAPcqWoUIGDvaLpZ+trNQkp+rNzZrLvIfhERwb33iUjV0sFiL5XqweVgqTdg6Q=="
+    )
     key_json = json.dumps(key)
     key = base64.b64encode(key_json.encode()).decode()
 

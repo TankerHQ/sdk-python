@@ -1,0 +1,13 @@
+version: '2.0'
+
+security: # configuration for the `safety check` command
+    ignore-cvss-severity-below: 0
+    ignore-cvss-unknown-severity: False
+    ignore-vulnerabilities:
+        70612:
+            reason: >
+              Jinja2 vulnerability
+              The maintainer and multiple third parties believe that this vulnerability isn't valid because 
+              users shouldn't use untrusted templates without sandboxing.
+            expires: '2025-04-01'
+    continue-on-vulnerability-error: False

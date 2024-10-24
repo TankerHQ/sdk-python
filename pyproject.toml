@@ -28,18 +28,18 @@ twine = "^3.2.0"
 build = "^0.10.0"
 
 # linters
-black = "22.3.0"
+black = "24.3.0"
 flake8 = "7"
 flake8-comprehensions = "3.14.0"
 flake8-docstrings = "1.7.0"
 isort = "5.10.1"
 mypy = "1.5"
-safety = "2.3.5"
+safety = "3.2.0"
 
 # tests
 faker = "13.14.0"
-requests = "2.31.0"
-types-requests = "2.27.31"
+requests = "2.32.2"
+types-requests = "2.31.0.0"
 pytest = "7.2.0"
 pytest-cov = "4.0.0"
 pytest-asyncio = "0.20.2"
