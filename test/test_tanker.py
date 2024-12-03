@@ -146,10 +146,6 @@ async def test_tanker_start_invalid_path(app: Dict[str, str]) -> None:
 async def test_tanker_enroll_user_fails_with_passphrase(
     app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        user_enrollment=True,
-    )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
@@ -168,10 +164,6 @@ async def test_tanker_enroll_user_fails_with_passphrase(
 async def test_tanker_enroll_user_fails_with_email(
     app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        user_enrollment=True,
-    )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
@@ -193,10 +185,6 @@ async def test_tanker_enroll_user_fails_with_email(
 async def test_tanker_enroll_user_fails_with_phone_number(
     app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        user_enrollment=True,
-    )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
@@ -217,10 +205,6 @@ async def test_tanker_enroll_user_fails_with_phone_number(
 async def test_tanker_enroll_user_with_preverified_methods(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
-    admin.update_app(
-        app["id"],
-        user_enrollment=True,
-    )
     server = create_tanker(app["id"], persistent_path=tmp_path)
 
     identity = tankersdk_identity.create_identity(
