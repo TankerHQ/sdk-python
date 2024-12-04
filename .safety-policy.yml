@@ -10,4 +10,8 @@ security: # configuration for the `safety check` command
               The maintainer and multiple third parties believe that this vulnerability isn't valid because 
               users shouldn't use untrusted templates without sandboxing.
             expires: '2025-04-01'
+        73937:
+            reason: >
+              We need to invest some time to move to Conan 2. Temporarily ignore this vulnerability.
+            expires: '2025-01-10'
     continue-on-vulnerability-error: False
