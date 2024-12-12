@@ -2015,6 +2015,38 @@ def test_prehash_password_vector_2() -> None:
     assert tankersdk.prehash_password(input) == expected
 
 
+def test_prehash_and_encrypt_password_empty_password() -> None:
+    publicKey = "iFpHADRaRYQbErZhHMDruROvqkRF3XkgJxKk+7eP1hI="
+    with pytest.raises(error.InvalidArgument):
+        tankersdk.prehash_and_encrypt_password("", publicKey)
+
+
+def test_prehash_and_encrypt_password_empty_publickey() -> None:
+    password = "super secretive password"
+    with pytest.raises(error.InvalidArgument):
+        tankersdk.prehash_and_encrypt_password(password, "")
+
+
+def test_prehash_and_encrypt_password_non_base64_publickey() -> None:
+    password = "super secretive password"
+    with pytest.raises(error.InvalidArgument):
+        tankersdk.prehash_and_encrypt_password(password, "$")
+
+
+def test_prehash_and_encrypt_password_invalid_publickey() -> None:
+    password = "super secretive password"
+    with pytest.raises(error.InvalidArgument):
+        tankersdk.prehash_and_encrypt_password(password, "fake")
+
+
+def test_prehash_and_encrypt_password_ok() -> None:
+    password = "super secretive password"
+    publicKey = "iFpHADRaRYQbErZhHMDruROvqkRF3XkgJxKk+7eP1hI="
+    hashed = tankersdk.prehash_and_encrypt_password(password, publicKey)
+    assert len(hashed) != 0
+    assert password not in hashed
+
+
 def check_session_token(
     app_id: str,
     public_identity: str,

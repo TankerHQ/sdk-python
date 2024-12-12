@@ -39,6 +39,7 @@ from .tanker import (  # noqa
     VerificationMethod,
     VerificationMethodType,
     VerificationOptions,
+    prehash_and_encrypt_password,
     prehash_password,
 )
 

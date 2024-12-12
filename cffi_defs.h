@@ -440,6 +440,7 @@ void tanker_free_verification_method_list(
     tanker_verification_method_list_t* list);
 
 tanker_expected_t* tanker_prehash_password(char const* password);
+tanker_expected_t* tanker_prehash_and_encrypt_password(char const* password, char const* public_key);
 
 void tanker_free_attach_result(tanker_attach_result_t* result);
 
