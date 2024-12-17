@@ -26,6 +26,7 @@ from tankersdk import (
     PassphraseVerification,
     PhoneNumberVerification,
     PhoneNumberVerificationMethod,
+    PrehashedAndEncryptedPassphraseVerification,
     PreverifiedEmailVerification,
     PreverifiedEmailVerificationMethod,
     PreverifiedOidcVerification,
@@ -63,6 +64,9 @@ def read_test_config() -> Dict[str, Any]:
         "url": assert_env("TANKER_APPD_URL"),
         "trustchaindUrl": assert_env("TANKER_TRUSTCHAIND_URL"),
         "verificationApiToken": assert_env("TANKER_VERIFICATION_API_TEST_TOKEN"),
+        "enrollPassphrasePublicEncryptionKey": assert_env(
+            "TANKER_ENROLL_PASSPHRASE_PUBLIC_ENCRYPTION_KEY"
+        ),
     }
     res["oidc"] = {
         "clientId": assert_env("TANKER_OIDC_CLIENT_ID"),
@@ -90,6 +94,16 @@ def create_tanker(app_id: str, *, persistent_path: Path) -> Tanker:
         sdk_type="sdk-python-test",
         persistent_path=str(persistent_path),
         cache_path=str(persistent_path),
+    )
+
+
+def create_paep_verfification(
+    passphrase: str,
+) -> PrehashedAndEncryptedPassphraseVerification:
+    public_key = TEST_CONFIG["server"]["enrollPassphrasePublicEncryptionKey"]
+    paep = tankersdk.prehash_and_encrypt_password(passphrase, public_key)
+    return PrehashedAndEncryptedPassphraseVerification(
+        prehashed_and_encrypted_passhphrase=paep
     )
 
 
@@ -220,6 +234,8 @@ async def test_tanker_enroll_user_with_preverified_methods(
     oidc_id_token = get_id_token()
     subject = extract_subject(oidc_id_token)
 
+    passphrase = "1Ring2RuleThemALL!"
+
     await server.enroll_user(
         identity,
         [
@@ -228,6 +244,7 @@ async def test_tanker_enroll_user_with_preverified_methods(
             PreverifiedOidcVerification(
                 subject=subject, provider_id=provider_config["id"]
             ),
+            create_paep_verfification(passphrase),
         ],
     )
 
@@ -266,6 +283,16 @@ async def test_tanker_enroll_user_with_preverified_methods(
     await tablet_tanker.set_oidc_test_nonce(nonce)
     await tablet_tanker.verify_identity(OidcIdTokenVerification(oidc_id_token))
     assert tablet_tanker.status == TankerStatus.READY
+
+    laptop2_path = tmp_path.joinpath("laptop2")
+    laptop2_path.mkdir(exist_ok=True)
+    laptop2_tanker = create_tanker(app["id"], persistent_path=laptop2_path)
+
+    await laptop2_tanker.start(identity)
+    assert laptop2_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+
+    await laptop2_tanker.verify_identity(PassphraseVerification(passphrase))
+    assert laptop2_tanker.status == TankerStatus.READY
 
 
 @pytest.mark.asyncio
@@ -1708,6 +1735,20 @@ async def test_register_fails_with_preverified_oidc(
 
 
 @pytest.mark.asyncio
+async def test_register_fails_with_prehashed_and_encrypted_passphrase(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    tanker = create_tanker(app["id"], persistent_path=tmp_path)
+    identity = tankersdk_identity.create_identity(
+        app["id"], app["secret"], str(uuid.uuid4())
+    )
+    await tanker.start(identity)
+
+    with pytest.raises(error.InvalidArgument):
+        await tanker.register_identity(create_paep_verfification("p@ssword"))
+
+
+@pytest.mark.asyncio
 async def test_verify_fails_with_preverified_email(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
@@ -1804,6 +1845,33 @@ async def test_verify_fails_with_preverified_oidc(
 
 
 @pytest.mark.asyncio
+async def test_verify_fails_with_prehashed_and_encrypted_passphrase(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    passphrase = "<3"
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
+
+    phone_path = tmp_path.joinpath("phone")
+    phone_path.mkdir(exist_ok=True)
+    phone_tanker = create_tanker(app["id"], persistent_path=phone_path)
+
+    await phone_tanker.start(alice_identity)
+    assert phone_tanker.status == TankerStatus.IDENTITY_VERIFICATION_NEEDED
+    with pytest.raises(error.InvalidArgument):
+        await phone_tanker.verify_identity(create_paep_verfification(passphrase))
+
+
+@pytest.mark.asyncio
 async def test_set_verification_method_with_preverified_email(
     tmp_path: Path, app: Dict[str, str], admin: Admin
 ) -> None:
@@ -1849,6 +1917,28 @@ async def test_set_verification_method_with_preverified_email(
 
     await laptop_tanker.stop()
     await phone_tanker.stop()
+
+
+@pytest.mark.asyncio
+async def test_set_verification_method_fails_with_prehashed_and_encrypted_passphrase(
+    tmp_path: Path, app: Dict[str, str], admin: Admin
+) -> None:
+    laptop_path = tmp_path.joinpath("laptop")
+    laptop_path.mkdir(exist_ok=True)
+    laptop_tanker = create_tanker(app["id"], persistent_path=laptop_path)
+    passphrase = "la roue tourne va tourner"
+    alice_identity = tankersdk_identity.create_identity(
+        app["id"],
+        app["secret"],
+        str(uuid.uuid4()),
+    )
+    await laptop_tanker.start(alice_identity)
+    await laptop_tanker.register_identity(PassphraseVerification(passphrase))
+
+    with pytest.raises(error.InvalidArgument):
+        await laptop_tanker.set_verification_method(
+            create_paep_verfification(passphrase)
+        )
 
 
 @pytest.mark.asyncio
