@@ -693,6 +693,21 @@ def prehash_password(password: str) -> str:
     return hashed
 
 
+def prehash_and_encrypt_password(password: str, public_key: str) -> str:
+    """Hash and encrypt a password client-side.
+
+    The result can be consumed by
+    """
+    c_password = ffihelpers.str_to_c_string(password)
+    c_public_key = ffihelpers.str_to_c_string(public_key)
+    c_expected_hashed = tankerlib.tanker_prehash_and_encrypt_password(
+        c_password, c_public_key
+    )
+    c_hashed = ffihelpers.unwrap_expected(c_expected_hashed, "char*")
+    hashed = ffihelpers.c_string_to_str(c_hashed)
+    return hashed
+
+
 _GLOBAL_TANKERS: "weakref.WeakKeyDictionary[Tanker, Any]" = weakref.WeakKeyDictionary()
 
 
