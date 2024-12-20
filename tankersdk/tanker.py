@@ -65,6 +65,7 @@ class VerificationMethodType(Enum):
     E2E_PASSPHRASE = 8
     PREVERIFIED_OIDC = 9
     OIDC_AUTHORIZATION_CODE = 10
+    PREHASHED_AND_ENCRYPTED_PASSPHRASE = 11
 
 
 class Verification:
@@ -163,6 +164,13 @@ class OidcAuthorizationCodeVerification(Verification):
         self.provider_id = provider_id
         self.authorization_code = authorization_code
         self.state = state
+
+
+class PrehashedAndEncryptedPassphraseVerification(Verification):
+    method_type = VerificationMethodType.PREHASHED_AND_ENCRYPTED_PASSPHRASE
+
+    def __init__(self, prehashed_and_encrypted_passhphrase: str):
+        self.prehashed_and_encrypted_passhphrase = prehashed_and_encrypted_passhphrase
 
 
 class VerificationMethod:
@@ -407,7 +415,7 @@ class CVerification:
 
         # Note: we store things in `self` so they don't get
         # garbage collected later on
-        c_verification = ffi.new("tanker_verification_t *", {"version": 8})
+        c_verification = ffi.new("tanker_verification_t *", {"version": 9})
         if isinstance(verification, VerificationKeyVerification):
             c_verification.verification_method_type = (
                 tankerlib.TANKER_VERIFICATION_METHOD_VERIFICATION_KEY
@@ -510,6 +518,16 @@ class CVerification:
             }
             c_verification.oidc_authorization_code_verification = (
                 self._oidc_authorization_code_verification
+            )
+        elif isinstance(verification, PrehashedAndEncryptedPassphraseVerification):
+            c_verification.verification_method_type = (
+                tankerlib.TANKER_VERIFICATION_METHOD_PREHASHED_AND_ENCRYPTED_PASSPHRASE
+            )
+            self._prehashed_and_encrypted_passphrase = ffihelpers.str_to_c_string(
+                verification.prehashed_and_encrypted_passhphrase
+            )
+            c_verification.prehashed_and_encrypted_passphrase = (
+                self._prehashed_and_encrypted_passphrase
             )
 
         self._c_verification = c_verification

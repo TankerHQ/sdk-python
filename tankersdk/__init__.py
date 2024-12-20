@@ -24,6 +24,7 @@ from .tanker import (  # noqa
     PassphraseVerificationMethod,
     PhoneNumberVerification,
     PhoneNumberVerificationMethod,
+    PrehashedAndEncryptedPassphraseVerification,
     PreverifiedEmailVerification,
     PreverifiedEmailVerificationMethod,
     PreverifiedOidcVerification,

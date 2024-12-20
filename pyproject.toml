@@ -23,8 +23,8 @@ typing_extensions = "^4.4.0"
 
 [tool.poetry.dev-dependencies]
 # CI/CD
-tankerci = { version = "== 2024.8.5322", source = "gitlab" }
-twine = "^3.2.0"
+tankerci = { version = "== 2024.12.5467", source = "gitlab" }
+twine = "^3.3.0"
 build = "^0.10.0"
 
 # linters

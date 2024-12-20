@@ -195,6 +195,7 @@ enum tanker_verification_method_type
   TANKER_VERIFICATION_METHOD_E2E_PASSPHRASE,
   TANKER_VERIFICATION_METHOD_PREVERIFIED_OIDC,
   TANKER_VERIFICATION_METHOD_OIDC_AUTHORIZATION_CODE,
+  TANKER_VERIFICATION_METHOD_PREHASHED_AND_ENCRYPTED_PASSPHRASE,
 
   TANKER_VERIFICATION_METHOD_LAST
 };
@@ -310,12 +311,13 @@ struct tanker_verification
   char const* preverified_phone_number;
   tanker_preverified_oidc_verification_t preverified_oidc_verification;
   tanker_oidc_authorization_code_verification_t oidc_authorization_code_verification;
+  char const* prehashed_and_encrypted_passphrase;
 };
 
 struct tanker_verification_method
 {
   uint8_t version;
-  // enum cannot be binded to java as they do not have a fixed size.
+  // enum cannot be bound to java as they do not have a fixed size.
   // It takes a value from tanker_verification_method_type:
   uint8_t verification_method_type;
   char const* value1;
@@ -352,7 +354,7 @@ struct tanker_sharing_options
 struct tanker_attach_result
 {
   uint8_t version;
-  // enum cannot be binded to java as they do not have a fixed size.
+  // enum cannot be bound to java as they do not have a fixed size.
   // It takes a value from the enum tanker_status:
   uint8_t status;
   tanker_verification_method_t* method;
