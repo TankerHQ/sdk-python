@@ -96,7 +96,7 @@ check/deployed-native/linux:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/linux, tags]
 
 check/deployed-native/macos/x86_64:
@@ -109,7 +109,7 @@ check/deployed-native/macos/x86_64:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/deployed-native/macos/arm:
@@ -122,7 +122,7 @@ check/deployed-native/macos/arm:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/macos/arm, tags]
 
 ## native from sources
@@ -137,7 +137,7 @@ check/native-from-sources/linux:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/compilation-linux, tags]
 
 check/native-from-sources/macos/x86_64:
@@ -150,7 +150,7 @@ check/native-from-sources/macos/x86_64:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/native-from-sources/macos/arm:
@@ -163,7 +163,7 @@ check/native-from-sources/macos/arm:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/macos/arm, tags]
 
 ## downstream
@@ -178,7 +178,7 @@ check/downstream/linux:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/linux, tags]
 
 check/downstream/macos/x86_64:
@@ -192,7 +192,7 @@ check/downstream/macos/x86_64:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/macos/x86_64, tags]
 
 check/downstream/macos/arm:
@@ -206,7 +206,7 @@ check/downstream/macos/arm:
     - poetry run python run-ci.py build --test
   parallel:
     matrix:
-      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12' ]
+      - PYENV_VERSION: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
   tags: !reference [.tags/macos/arm, tags]
 
 .safety:
