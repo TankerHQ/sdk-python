@@ -17,7 +17,7 @@ authors = ["Tanker team"]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9,<4.0"
 cffi = "^1.13.2"
 typing_extensions = "^4.4.0"
 
