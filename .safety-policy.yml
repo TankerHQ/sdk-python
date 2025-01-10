@@ -4,14 +4,8 @@ security: # configuration for the `safety check` command
     ignore-cvss-severity-below: 0
     ignore-cvss-unknown-severity: False
     ignore-vulnerabilities:
-        70612:
-            reason: >
-              Jinja2 vulnerability
-              The maintainer and multiple third parties believe that this vulnerability isn't valid because 
-              users shouldn't use untrusted templates without sandboxing.
-            expires: '2025-04-01'
         73937:
             reason: >
               We need to invest some time to move to Conan 2. Temporarily ignore this vulnerability.
-            expires: '2025-01-10'
+            expires: '2025-09-10'
     continue-on-vulnerability-error: False
