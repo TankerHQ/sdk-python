@@ -223,11 +223,6 @@ check/downstream/macos/arm:
     - poetry run safety check --full-report
   tags: !reference [.tags/linux, tags]
 
-safety:
-  extends:
-    - .rules/nightly
-    - .safety
-
 safety/manual:
   extends:
     - .rules/mr/manual
